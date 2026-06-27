@@ -88,7 +88,9 @@ export default function Community() {
   // Modal Share State
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [selectedGameId, setSelectedGameId] = useState("")
-  const [selectedSavePath, setSelectedSavePath] = useState("")
+  const [gameSearchQuery, setGameSearchQuery] = useState("")
+  const [isGameDropdownOpen, setIsGameDropdownOpen] = useState(false)
+  const [selectedBackupId, setSelectedBackupId] = useState("")
   const [checkpointTitle, setCheckpointTitle] = useState("")
   const [checkpointDesc, setCheckpointDesc] = useState("")
   const [authorName, setAuthorName] = useState("")
@@ -180,6 +182,18 @@ export default function Community() {
   useEffect(() => {
     loadConfigAndData()
   }, [])
+
+  useEffect(() => {
+    if (!isShareModalOpen) {
+      setSelectedGameId("")
+      setGameSearchQuery("")
+      setIsGameDropdownOpen(false)
+      setSelectedBackupId("")
+      setCheckpointTitle("")
+      setCheckpointDesc("")
+      setAuthorName("")
+    }
+  }, [isShareModalOpen])
 
   // Filter & Sort
   const filteredCheckpoints = checkpoints.filter((cp) => {
@@ -279,29 +293,10 @@ export default function Community() {
     }
   }
 
-  // File Picker for Upload
-  const handlePickFile = async () => {
-    if (!isTauri) return
-    try {
-      const { invoke } = await import("@tauri-apps/api/core")
-      const gameMatch = games.find(g => g.id === selectedGameId)
-      const startDir = gameMatch?.savePath || null
-
-      const path = await invoke<string | null>("select_save_file", {
-        startDir,
-      })
-      if (path) {
-        setSelectedSavePath(path)
-      }
-    } catch (err) {
-      toast.error(`Erro ao selecionar arquivo: ${err}`)
-    }
-  }
-
   // Publish Checkpoint
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedGameId || !selectedSavePath || !checkpointTitle) {
+    if (!selectedGameId || !selectedBackupId || !checkpointTitle) {
       toast.error("Por favor, preencha todos os campos obrigatórios.")
       return
     }
@@ -313,15 +308,17 @@ export default function Community() {
     let tempZipPath = ""
     try {
       const { invoke } = await import("@tauri-apps/api/core")
-      const toastId = toast.loading("Comprimindo arquivos de save com zstd...")
+      const toastId = toast.loading("Comprimindo arquivos de save do backup com zstd...")
 
-      // Step 1: Pack the save locally to a temporary .ludocard file
-      const tempSaveInfo = await invoke<any>("export_temp_ludocard_save", {
+      // Step 1: Pack the backup locally to a temporary .ludocard file
+      const tempSaveInfo = await invoke<any>("export_temp_ludocard_backup", {
         gameTitle: selectedGame.title,
         gameId: selectedGame.id,
         checkpointTitle: checkpointTitle,
         description: checkpointDesc,
-        sourcePath: selectedSavePath,
+        backupPath: selectedGame.backupPath || "",
+        backupId: selectedBackupId,
+        savePath: selectedGame.savePath,
       })
 
       tempZipPath = tempSaveInfo.filePath
@@ -397,7 +394,9 @@ export default function Community() {
       
       // Clean up modal states
       setSelectedGameId("")
-      setSelectedSavePath("")
+      setGameSearchQuery("")
+      setIsGameDropdownOpen(false)
+      setSelectedBackupId("")
       setCheckpointTitle("")
       setCheckpointDesc("")
       setAuthorName("")
@@ -458,7 +457,7 @@ export default function Community() {
 
   return (
     <AppShell
-      title="Comunidade"
+      title="Save Share HUB"
       description="Compartilhe e baixe checkpoints de saves"
       actions={
         isConfigured && (
@@ -741,49 +740,125 @@ export default function Community() {
             </CardHeader>
             <CardContent className="pt-4">
               <form onSubmit={handlePublish} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="game-select" className="text-xs font-semibold text-muted-foreground">Jogo do Save *</label>
-                  <select
-                    id="game-select"
-                    value={selectedGameId}
-                    onChange={(e) => {
-                      setSelectedGameId(e.target.value)
-                      setSelectedSavePath("")
-                    }}
-                    className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                    required
-                  >
-                    <option value="" disabled>Selecione um jogo da sua biblioteca</option>
-                    {games.filter(g => g.installed).map(g => (
-                      <option key={g.id} value={g.id}>{g.title} ({g.platform})</option>
-                    ))}
-                  </select>
+                {/* Searchable Game Selector */}
+                <div className="flex flex-col gap-1.5 relative">
+                  <label className="text-xs font-semibold text-muted-foreground">Jogo do Save *</label>
+                  
+                  {!selectedGameId ? (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Digite para pesquisar um jogo instalado..."
+                        value={gameSearchQuery}
+                        onChange={(e) => {
+                          setGameSearchQuery(e.target.value)
+                          setIsGameDropdownOpen(true)
+                        }}
+                        onFocus={() => setIsGameDropdownOpen(true)}
+                        className="pl-9"
+                      />
+                      
+                      {isGameDropdownOpen && (
+                        <div className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto rounded-md border border-border bg-popover text-popover-foreground shadow-md animate-in fade-in-50 slide-in-from-top-1 duration-100">
+                          {games
+                            .filter(g => g.installed && (!gameSearchQuery || g.title.toLowerCase().includes(gameSearchQuery.toLowerCase())))
+                            .length === 0 ? (
+                            <div className="py-2 px-3 text-xs text-muted-foreground">Nenhum jogo encontrado</div>
+                          ) : (
+                            games
+                              .filter(g => g.installed && (!gameSearchQuery || g.title.toLowerCase().includes(gameSearchQuery.toLowerCase())))
+                              .map(g => (
+                                <button
+                                  key={g.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedGameId(g.id)
+                                    setGameSearchQuery(g.title)
+                                    setIsGameDropdownOpen(false)
+                                    setSelectedBackupId("")
+                                  }}
+                                  className="w-full text-left py-2 px-3 text-sm hover:bg-accent hover:text-accent-foreground transition-colors flex items-center gap-2"
+                                >
+                                  {g.cover && (
+                                    <img src={g.cover} alt="" className="size-6 object-cover rounded" />
+                                  )}
+                                  <span>{g.title} <span className="text-[10px] text-muted-foreground">({g.platform})</span></span>
+                                </button>
+                              ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    (() => {
+                      const selectedGame = games.find(g => g.id === selectedGameId)
+                      return (
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
+                          <div className="flex items-center gap-3">
+                            {selectedGame?.cover && (
+                              <img src={selectedGame.cover} alt="" className="h-10 w-8.5 object-cover rounded border border-border" />
+                            )}
+                            <div>
+                              <div className="text-sm font-semibold">{selectedGame?.title}</div>
+                              <div className="text-xs text-muted-foreground">{selectedGame?.platform}</div>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedGameId("")
+                              setGameSearchQuery("")
+                              setSelectedBackupId("")
+                            }}
+                            className="text-xs text-muted-foreground hover:text-destructive"
+                          >
+                            Alterar
+                          </Button>
+                        </div>
+                      )
+                    })()
+                  )}
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label htmlFor="save-file" className="text-xs font-semibold text-muted-foreground">Arquivo de Progresso (Save Slot)*</label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="save-file"
-                      readOnly
-                      placeholder="Nenhum arquivo de save selecionado"
-                      value={selectedSavePath}
-                      className="font-mono text-xs"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={!selectedGameId}
-                      onClick={handlePickFile}
-                    >
-                      Selecionar
-                    </Button>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">
-                    Apenas selecione o arquivo específico correspondente ao slot desejado (ex: slot1.sav, ER0000.sl2).
-                  </span>
-                </div>
+                {/* Backup Version Selector */}
+                {selectedGameId && (() => {
+                  const selectedGame = games.find(g => g.id === selectedGameId)
+                  const hasBackups = selectedGame && selectedGame.backups && selectedGame.backups.length > 0
+                  
+                  return (
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="backup-select" className="text-xs font-semibold text-muted-foreground">Mídia de Progresso (Backup Realizado) *</label>
+                      
+                      {hasBackups ? (
+                        <>
+                          <select
+                            id="backup-select"
+                            value={selectedBackupId}
+                            onChange={(e) => setSelectedBackupId(e.target.value)}
+                            className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                            required
+                          >
+                            <option value="" disabled>Selecione um backup do histórico local</option>
+                            {selectedGame.backups.map(b => (
+                              <option key={b.id} value={b.id}>
+                                {b.date} às {b.time} ({b.kind}) — {b.sizeMB.toFixed(2)} MB
+                              </option>
+                            ))}
+                          </select>
+                          <span className="text-[10px] text-muted-foreground">
+                            Escolha um ponto do seu histórico de backups para converter e compartilhar.
+                          </span>
+                        </>
+                      ) : (
+                        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-400">
+                          ⚠️ Você não possui backups deste jogo. Por favor, vá até a aba Biblioteca e faça um backup do seu save antes de tentar compartilhá-lo na comunidade.
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="checkpoint-title" className="text-xs font-semibold text-muted-foreground">Título do Checkpoint *</label>

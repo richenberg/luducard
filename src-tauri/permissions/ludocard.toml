@@ -26,5 +26,7 @@ commands.allow = [
   "download_and_import_ludocard",
   "upload_file_to_url",
   "export_temp_ludocard_save",
+  "export_temp_ludocard_backup",
+  "export_ludocard_backup",
   "delete_temp_file"
 ]

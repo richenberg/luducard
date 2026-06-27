@@ -127,6 +127,46 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     }
   };
 
+  const handleExportBackupVersion = async (backupId: string, backupDate: string, backupTime: string) => {
+    if (!isTauri) {
+      toast.info(`[Mock] Exportando backup de "${game.title}" (${backupDate}) como .ludocard`);
+      return;
+    }
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      // Choose where to save the .ludocard file
+      const slugName = game.id.replace(/[^a-z0-9-]/gi, "-");
+      const formattedDate = backupDate.replace(/[^a-z0-9-]/gi, "-");
+      const formattedTime = backupTime.replace(/[^a-z0-9-]/gi, "-");
+      const destPath = await invoke<string | null>("save_ludocard_dialog", {
+        defaultName: `${slugName}_backup_${formattedDate}_${formattedTime}.ludocard`,
+      });
+      if (!destPath) return; // User cancelled
+
+      const toastId = toast.loading(`Compactando backup de "${game.title}"...`);
+      const metadata = await invoke<any>("export_ludocard_backup", {
+        gameTitle: game.title,
+        gameId: game.id,
+        checkpointTitle: `Backup de ${game.title} - ${backupDate} ${backupTime}`,
+        description: `Exportado a partir do backup local realizado em ${backupDate} às ${backupTime}.`,
+        backupPath: game.backupPath || "",
+        backupId: backupId,
+        savePath: game.savePath,
+        destPath: destPath,
+      });
+
+      const compressedMB = (metadata.compressedSizeBytes / (1024 * 1024)).toFixed(1);
+      const originalMB = (metadata.totalSizeBytes / (1024 * 1024)).toFixed(1);
+      toast.success(
+        `Exportado com sucesso! ${originalMB} MB → ${compressedMB} MB compactado`,
+        { id: toastId }
+      );
+    } catch (err) {
+      toast.error(`Falha ao exportar backup: ${err}`);
+    }
+  };
+
   const handleToggleLocked = async (versionId: string, currentLocked: boolean) => {
     if (isTauri) {
       const nextLocked = !currentLocked;
@@ -183,27 +223,21 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
 
-      // Step 1: Let user pick the specific save file
-      const selectedFile = await invoke<string | null>("select_save_file", {
-        startDir: game.savePath || null,
-      });
-      if (!selectedFile) return; // User cancelled
-
-      // Step 2: Choose where to save the .ludocard file
+      // Step 1: Choose where to save the .ludocard file
       const slugName = game.id.replace(/[^a-z0-9-]/gi, "-");
       const destPath = await invoke<string | null>("save_ludocard_dialog", {
         defaultName: `${slugName}.ludocard`,
       });
       if (!destPath) return; // User cancelled
 
-      // Step 3: Export
+      // Step 2: Export the whole save path directory
       const toastId = toast.loading(`Compactando save de "${game.title}"...`);
       const metadata = await invoke<any>("export_ludocard_save", {
         gameTitle: game.title,
         gameId: game.id,
         checkpointTitle: `Save de ${game.title}`,
         description: "",
-        sourcePath: selectedFile,
+        sourcePath: game.savePath,
         destPath: destPath,
       });
 
@@ -440,6 +474,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         >
                           <RotateCcw data-icon="inline-start" />
                           Restaurar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleExportBackupVersion(b.id, b.date, b.time)}
+                        >
+                          <Share2 data-icon="inline-start" />
+                          Exportar
                         </Button>
                         <Button
                           size="icon-sm"

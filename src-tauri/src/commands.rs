@@ -35,6 +35,7 @@ pub struct FrontendGame {
     pub cover: String,
     pub platform: String,
     pub save_path: String,
+    pub backup_path: String,
     #[serde(rename = "sizeMB")]
     pub size_mb: f64,
     pub last_backup: String,
@@ -616,12 +617,18 @@ fn build_frontend_game(
 
     let backups_size_mb = backups_list.iter().map(|b| b.size_mb).sum::<f64>();
 
+    let mut backup_path = String::new();
+    if let Some(ApiGame::Stored { backup_path: path, .. }) = backup_game {
+        backup_path = path.clone();
+    }
+
     FrontendGame {
         id: slug,
         title: display_title,
         cover: cover_path,
         platform,
         save_path,
+        backup_path,
         size_mb: (size_bytes as f64) / (1024.0 * 1024.0),
         last_backup: last_backup_str,
         status,
@@ -1445,6 +1452,144 @@ pub async fn select_save_file(start_dir: Option<String>) -> Result<Option<String
     Ok(result.map(|f| f.to_string_lossy().to_string()))
 }
 
+fn export_ludocard_save_internal(
+    app: &tauri::AppHandle,
+    game_title: &str,
+    game_id: &str,
+    checkpoint_title: &str,
+    description: &str,
+    source_path: &str,
+    dest_path: &str,
+) -> Result<LudocardMetadata, String> {
+    let source = Path::new(source_path);
+    if !source.exists() {
+        return Err(format!(
+            "O arquivo de save não foi encontrado: {}",
+            source_path
+        ));
+    }
+
+    // Collect files to archive: if source is a file, just that file.
+    // If source is a directory, collect all files in it (shallow, max 2 levels).
+    let mut files_to_archive: Vec<PathBuf> = Vec::new();
+    let base_dir: &Path;
+
+    if source.is_file() {
+        files_to_archive.push(source.to_path_buf());
+        base_dir = source.parent().unwrap_or(source);
+    } else if source.is_dir() {
+        for entry in WalkDir::new(source)
+            .max_depth(2)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            if entry.file_type().is_file() {
+                files_to_archive.push(entry.path().to_path_buf());
+            }
+        }
+        base_dir = source;
+    } else {
+        return Err("O caminho selecionado não é um arquivo ou pasta válida.".to_string());
+    }
+
+    if files_to_archive.is_empty() {
+        return Err("Nenhum arquivo encontrado para exportar.".to_string());
+    }
+
+    // Calculate total uncompressed size
+    let total_size: u64 = files_to_archive
+        .iter()
+        .filter_map(|f| std::fs::metadata(f).ok())
+        .map(|m| m.len())
+        .sum();
+
+    // Build file name list (relative paths)
+    let original_files: Vec<String> = files_to_archive
+        .iter()
+        .filter_map(|f| {
+            f.strip_prefix(base_dir)
+                .ok()
+                .map(|rel| rel.to_string_lossy().to_string())
+        })
+        .collect();
+
+    // Get client UUID
+    let client_uuid = app
+        .path()
+        .app_data_dir()
+        .map(|dir| get_or_create_client_uuid(&dir))
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    let now = chrono::Local::now();
+
+    // Create the tar + zstd archive
+    let dest_file = std::fs::File::create(dest_path)
+        .map_err(|e| format!("Falha ao criar o arquivo de destino: {}", e))?;
+
+    let zstd_encoder = zstd::Encoder::new(dest_file, 19) // Level 19 = high compression
+        .map_err(|e| format!("Falha ao iniciar compressão zstd: {}", e))?;
+
+    let mut tar_builder = tar::Builder::new(zstd_encoder);
+
+    // Add each save file to the tar archive under "saves/" prefix
+    for file_path in &files_to_archive {
+        let relative = file_path
+            .strip_prefix(base_dir)
+            .unwrap_or(file_path);
+        let archive_name = Path::new("saves").join(relative);
+
+        tar_builder
+            .append_path_with_name(file_path, &archive_name)
+            .map_err(|e| format!("Falha ao adicionar arquivo ao pacote: {}", e))?;
+    }
+
+    // Build metadata (compressed_size will be updated after finishing)
+    let metadata = LudocardMetadata {
+        game_title: game_title.to_string(),
+        game_id: game_id.to_string(),
+        checkpoint_title: checkpoint_title.to_string(),
+        description: description.to_string(),
+        original_files,
+        created_at: now.to_rfc3339(),
+        total_size_bytes: total_size,
+        compressed_size_bytes: 0, // Will be set after archive is closed
+        client_uuid,
+    };
+
+    // Serialize metadata and add to tar
+    let metadata_json = serde_json::to_string_pretty(&metadata)
+        .map_err(|e| format!("Falha ao serializar metadados: {}", e))?;
+
+    let metadata_bytes = metadata_json.as_bytes();
+    let mut header = tar::Header::new_gnu();
+    header.set_size(metadata_bytes.len() as u64);
+    header.set_mode(0o644);
+    header.set_cksum();
+
+    tar_builder
+        .append_data(&mut header, "metadata.json", metadata_bytes)
+        .map_err(|e| format!("Falha ao adicionar metadados ao pacote: {}", e))?;
+
+    // Finish the tar archive, then finish the zstd encoder
+    let zstd_encoder = tar_builder
+        .into_inner()
+        .map_err(|e| format!("Falha ao finalizar o arquivo tar: {}", e))?;
+
+    zstd_encoder
+        .finish()
+        .map_err(|e| format!("Falha ao finalizar a compressão: {}", e))?;
+
+    // Read the actual compressed file size
+    let compressed_size = std::fs::metadata(dest_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    Ok(LudocardMetadata {
+        compressed_size_bytes: compressed_size,
+        ..metadata
+    })
+}
+
 /// Exports a game save as a compressed `.ludocard` archive.
 /// The archive is a tar file compressed with zstd, containing:
 /// - `metadata.json`: Archive metadata (game info, notes, sizes)
@@ -1460,133 +1605,15 @@ pub async fn export_ludocard_save(
     dest_path: String,
 ) -> Result<LudocardMetadata, String> {
     tokio::task::spawn_blocking(move || {
-        let source = Path::new(&source_path);
-        if !source.exists() {
-            return Err(format!(
-                "O arquivo de save não foi encontrado: {}",
-                source_path
-            ));
-        }
-
-        // Collect files to archive: if source is a file, just that file.
-        // If source is a directory, collect all files in it (shallow, max 2 levels).
-        let mut files_to_archive: Vec<PathBuf> = Vec::new();
-        let base_dir: &Path;
-
-        if source.is_file() {
-            files_to_archive.push(source.to_path_buf());
-            base_dir = source.parent().unwrap_or(source);
-        } else if source.is_dir() {
-            for entry in WalkDir::new(source)
-                .max_depth(2)
-                .into_iter()
-                .filter_map(|e| e.ok())
-            {
-                if entry.file_type().is_file() {
-                    files_to_archive.push(entry.path().to_path_buf());
-                }
-            }
-            base_dir = source;
-        } else {
-            return Err("O caminho selecionado não é um arquivo ou pasta válida.".to_string());
-        }
-
-        if files_to_archive.is_empty() {
-            return Err("Nenhum arquivo encontrado para exportar.".to_string());
-        }
-
-        // Calculate total uncompressed size
-        let total_size: u64 = files_to_archive
-            .iter()
-            .filter_map(|f| std::fs::metadata(f).ok())
-            .map(|m| m.len())
-            .sum();
-
-        // Build file name list (relative paths)
-        let original_files: Vec<String> = files_to_archive
-            .iter()
-            .filter_map(|f| {
-                f.strip_prefix(base_dir)
-                    .ok()
-                    .map(|rel| rel.to_string_lossy().to_string())
-            })
-            .collect();
-
-        // Get client UUID
-        let client_uuid = app
-            .path()
-            .app_data_dir()
-            .map(|dir| get_or_create_client_uuid(&dir))
-            .unwrap_or_else(|_| "unknown".to_string());
-
-        let now = chrono::Local::now();
-
-        // Create the tar + zstd archive
-        let dest_file = std::fs::File::create(&dest_path)
-            .map_err(|e| format!("Falha ao criar o arquivo de destino: {}", e))?;
-
-        let zstd_encoder = zstd::Encoder::new(dest_file, 19) // Level 19 = high compression
-            .map_err(|e| format!("Falha ao iniciar compressão zstd: {}", e))?;
-
-        let mut tar_builder = tar::Builder::new(zstd_encoder);
-
-        // Add each save file to the tar archive under "saves/" prefix
-        for file_path in &files_to_archive {
-            let relative = file_path
-                .strip_prefix(base_dir)
-                .unwrap_or(file_path);
-            let archive_name = Path::new("saves").join(relative);
-
-            tar_builder
-                .append_path_with_name(file_path, &archive_name)
-                .map_err(|e| format!("Falha ao adicionar arquivo ao pacote: {}", e))?;
-        }
-
-        // Build metadata (compressed_size will be updated after finishing)
-        let metadata = LudocardMetadata {
-            game_title: game_title.clone(),
-            game_id: game_id.clone(),
-            checkpoint_title: checkpoint_title.clone(),
-            description: description.clone(),
-            original_files: original_files.clone(),
-            created_at: now.to_rfc3339(),
-            total_size_bytes: total_size,
-            compressed_size_bytes: 0, // Will be set after archive is closed
-            client_uuid: client_uuid.clone(),
-        };
-
-        // Serialize metadata and add to tar
-        let metadata_json = serde_json::to_string_pretty(&metadata)
-            .map_err(|e| format!("Falha ao serializar metadados: {}", e))?;
-
-        let metadata_bytes = metadata_json.as_bytes();
-        let mut header = tar::Header::new_gnu();
-        header.set_size(metadata_bytes.len() as u64);
-        header.set_mode(0o644);
-        header.set_cksum();
-
-        tar_builder
-            .append_data(&mut header, "metadata.json", metadata_bytes)
-            .map_err(|e| format!("Falha ao adicionar metadados ao pacote: {}", e))?;
-
-        // Finish the tar archive, then finish the zstd encoder
-        let zstd_encoder = tar_builder
-            .into_inner()
-            .map_err(|e| format!("Falha ao finalizar o arquivo tar: {}", e))?;
-
-        zstd_encoder
-            .finish()
-            .map_err(|e| format!("Falha ao finalizar a compressão: {}", e))?;
-
-        // Read the actual compressed file size
-        let compressed_size = std::fs::metadata(&dest_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
-
-        Ok(LudocardMetadata {
-            compressed_size_bytes: compressed_size,
-            ..metadata
-        })
+        export_ludocard_save_internal(
+            &app,
+            &game_title,
+            &game_id,
+            &checkpoint_title,
+            &description,
+            &source_path,
+            &dest_path,
+        )
     })
     .await
     .map_err(|e| e.to_string())?
@@ -1970,5 +1997,270 @@ pub async fn delete_temp_file(file_path: String) -> Result<(), String> {
         std::fs::remove_file(path).map_err(|e| format!("Falha ao remover arquivo temporário: {}", e))?;
     }
     Ok(())
+}
+
+/// Helper command to package a game backup version from the backup directory into a temp .ludocard archive.
+#[tauri::command]
+pub async fn export_temp_ludocard_backup(
+    app: tauri::AppHandle,
+    game_title: String,
+    game_id: String,
+    checkpoint_title: String,
+    description: String,
+    backup_path: String,
+    backup_id: String,
+    save_path: String,
+) -> Result<HashMap<String, serde_json::Value>, String> {
+    tokio::task::spawn_blocking(move || {
+        let backup_folder = Path::new(&backup_path).join(&backup_id);
+        if !backup_folder.exists() {
+            return Err(format!(
+                "O diretório do backup não foi encontrado: {}",
+                backup_folder.display()
+            ));
+        }
+
+        // Load mapping.yaml to get the drives mapping and files list
+        let mapping_path = Path::new(&backup_path).join("mapping.yaml");
+        if !mapping_path.exists() {
+            return Err(format!(
+                "O arquivo mapping.yaml não foi encontrado em: {}",
+                mapping_path.display()
+            ));
+        }
+
+        let mapping_file = StrictPath::from(mapping_path.as_path());
+        let mapping = ludusavi::scan::layout::IndividualMapping::load(&mapping_file)
+            .map_err(|e| format!("Falha ao carregar mapping.yaml: {}", e))?;
+
+        // Find the specific backup version in the mapping
+        let backup_version = mapping.backups.iter().find(|b| b.name == backup_id)
+            .ok_or_else(|| format!("Backup '{}' não encontrado no mapping.yaml", backup_id))?;
+
+        // Create a temporary directory to assemble the files
+        let temp_dir = std::env::temp_dir();
+        let export_temp_dir = temp_dir.join(format!("ludocard_export_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&export_temp_dir)
+            .map_err(|e| format!("Falha ao criar diretório temporário de exportação: {}", e))?;
+
+        // Resolve normalized live save path
+        let live_save_dir = Path::new(&save_path);
+
+        // Copy files from backup to the temporary directory with their correct relative paths
+        for (file_key, _) in &backup_version.files {
+            let src_file_path = backup_folder.join(file_key);
+            if !src_file_path.exists() {
+                continue;
+            }
+
+            // Reconstruct absolute path
+            // file_key is like "drive-C/Users/..." or "drive-0/..."
+            let file_key_normalized = file_key.replace('\\', "/");
+            let parts: Vec<&str> = file_key_normalized.split('/').collect();
+            if parts.is_empty() {
+                continue;
+            }
+            let drive_key = parts[0];
+            let relative_to_drive = parts[1..].join("/");
+
+            let drive_letter = mapping.drives.get(drive_key)
+                .map(|s| s.as_str())
+                .unwrap_or(""); // e.g. "C:" or ""
+
+            let original_abs_path_str = if drive_letter.is_empty() {
+                // Unix root
+                format!("/{}", relative_to_drive)
+            } else {
+                // Windows path, e.g. "C:/Users/..."
+                format!("{}/{}", drive_letter, relative_to_drive)
+            };
+
+            let original_abs_path = Path::new(&original_abs_path_str);
+
+            // Compute relative path from live_save_dir
+            let orig_str = original_abs_path_str.replace('\\', "/");
+            let live_str = live_save_dir.to_string_lossy().to_string().replace('\\', "/");
+
+            let relative_path_str = if orig_str.starts_with(&live_str) {
+                let mut rel = &orig_str[live_str.len()..];
+                if rel.starts_with('/') {
+                    rel = &rel[1..];
+                }
+                rel.to_string()
+            } else if cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase()) {
+                let mut rel = &orig_str[live_str.len()..];
+                if rel.starts_with('/') {
+                    rel = &rel[1..];
+                }
+                rel.to_string()
+            } else {
+                original_abs_path.file_name()
+                    .map(|f| f.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "save_file".to_string())
+            };
+
+            let dest_file_path = export_temp_dir.join(&relative_path_str);
+            if let Some(parent) = dest_file_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+
+            std::fs::copy(&src_file_path, &dest_file_path)
+                .map_err(|e| format!("Falha ao copiar arquivo de backup para pasta temporária: {}", e))?;
+        }
+
+        // Pack the temporary folder
+        let temp_archive_path = temp_dir.join(format!("ludocard_upload_{}.ludocard", uuid::Uuid::new_v4()));
+        let temp_archive_path_str = temp_archive_path.to_string_lossy().to_string();
+
+        let metadata_res = export_ludocard_save_internal(
+            &app,
+            &game_title,
+            &game_id,
+            &checkpoint_title,
+            &description,
+            &export_temp_dir.to_string_lossy().to_string(),
+            &temp_archive_path_str,
+        );
+
+        // Always clean up the temporary files directory
+        let _ = std::fs::remove_dir_all(&export_temp_dir);
+
+        let metadata = metadata_res.map_err(|e| format!("Falha ao empacotar save do backup: {}", e))?;
+
+        let mut result = HashMap::new();
+        result.insert("filePath".to_string(), serde_json::json!(temp_archive_path_str));
+        result.insert("fileSize".to_string(), serde_json::json!(metadata.compressed_size_bytes));
+        result.insert("fileName".to_string(), serde_json::json!(format!("{}.ludocard", metadata.game_id)));
+        Ok(result)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Helper command to package a game backup version from the backup directory directly to dest_path.
+#[tauri::command]
+pub async fn export_ludocard_backup(
+    app: tauri::AppHandle,
+    game_title: String,
+    game_id: String,
+    checkpoint_title: String,
+    description: String,
+    backup_path: String,
+    backup_id: String,
+    save_path: String,
+    dest_path: String,
+) -> Result<LudocardMetadata, String> {
+    tokio::task::spawn_blocking(move || {
+        let backup_folder = Path::new(&backup_path).join(&backup_id);
+        if !backup_folder.exists() {
+            return Err(format!(
+                "O diretório do backup não foi encontrado: {}",
+                backup_folder.display()
+            ));
+        }
+
+        // Load mapping.yaml to get the drives mapping and files list
+        let mapping_path = Path::new(&backup_path).join("mapping.yaml");
+        if !mapping_path.exists() {
+            return Err(format!(
+                "O arquivo mapping.yaml não foi encontrado em: {}",
+                mapping_path.display()
+            ));
+        }
+
+        let mapping_file = StrictPath::from(mapping_path.as_path());
+        let mapping = ludusavi::scan::layout::IndividualMapping::load(&mapping_file)
+            .map_err(|e| format!("Falha ao carregar mapping.yaml: {}", e))?;
+
+        // Find the specific backup version in the mapping
+        let backup_version = mapping.backups.iter().find(|b| b.name == backup_id)
+            .ok_or_else(|| format!("Backup '{}' não encontrado no mapping.yaml", backup_id))?;
+
+        // Create a temporary directory to assemble the files
+        let temp_dir = std::env::temp_dir();
+        let export_temp_dir = temp_dir.join(format!("ludocard_export_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&export_temp_dir)
+            .map_err(|e| format!("Falha ao criar diretório temporário de exportação: {}", e))?;
+
+        // Resolve normalized live save path
+        let live_save_dir = Path::new(&save_path);
+
+        // Copy files from backup to the temporary directory with their correct relative paths
+        for (file_key, _) in &backup_version.files {
+            let src_file_path = backup_folder.join(file_key);
+            if !src_file_path.exists() {
+                continue;
+            }
+
+            // Reconstruct absolute path
+            let file_key_normalized = file_key.replace('\\', "/");
+            let parts: Vec<&str> = file_key_normalized.split('/').collect();
+            if parts.is_empty() {
+                continue;
+            }
+            let drive_key = parts[0];
+            let relative_to_drive = parts[1..].join("/");
+
+            let drive_letter = mapping.drives.get(drive_key)
+                .map(|s| s.as_str())
+                .unwrap_or("");
+
+            let original_abs_path_str = if drive_letter.is_empty() {
+                format!("/{}", relative_to_drive)
+            } else {
+                format!("{}/{}", drive_letter, relative_to_drive)
+            };
+
+            let original_abs_path = Path::new(&original_abs_path_str);
+
+            // Compute relative path from live_save_dir
+            let orig_str = original_abs_path_str.replace('\\', "/");
+            let live_str = live_save_dir.to_string_lossy().to_string().replace('\\', "/");
+
+            let relative_path_str = if orig_str.starts_with(&live_str) {
+                let mut rel = &orig_str[live_str.len()..];
+                if rel.starts_with('/') {
+                    rel = &rel[1..];
+                }
+                rel.to_string()
+            } else if cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase()) {
+                let mut rel = &orig_str[live_str.len()..];
+                if rel.starts_with('/') {
+                    rel = &rel[1..];
+                }
+                rel.to_string()
+            } else {
+                original_abs_path.file_name()
+                    .map(|f| f.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "save_file".to_string())
+            };
+
+            let dest_file_path = export_temp_dir.join(&relative_path_str);
+            if let Some(parent) = dest_file_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+
+            std::fs::copy(&src_file_path, &dest_file_path)
+                .map_err(|e| format!("Falha ao copiar arquivo de backup para pasta temporária: {}", e))?;
+        }
+
+        // Pack the temporary folder directly to dest_path
+        let metadata_res = export_ludocard_save_internal(
+            &app,
+            &game_title,
+            &game_id,
+            &checkpoint_title,
+            &description,
+            &export_temp_dir.to_string_lossy().to_string(),
+            &dest_path,
+        );
+
+        // Always clean up the temporary files directory
+        let _ = std::fs::remove_dir_all(&export_temp_dir);
+
+        metadata_res.map_err(|e| format!("Falha ao empacotar save do backup: {}", e))
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 

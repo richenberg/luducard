@@ -20,6 +20,7 @@ export interface Game {
   cover: string
   platform: Platform
   savePath: string
+  backupPath?: string
   sizeMB: number
   backupsSizeMB: number
   lastBackup: string

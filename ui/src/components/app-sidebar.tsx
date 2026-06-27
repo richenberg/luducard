@@ -27,7 +27,7 @@ const navItems = [
   { title: "Biblioteca", href: "/", icon: LibraryBig },
   { title: "Escanear & Adicionar", href: "/scan", icon: ScanLine },
   { title: "Nuvem & Sincronização", href: "/cloud", icon: CloudCog },
-  { title: "Comunidade", href: "/community", icon: Users },
+  { title: "Save Share HUB", href: "/community", icon: Users },
   { title: "Configurações", href: "/settings", icon: Settings },
 ]
 

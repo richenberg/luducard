@@ -144,6 +144,8 @@ fn main() {
             commands::open_ludocard_dialog,
             commands::upload_file_to_url,
             commands::export_temp_ludocard_save,
+            commands::export_temp_ludocard_backup,
+            commands::export_ludocard_backup,
             commands::delete_temp_file,
         ])
         .run(tauri::generate_context!())
