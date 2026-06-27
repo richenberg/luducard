@@ -4,6 +4,7 @@ import GameDetail from "@/pages/GameDetail";
 import Scan from "@/pages/Scan";
 import Cloud from "@/pages/Cloud";
 import Settings from "@/pages/Settings";
+import Community from "@/pages/Community";
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
       <Route path="/game/:id" element={<GameDetail />} />
       <Route path="/scan" element={<Scan />} />
       <Route path="/cloud" element={<Cloud />} />
+      <Route path="/community" element={<Community />} />
       <Route path="/settings" element={<Settings />} />
     </Routes>
   );

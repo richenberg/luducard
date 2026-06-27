@@ -22,7 +22,11 @@ pub const MANIFEST_URL: &str =
     "https://raw.githubusercontent.com/mtkennerly/ludusavi-manifest/master/data/manifest.yaml";
 
 fn default_backup_dir() -> StrictPath {
-    StrictPath::new(format!("{}/ludusavi-backup", CommonPath::Home.get().unwrap())).rendered()
+    if crate::prelude::is_portable() {
+        crate::prelude::app_dir().joined("ludocard-backups")
+    } else {
+        StrictPath::new(format!("{}/ludusavi-backup", CommonPath::Home.get().unwrap())).rendered()
+    }
 }
 
 #[derive(Debug, Clone)]

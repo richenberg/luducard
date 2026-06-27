@@ -194,6 +194,7 @@ pub struct ApiBackup {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
     pub locked: bool,
+    pub size_bytes: u64,
 }
 
 /// General output used by commands in `--api` mode
@@ -589,6 +590,7 @@ impl Reporter {
                         os: backup.os(),
                         comment: backup.comment().cloned(),
                         locked: backup.locked(),
+                        size_bytes: backup.size_bytes(),
                     });
                 }
 

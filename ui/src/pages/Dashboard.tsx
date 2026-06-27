@@ -16,7 +16,7 @@ export default function Dashboard() {
   const selectedCount = Object.values(selected).filter(Boolean).length
 
   const handleBackupSelected = async () => {
-    const gamesToBackup = games.filter(g => selected[g.id]);
+    const gamesToBackup = selectedCount > 0 ? games.filter(g => selected[g.id]) : games;
     if (gamesToBackup.length === 0) return;
 
     setBackingUp(true);
@@ -27,11 +27,21 @@ export default function Dashboard() {
         for (const game of gamesToBackup) {
           await invoke("backup_game", { gameTitle: game.title });
         }
-        toast.success(`Backup concluído para os jogos selecionados!`, { id: toastId });
+        toast.success(
+          selectedCount > 0
+            ? `Backup concluído para os jogos selecionados!`
+            : `Backup concluído para todos os jogos!`,
+          { id: toastId }
+        );
         loadGames(true);
       } else {
         await new Promise(resolve => setTimeout(resolve, 1500));
-        toast.success(`[Mock] Backup concluído para os jogos selecionados!`, { id: toastId });
+        toast.success(
+          selectedCount > 0
+            ? `[Mock] Backup concluído para os jogos selecionados!`
+            : `[Mock] Backup concluído para todos os jogos!`,
+          { id: toastId }
+        );
       }
       setSelected({}); // Clear selection after backup
     } catch (err) {
@@ -47,7 +57,7 @@ export default function Dashboard() {
       description="Gerencie e proteja os saves dos seus jogos"
       actions={
         <Button
-          disabled={selectedCount === 0 || backingUp}
+          disabled={backingUp || games.length === 0}
           onClick={handleBackupSelected}
           variant={selectedCount > 0 ? "default" : "outline"}
         >
@@ -56,7 +66,9 @@ export default function Dashboard() {
           ) : (
             <ArrowUpToLine data-icon="inline-start" />
           )}
-          Fazer backup {selectedCount > 0 ? `(${selectedCount})` : ""}
+          {selectedCount > 0
+            ? `Fazer backup (${selectedCount}/${games.length})`
+            : `Fazer backup de todos (${games.length}/${games.length})`}
         </Button>
       }
     >

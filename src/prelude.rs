@@ -34,7 +34,7 @@ pub const SKIP: &str = "<skip>";
 pub const APP_DIR_NAME: &str = "ludusavi";
 #[allow(unused)]
 pub const LINUX_APP_ID: &str = "com.mtkennerly.ludusavi";
-const PORTABLE_FLAG_FILE_NAME: &str = "ludusavi.portable";
+const PORTABLE_FLAG_FILE_NAME: &str = "ludocard.portable";
 pub const INVALID_FILE_CHARS: &[char] = &['\\', '/', ':', '*', '?', '"', '<', '>', '|', '\0'];
 
 pub static STEAM_DECK: LazyLock<bool> =
@@ -161,15 +161,23 @@ impl CommandError {
     }
 }
 
+pub fn is_portable() -> bool {
+    if let Ok(mut flag) = std::env::current_exe() {
+        flag.pop();
+        flag.push(PORTABLE_FLAG_FILE_NAME);
+        flag.exists()
+    } else {
+        false
+    }
+}
+
 pub fn app_dir() -> StrictPath {
     if let Some(dir) = CONFIG_DIR.lock().unwrap().as_ref() {
         return StrictPath::from(dir.clone());
     }
 
-    if let Ok(mut flag) = std::env::current_exe() {
-        flag.pop();
-        flag.push(PORTABLE_FLAG_FILE_NAME);
-        if flag.exists() {
+    if is_portable() {
+        if let Ok(mut flag) = std::env::current_exe() {
             flag.pop();
             return StrictPath::from(flag);
         }

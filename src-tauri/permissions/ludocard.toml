@@ -13,5 +13,18 @@ commands.allow = [
   "add_root",
   "remove_root",
   "select_folder",
-  "open_game_folder"
+  "open_game_folder",
+  "toggle_backup_locked",
+  "toggle_portable_mode",
+  "get_client_uuid",
+  "select_save_file",
+  "export_ludocard_save",
+  "read_ludocard_metadata",
+  "import_ludocard_save",
+  "save_ludocard_dialog",
+  "open_ludocard_dialog",
+  "download_and_import_ludocard",
+  "upload_file_to_url",
+  "export_temp_ludocard_save",
+  "delete_temp_file"
 ]

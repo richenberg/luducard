@@ -11,6 +11,7 @@ export interface BackupVersion {
   kind: BackupKind
   sizeMB: number
   cloud: boolean
+  locked?: boolean
 }
 
 export interface Game {
@@ -20,12 +21,14 @@ export interface Game {
   platform: Platform
   savePath: string
   sizeMB: number
+  backupsSizeMB: number
   lastBackup: string
   status: BackupStatus
   autoBackup: boolean
   cloudSync: boolean
   backups: BackupVersion[]
   installed: boolean
+  lastPlayed?: string // ISO 8601 date string
 }
 
 export const platformColors: Record<Platform, string> = {
@@ -44,18 +47,20 @@ export const games: Game[] = [
     platform: "Steam",
     savePath: "C:/Users/Player/AppData/Roaming/AetherFrontier/Saves",
     sizeMB: 12.4,
+    backupsSizeMB: 58.8,
     lastBackup: "Hoje, 14:00",
     status: "ok",
     autoBackup: true,
     cloudSync: true,
     backups: [
       { id: "b1", date: "Hoje", time: "14:00", kind: "Automático", sizeMB: 12.4, cloud: true },
-      { id: "b2", date: "Hoje", time: "09:12", kind: "Manual", sizeMB: 12.1, cloud: true },
+      { id: "b2", date: "Hoje", time: "09:12", kind: "Manual", sizeMB: 12.1, cloud: true, locked: true },
       { id: "b3", date: "Ontem", time: "23:45", kind: "Antes de fechar", sizeMB: 11.8, cloud: true },
       { id: "b4", date: "Ontem", time: "18:30", kind: "Automático", sizeMB: 11.6, cloud: false },
       { id: "b5", date: "12 jun 2026", time: "21:05", kind: "Automático", sizeMB: 10.9, cloud: true },
     ],
     installed: true,
+    lastPlayed: "2026-06-26T14:00:00-03:00",
   },
   {
     id: "ironclad-legion",
@@ -64,6 +69,7 @@ export const games: Game[] = [
     platform: "Epic",
     savePath: "C:/Users/Player/Saved Games/IroncladLegion",
     sizeMB: 34.7,
+    backupsSizeMB: 102.4,
     lastBackup: "Ontem, 22:10",
     status: "pending",
     autoBackup: true,
@@ -74,6 +80,7 @@ export const games: Game[] = [
       { id: "b3", date: "10 jun 2026", time: "20:30", kind: "Manual", sizeMB: 33.5, cloud: false },
     ],
     installed: true,
+    lastPlayed: "2026-06-25T22:10:00-03:00",
   },
   {
     id: "neon-drift",
@@ -82,6 +89,7 @@ export const games: Game[] = [
     platform: "Steam",
     savePath: "C:/Program Files (x86)/Steam/userdata/884512/NeonDrift",
     sizeMB: 5.1,
+    backupsSizeMB: 10.0,
     lastBackup: "Hoje, 11:32",
     status: "ok",
     autoBackup: false,
@@ -91,6 +99,7 @@ export const games: Game[] = [
       { id: "b2", date: "08 jun 2026", time: "19:15", kind: "Manual", sizeMB: 4.9, cloud: true },
     ],
     installed: true,
+    lastPlayed: "2026-06-26T11:32:00-03:00",
   },
   {
     id: "hollow-pines",
@@ -99,6 +108,7 @@ export const games: Game[] = [
     platform: "GOG",
     savePath: "C:/Users/Player/Documents/HollowPines/saves",
     sizeMB: 2.3,
+    backupsSizeMB: 4.5,
     lastBackup: "3 dias atrás",
     status: "pending",
     autoBackup: true,
@@ -108,6 +118,7 @@ export const games: Game[] = [
       { id: "b2", date: "20 jun 2026", time: "10:00", kind: "Automático", sizeMB: 2.2, cloud: true },
     ],
     installed: false,
+    lastPlayed: "2026-06-22T13:20:00-03:00",
   },
   {
     id: "starforge",
@@ -116,6 +127,7 @@ export const games: Game[] = [
     platform: "Steam",
     savePath: "C:/Program Files (x86)/Steam/userdata/884512/Starforge",
     sizeMB: 48.9,
+    backupsSizeMB: 142.5,
     lastBackup: "Hoje, 08:00",
     status: "ok",
     autoBackup: true,
@@ -126,6 +138,7 @@ export const games: Game[] = [
       { id: "b3", date: "23 jun 2026", time: "08:00", kind: "Automático", sizeMB: 46.1, cloud: true },
     ],
     installed: true,
+    lastPlayed: "2026-06-26T08:00:00-03:00",
   },
   {
     id: "shadowveil",
@@ -134,6 +147,7 @@ export const games: Game[] = [
     platform: "Origin",
     savePath: "C:/Users/Player/AppData/Local/Shadowveil/SaveGames",
     sizeMB: 18.2,
+    backupsSizeMB: 0.0,
     lastBackup: "Nunca",
     status: "never",
     autoBackup: false,
@@ -148,6 +162,7 @@ export const games: Game[] = [
     platform: "Emulador",
     savePath: "E:/Emuladores/RetroArch/saves/PixelKnights.srm",
     sizeMB: 0.8,
+    backupsSizeMB: 2.3,
     lastBackup: "Ontem, 19:30",
     status: "ok",
     autoBackup: true,
@@ -158,6 +173,7 @@ export const games: Game[] = [
       { id: "b3", date: "21 jun 2026", time: "22:00", kind: "Automático", sizeMB: 0.7, cloud: false },
     ],
     installed: true,
+    lastPlayed: "2026-06-25T19:30:00-03:00",
   },
 ]
 

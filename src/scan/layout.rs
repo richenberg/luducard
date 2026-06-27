@@ -156,6 +156,18 @@ impl Backup {
         self.kind() == BackupKind::Full
     }
 
+    pub fn size_bytes(&self) -> u64 {
+        match self {
+            Self::Full(x) => x.files.values().map(|f| f.size).sum(),
+            Self::Differential(x) => x
+                .files
+                .values()
+                .filter_map(|f| f.as_ref())
+                .map(|f| f.size)
+                .sum(),
+        }
+    }
+
     /// File path must be in rendered form.
     pub fn includes_file(&self, file: String) -> bool {
         match self {

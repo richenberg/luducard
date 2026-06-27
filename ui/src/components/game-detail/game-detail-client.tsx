@@ -14,6 +14,9 @@ import {
   Folder,
   FolderSync,
   Package,
+  Pin,
+  Share2,
+  FileArchive,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -124,6 +127,36 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     }
   };
 
+  const handleToggleLocked = async (versionId: string, currentLocked: boolean) => {
+    if (isTauri) {
+      const nextLocked = !currentLocked;
+      const id = toast.loading(
+        nextLocked
+          ? `Bloqueando versão "${versionId}"...`
+          : `Desbloqueando versão "${versionId}"...`
+      );
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("toggle_backup_locked", {
+          gameTitle: game.title,
+          backupId: versionId,
+          locked: nextLocked,
+        });
+        toast.success(
+          nextLocked
+            ? "Versão bloqueada com sucesso! Ela não será deletada automaticamente."
+            : "Versão desbloqueada com sucesso.",
+          { id }
+        );
+        if (onRefresh) onRefresh();
+      } catch (err) {
+        toast.error(`Falha ao alterar status da versão: ${err}`, { id });
+      }
+    } else {
+      toast.info(`[Mock] Alterado bloqueio da versão "${versionId}" para ${!currentLocked}`);
+    }
+  };
+
   const handleOpenFolder = async (folderType: "game" | "save" | "backup") => {
     if (!isTauri) {
       toast.info(`[Mock] Abrindo pasta de ${folderType === "game" ? "instalação" : folderType === "save" ? "saves" : "backups"} para ${game.title}`);
@@ -139,6 +172,49 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     } catch (err) {
       console.error(err);
       toast.error(`Erro ao abrir pasta: ${err}`);
+    }
+  };
+
+  const handleExportSave = async () => {
+    if (!isTauri) {
+      toast.info(`[Mock] Exportando save de "${game.title}" como .ludocard`);
+      return;
+    }
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      // Step 1: Let user pick the specific save file
+      const selectedFile = await invoke<string | null>("select_save_file", {
+        startDir: game.savePath || null,
+      });
+      if (!selectedFile) return; // User cancelled
+
+      // Step 2: Choose where to save the .ludocard file
+      const slugName = game.id.replace(/[^a-z0-9-]/gi, "-");
+      const destPath = await invoke<string | null>("save_ludocard_dialog", {
+        defaultName: `${slugName}.ludocard`,
+      });
+      if (!destPath) return; // User cancelled
+
+      // Step 3: Export
+      const toastId = toast.loading(`Compactando save de "${game.title}"...`);
+      const metadata = await invoke<any>("export_ludocard_save", {
+        gameTitle: game.title,
+        gameId: game.id,
+        checkpointTitle: `Save de ${game.title}`,
+        description: "",
+        sourcePath: selectedFile,
+        destPath: destPath,
+      });
+
+      const compressedMB = (metadata.compressedSizeBytes / (1024 * 1024)).toFixed(1);
+      const originalMB = (metadata.totalSizeBytes / (1024 * 1024)).toFixed(1);
+      toast.success(
+        `Exportado com sucesso! ${originalMB} MB → ${compressedMB} MB compactado`,
+        { id: toastId }
+      );
+    } catch (err) {
+      toast.error(`Falha ao exportar: ${err}`);
     }
   };
 
@@ -220,6 +296,16 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 <Package className="size-3.5" data-icon="inline-start" />
                 Pasta de Backups
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportSave}
+                title="Exportar save como arquivo .ludocard compactado para compartilhar"
+                className="border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <Share2 className="size-3.5" data-icon="inline-start" />
+                Exportar Save (.ludocard)
+              </Button>
             </div>
           </div>
         </div>
@@ -248,9 +334,16 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <span className="flex items-center gap-2 text-sm">
                   <HardDrive className="size-4 text-muted-foreground" />
-                  Tamanho do save
+                  Saves no PC
                 </span>
                 <span className="text-xs font-medium">{formatSize(game.sizeMB)}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+                <span className="flex items-center gap-2 text-sm">
+                  <Package className="size-4 text-muted-foreground" />
+                  Total em backups
+                </span>
+                <span className="text-xs font-medium">{formatSize(game.backupsSizeMB || 0)}</span>
               </div>
             </CardContent>
           </Card>
@@ -314,7 +407,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       )}
                     />
                     <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex min-w-0 flex-col gap-0.5">
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">
                             {b.date} às {b.time}
@@ -323,6 +416,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                             <Cloud className="size-3.5 text-primary" />
                           ) : (
                             <CloudOff className="size-3.5 text-muted-foreground" />
+                          )}
+                          {b.locked && (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500 border border-amber-500/20">
+                              <Pin className="size-2.5 fill-current" />
+                              Alfinetado
+                            </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -341,6 +440,18 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         >
                           <RotateCcw data-icon="inline-start" />
                           Restaurar
+                        </Button>
+                        <Button
+                          size="icon-sm"
+                          variant={b.locked ? "secondary" : "ghost"}
+                          onClick={() => handleToggleLocked(b.id, !!b.locked)}
+                          title={b.locked ? "Desafixar versão (permitir exclusão automática)" : "Fixar/Alfinetar versão (impedir exclusão automática)"}
+                          className={cn(
+                            b.locked ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <Pin className={cn("size-4", b.locked && "fill-current")} />
+                          <span className="sr-only">{b.locked ? "Desafixar" : "Fixar"}</span>
                         </Button>
                         <Button
                           size="icon-sm"

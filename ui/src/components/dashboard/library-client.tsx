@@ -7,6 +7,7 @@ import {
   List,
   ArrowUpToLine,
   ArrowDownToLine,
+  ArrowUpDown,
   Cloud,
   CloudOff,
   AlertTriangle,
@@ -217,6 +218,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
   const [platform, setPlatform] = useState<Platform | "all">("all")
   const [onlyPending, setOnlyPending] = useState(false)
   const [onlyInstalled, setOnlyInstalled] = useState(false)
+  const [sortBy, setSortBy] = useState<"name" | "recent" | "size">("name")
 
   const handleBackup = async (title: string) => {
     if (isTauri) {
@@ -251,14 +253,34 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
   };
 
   const filtered = useMemo(() => {
-    return games.filter((g) => {
+    const result = games.filter((g) => {
       if (query && !g.title.toLowerCase().includes(query.toLowerCase())) return false
       if (platform !== "all" && g.platform !== platform) return false
       if (onlyPending && g.status === "ok") return false
       if (onlyInstalled && !g.installed) return false
       return true
     })
-  }, [games, query, platform, onlyPending, onlyInstalled])
+
+    // Apply sorting
+    switch (sortBy) {
+      case "recent":
+        result.sort((a, b) => {
+          const dateA = a.lastPlayed ? new Date(a.lastPlayed).getTime() : 0
+          const dateB = b.lastPlayed ? new Date(b.lastPlayed).getTime() : 0
+          return dateB - dateA // Most recent first
+        })
+        break
+      case "size":
+        result.sort((a, b) => b.sizeMB - a.sizeMB) // Largest first
+        break
+      case "name":
+      default:
+        result.sort((a, b) => a.title.localeCompare(b.title))
+        break
+    }
+
+    return result
+  }, [games, query, platform, onlyPending, onlyInstalled, sortBy])
 
   const allFilteredSelected = filtered.length > 0 && filtered.every(g => !!selected[g.id]);
 
@@ -370,6 +392,20 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
                 <SelectItem value="GOG">GOG</SelectItem>
                 <SelectItem value="Origin">Origin</SelectItem>
                 <SelectItem value="Emulador">Emulador</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "name" | "recent" | "size")}>
+            <SelectTrigger className="w-[190px]">
+              <ArrowUpDown className="size-4 mr-1.5 shrink-0 text-muted-foreground" />
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="name">Nome (A-Z)</SelectItem>
+                <SelectItem value="recent">Jogados recentemente</SelectItem>
+                <SelectItem value="size">Tamanho do save</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>

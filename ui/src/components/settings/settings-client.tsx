@@ -12,6 +12,8 @@ import {
   Cloud,
   FileCode,
   Eye,
+  Database,
+  Key,
 } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -75,6 +77,11 @@ export function SettingsClient() {
   const [cloudSync, setCloudSync] = useState(false)
   const [rcloneArguments, setRcloneArguments] = useState("")
   const [fileWatcher, setFileWatcher] = useState(false)
+  const [systemTray, setSystemTray] = useState(true)
+  const [startWithWindows, setStartWithWindows] = useState(false)
+  const [portable, setPortable] = useState(false)
+  const [supabaseUrl, setSupabaseUrl] = useState("")
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState("")
 
   const loadSettings = async () => {
     if (!isTauri) return;
@@ -87,6 +94,11 @@ export function SettingsClient() {
         cloudSync: boolean;
         rcloneArguments: string;
         fileWatcher: boolean;
+        systemTray: boolean;
+        startWithWindows: boolean;
+        portable: boolean;
+        supabaseUrl: string;
+        supabaseAnonKey: string;
       }>("get_settings");
       setBackupPath(s.backupPath);
       setRclonePath(s.rclonePath);
@@ -94,6 +106,11 @@ export function SettingsClient() {
       setCloudSync(s.cloudSync);
       setRcloneArguments(s.rcloneArguments);
       setFileWatcher(s.fileWatcher);
+      setSystemTray(s.systemTray);
+      setStartWithWindows(s.startWithWindows);
+      setPortable(s.portable);
+      setSupabaseUrl(s.supabaseUrl || "");
+      setSupabaseAnonKey(s.supabaseAnonKey || "");
     } catch (err) {
       console.error("Failed to load settings from Tauri:", err);
     }
@@ -103,9 +120,19 @@ export function SettingsClient() {
     loadSettings();
   }, []);
 
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (override?: { fileWatcher?: boolean; systemTray?: boolean; startWithWindows?: boolean }) => {
+    const nextFileWatcher = override && override.fileWatcher !== undefined ? override.fileWatcher : fileWatcher;
+    const nextSystemTray = override && override.systemTray !== undefined ? override.systemTray : systemTray;
+    const nextStartWithWindows = override && override.startWithWindows !== undefined ? override.startWithWindows : startWithWindows;
+
+    if (override) {
+      if (override.fileWatcher !== undefined) setFileWatcher(override.fileWatcher);
+      if (override.systemTray !== undefined) setSystemTray(override.systemTray);
+      if (override.startWithWindows !== undefined) setStartWithWindows(override.startWithWindows);
+    }
+
     if (isTauri) {
-      const id = toast.loading("Salvando configurações...");
+      const id = override ? undefined : toast.loading("Salvando configurações...");
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("save_settings", {
@@ -115,16 +142,70 @@ export function SettingsClient() {
             cloudPath,
             cloudSync,
             rcloneArguments,
-            fileWatcher,
+            fileWatcher: nextFileWatcher,
+            systemTray: nextSystemTray,
+            startWithWindows: nextStartWithWindows,
+            portable,
+            supabaseUrl,
+            supabaseAnonKey,
           }
         });
-        toast.success("Configurações salvas no backend!", { id });
-        loadSettings();
+        if (id) {
+          toast.success("Configurações salvas no backend!", { id });
+        }
+        // Reload settings to ensure React states are perfectly in sync
+        const s = await invoke<{
+          backupPath: string;
+          rclonePath: string;
+          cloudPath: string;
+          cloudSync: boolean;
+          rcloneArguments: string;
+          fileWatcher: boolean;
+          systemTray: boolean;
+          startWithWindows: boolean;
+          portable: boolean;
+          supabaseUrl: string;
+          supabaseAnonKey: string;
+        }>("get_settings");
+        setBackupPath(s.backupPath);
+        setRclonePath(s.rclonePath);
+        setCloudPath(s.cloudPath);
+        setCloudSync(s.cloudSync);
+        setRcloneArguments(s.rcloneArguments);
+        setFileWatcher(s.fileWatcher);
+        setSystemTray(s.systemTray);
+        setStartWithWindows(s.startWithWindows);
+        setPortable(s.portable);
+        setSupabaseUrl(s.supabaseUrl || "");
+        setSupabaseAnonKey(s.supabaseAnonKey || "");
       } catch (err) {
-        toast.error(`Erro ao salvar: ${err}`, { id });
+        if (id) {
+          toast.error(`Erro ao salvar: ${err}`, { id });
+        } else {
+          toast.error(`Erro ao salvar configuração: ${err}`);
+        }
       }
     } else {
-      toast.success("[Mock] Configurações salvas com sucesso!");
+      if (!override) {
+        toast.success("[Mock] Configurações salvas com sucesso!");
+      }
+    }
+  }
+
+  const handleTogglePortable = async (checked: boolean) => {
+    if (!isTauri) {
+      setPortable(checked);
+      toast.success(`[Mock] Modo Portátil ${checked ? "ativado" : "desativado"}!`);
+      return;
+    }
+    const id = toast.loading(checked ? "Ativando Modo Portátil e migrando dados..." : "Desativando Modo Portátil e migrando dados...");
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("toggle_portable_mode", { enable: checked });
+      toast.success(checked ? "Modo Portátil ativado! Configurações salvas na pasta do executável." : "Modo Portátil desativado!", { id });
+      await loadSettings();
+    } catch (err) {
+      toast.error(`Erro ao alterar Modo Portátil: ${err}`, { id });
     }
   }
 
@@ -157,14 +238,57 @@ export function SettingsClient() {
               icon={Eye}
               title="Monitor de Saves (File Watcher)"
               description="Monitora alterações nos saves e faz backup automático quando o jogo fechar."
-              control={<Switch checked={fileWatcher} onCheckedChange={(c) => { setFileWatcher(c); toast.message(c ? "File Watcher ativado" : "File Watcher desativado") }} />}
+              control={
+                <Switch
+                  checked={fileWatcher}
+                  onCheckedChange={(c) => {
+                    handleSaveSettings({ fileWatcher: c });
+                    toast.message(c ? "File Watcher ativado" : "File Watcher desativado");
+                  }}
+                />
+              }
             />
             <Separator />
             <SettingRow
               icon={Power}
               title="Iniciar com o Windows"
               description="Abre minimizado na bandeja do sistema ao ligar o PC."
-              control={<Switch defaultChecked onCheckedChange={(c) => toast.message(c ? "Inicialização automática ligada" : "Desligada")} />}
+              control={
+                <Switch
+                  checked={startWithWindows}
+                  onCheckedChange={(c) => {
+                    handleSaveSettings({ startWithWindows: c });
+                    toast.message(c ? "Inicialização automática ligada" : "Inicialização automática desligada");
+                  }}
+                />
+              }
+            />
+            <Separator />
+            <SettingRow
+              icon={Settings2}
+              title="Executar na Bandeja (System Tray)"
+              description="Minimiza o aplicativo perto do relógio ao invés de fechar, mantendo o monitoramento em segundo plano."
+              control={
+                <Switch
+                  checked={systemTray}
+                  onCheckedChange={(c) => {
+                    handleSaveSettings({ systemTray: c });
+                    toast.message(c ? "Execução na bandeja ativada" : "Execução na bandeja desativada");
+                  }}
+                />
+              }
+            />
+            <Separator />
+            <SettingRow
+              icon={HardDrive}
+              title="Modo Portátil (Portable Mode)"
+              description="Salva todas as configurações, manifestos e backups na pasta do executável (ideal para pendrives)."
+              control={
+                <Switch
+                  checked={portable}
+                  onCheckedChange={handleTogglePortable}
+                />
+              }
             />
             <Separator />
             <SettingRow
@@ -269,8 +393,39 @@ export function SettingsClient() {
             </div>
 
             <Separator />
+            <div className="flex flex-col gap-2.5 py-3">
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Database className="size-4 text-primary" />
+                URL do Supabase (Repositório Comunitário)
+              </span>
+              <span className="text-xs text-muted-foreground">URL da API do seu projeto Supabase para a aba de comunidade.</span>
+              <Input
+                value={supabaseUrl}
+                onChange={(e) => setSupabaseUrl(e.target.value)}
+                placeholder="Ex: https://xyz.supabase.co"
+                className="max-w-md font-mono text-xs"
+              />
+            </div>
+
+            <Separator />
+            <div className="flex flex-col gap-2.5 py-3">
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Key className="size-4 text-primary" />
+                Anon Key do Supabase
+              </span>
+              <span className="text-xs text-muted-foreground">Chave pública (anon) usada para autenticação anônima nas tabelas.</span>
+              <Input
+                type="password"
+                value={supabaseAnonKey}
+                onChange={(e) => setSupabaseAnonKey(e.target.value)}
+                placeholder="Anon API Key pública"
+                className="max-w-md font-mono text-xs"
+              />
+            </div>
+
+            <Separator />
             <div className="flex justify-end pt-4">
-              <Button onClick={handleSaveSettings}>Salvar Configurações</Button>
+              <Button onClick={() => handleSaveSettings()}>Salvar Configurações</Button>
             </div>
           </CardContent>
         </Card>
@@ -417,4 +572,19 @@ export function SettingsClient() {
             <SettingRow
               icon={Bell}
               title="Alertas de falha"
-              description="Notifica imed
+              description="Notifica imediatamente quando um backup falha."
+              control={<Switch defaultChecked onCheckedChange={(c) => toast.message(c ? "Alertas de falha ligados" : "Desligados")} />}
+            />
+            <Separator />
+            <SettingRow
+              icon={Bell}
+              title="Sons de alerta"
+              description="Toca um som ao concluir ou falhar um backup."
+              control={<Switch onCheckedChange={(c) => toast.message(c ? "Sons ligados" : "Sons desligados")} />}
+            />
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  )
+}
