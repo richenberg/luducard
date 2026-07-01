@@ -16,12 +16,11 @@ fn main() {
             let args: Vec<String> = std::env::args().collect();
             let start_minimized = args.contains(&"--minimized".to_string()) || args.contains(&"-m".to_string());
 
-            if !start_minimized {
-                if let Some(window) = app.get_webview_window("main") {
+            if !start_minimized
+                && let Some(window) = app.get_webview_window("main") {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
-            }
 
             // 1. Create Tray Menu Items
             let quit_i = tauri::menu::MenuItemBuilder::with_id("quit", "Sair do Ludocard").build(app)?;
@@ -93,11 +92,10 @@ fn main() {
 
                         let mut json: serde_json::Value = if let Ok(content) = std::fs::read_to_string(&config_path) {
                             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-                                if let Some(notified) = val.get("first_minimize_notified").and_then(|v| v.as_bool()) {
-                                    if notified {
+                                if let Some(notified) = val.get("first_minimize_notified").and_then(|v| v.as_bool())
+                                    && notified {
                                         first_time = false;
                                     }
-                                }
                                 val
                             } else {
                                 serde_json::json!({})

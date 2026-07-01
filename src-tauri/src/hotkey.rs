@@ -24,8 +24,8 @@ static HOTKEY_THREAD_ID: LazyLock<Mutex<Option<u32>>> = LazyLock::new(|| Mutex::
 /// Loads quick-save settings from ludocard.json.
 pub fn load_quick_save_settings(app_data_dir: &Path) -> (bool, String) {
     let config_path = app_data_dir.join("ludocard.json");
-    if let Ok(content) = std::fs::read_to_string(&config_path) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+    if let Ok(content) = std::fs::read_to_string(&config_path)
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
             let enabled = json.get("quick_save_enabled").and_then(|v| v.as_bool()).unwrap_or(true);
             let shortcut = json
                 .get("quick_save_shortcut")
@@ -34,7 +34,6 @@ pub fn load_quick_save_settings(app_data_dir: &Path) -> (bool, String) {
                 .to_string();
             return (enabled, shortcut);
         }
-    }
     (true, "Ctrl+Shift+S".to_string())
 }
 
@@ -74,11 +73,10 @@ pub fn parse_shortcut(shortcut: &str) -> Option<(u32, u32)> {
                         vk = c as u32;
                     }
                 } else if other.starts_with('f') && other.len() > 1 {
-                    if let Ok(num) = other[1..].parse::<u32>() {
-                        if num >= 1 && num <= 12 {
+                    if let Ok(num) = other[1..].parse::<u32>()
+                        && (1..=12).contains(&num) {
                             vk = 0x70 + (num - 1); // VK_F1 is 0x70
                         }
-                    }
                 } else {
                     match other {
                         "space" => vk = 0x20,
@@ -125,7 +123,7 @@ fn get_foreground_process_path() -> Option<PathBuf> {
 
     unsafe {
         let hwnd = GetForegroundWindow();
-        if hwnd.0 == std::ptr::null_mut() {
+        if hwnd.0.is_null() {
             return None;
         }
         let mut pid: u32 = 0;
@@ -252,8 +250,8 @@ fn matches_game(game_title: &str, install_dir: Option<&str>, exe_path: &Path) ->
         .unwrap_or_default();
 
     // 1. Install dir match
-    if let Some(dir) = install_dir {
-        if !dir.is_empty() {
+    if let Some(dir) = install_dir
+        && !dir.is_empty() {
             let dir_lower = dir.to_lowercase();
             let normalized_exe = exe_str.replace('\\', "/");
             let normalized_dir = dir_lower.replace('\\', "/");
@@ -261,7 +259,6 @@ fn matches_game(game_title: &str, install_dir: Option<&str>, exe_path: &Path) ->
                 return true;
             }
         }
-    }
 
     // 2. Fuzzy/slug matches
     let game_lower = game_title.to_lowercase();
@@ -403,11 +400,10 @@ pub fn init_hotkey(app: &tauri::AppHandle) {
 
     if let Ok(dir) = app.path().app_data_dir() {
         let (enabled, shortcut) = load_quick_save_settings(&dir);
-        if enabled {
-            if let Some((modifiers, vk)) = parse_shortcut(&shortcut) {
+        if enabled
+            && let Some((modifiers, vk)) = parse_shortcut(&shortcut) {
                 send_hotkey_command(HotkeyControl::Register { modifiers, vk });
             }
-        }
     }
 }
 

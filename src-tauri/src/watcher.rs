@@ -26,6 +26,12 @@ pub struct WatcherState {
     enabled: bool,
 }
 
+impl Default for WatcherState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WatcherState {
     pub fn new() -> Self {
         Self {
@@ -44,11 +50,10 @@ static WATCHER_STATE: std::sync::LazyLock<Mutex<WatcherState>> =
 /// Loads the file watcher enabled setting from ludocard.json in the app data directory.
 pub fn load_file_watcher_setting(app_data_dir: &Path) -> bool {
     let config_path = app_data_dir.join("ludocard.json");
-    if let Ok(content) = std::fs::read_to_string(&config_path) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+    if let Ok(content) = std::fs::read_to_string(&config_path)
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
             return json.get("file_watcher").and_then(|v| v.as_bool()).unwrap_or(false);
         }
-    }
     false
 }
 

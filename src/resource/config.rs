@@ -1437,11 +1437,7 @@ impl Config {
         let path = Self::path();
         let existed = path.exists();
         let mut config: Self = ResourceFile::load().map_err(|e| Error::ConfigInvalid { why: format!("{e}") })?;
-        if !existed {
-            config.has_set_language = false;
-        } else {
-            config.has_set_language = true;
-        }
+        config.has_set_language = existed;
         Ok(config)
     }
 

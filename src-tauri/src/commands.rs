@@ -146,11 +146,10 @@ fn save_scan_cache(app_dir: &Path, cache: &HashMap<String, CachedScanInfo>) {
 
 pub fn load_scan_cache(app_dir: &Path) -> HashMap<String, CachedScanInfo> {
     let path = app_dir.join("scan_cache.json");
-    if let Ok(content) = std::fs::read_to_string(path) {
-        if let Ok(cache) = serde_json::from_str(&content) {
+    if let Ok(content) = std::fs::read_to_string(path)
+        && let Ok(cache) = serde_json::from_str(&content) {
             return cache;
         }
-    }
     HashMap::new()
 }
 
@@ -191,8 +190,8 @@ fn get_game_cover(app_data_dir: Option<&Path>, slug: &str) -> String {
     if let Some(dir) = app_data_dir {
         for ext in &["jpg", "png"] {
             let file_path = dir.join("covers").join(format!("{}.{}", slug, ext));
-            if file_path.exists() {
-                if let Ok(bytes) = std::fs::read(&file_path) {
+            if file_path.exists()
+                && let Ok(bytes) = std::fs::read(&file_path) {
                     let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
                     let mime = if *ext == "png" { "image/png" } else { "image/jpeg" };
                     let base64_uri = format!("data:{};base64,{}", mime, encoded);
@@ -201,7 +200,6 @@ fn get_game_cover(app_data_dir: Option<&Path>, slug: &str) -> String {
                     cache.insert(slug.to_string(), base64_uri.clone());
                     return base64_uri;
                 }
-            }
         }
     }
 
@@ -264,11 +262,10 @@ fn extract_title_id_from_path(path: &str) -> Option<String> {
         if clean.len() == 16 && clean.chars().all(|c| c.is_ascii_hexdigit()) {
             return Some(clean.to_lowercase());
         }
-        if clean.len() == 8 && clean.chars().all(|c| c.is_ascii_hexdigit()) {
-            if clean != "00050000" && clean != "0005000e" && clean != "0005000c" {
+        if clean.len() == 8 && clean.chars().all(|c| c.is_ascii_hexdigit())
+            && clean != "00050000" && clean != "0005000e" && clean != "0005000c" {
                 return Some(clean.to_lowercase());
             }
-        }
     }
     None
 }
@@ -293,9 +290,9 @@ fn resolve_wiiu_product_code(game_name: &str) -> Option<String> {
         .build()
         .ok()?;
     let url = "https://raw.githubusercontent.com/Laf111/CEMU-Batch-Framework/master/resources/WiiU-Titles-Library.csv";
-    if let Ok(resp) = client.get(url).send() {
-        if resp.status().is_success() {
-            if let Ok(content) = resp.text() {
+    if let Ok(resp) = client.get(url).send()
+        && resp.status().is_success()
+            && let Ok(content) = resp.text() {
                 let name_clean = clean_name_for_match(game_name);
                 for line in content.lines() {
                     let parts: Vec<&str> = if line.contains(';') {
@@ -316,7 +313,7 @@ fn resolve_wiiu_product_code(game_name: &str) -> Option<String> {
                                 "1".to_string()
                             };
 
-                            let game_code = product_code.split('-').last().unwrap_or(&product_code).to_uppercase();
+                            let game_code = product_code.split('-').next_back().unwrap_or(&product_code).to_uppercase();
                             let pub_code = if company_code == "1" || company_code.is_empty() || company_code == "-" {
                                 "01".to_string()
                             } else if company_code.len() >= 2 {
@@ -333,8 +330,6 @@ fn resolve_wiiu_product_code(game_name: &str) -> Option<String> {
                     }
                 }
             }
-        }
-    }
     None
 }
 
@@ -394,11 +389,10 @@ fn start_cover_downloads(
         for (i, (slug, title, steam_id, title_id)) in games_to_download.iter().enumerate() {
             let mut app_id = *steam_id;
             let clean_title = clean_emulator_prefix(title);
-            if app_id.is_none() {
-                if let Ok(search_res) = search_steam_app_id(&client, &clean_title) {
+            if app_id.is_none()
+                && let Ok(search_res) = search_steam_app_id(&client, &clean_title) {
                     app_id = Some(search_res);
                 }
-            }
 
             let mut downloaded = false;
             let mut base64_uri = String::new();
@@ -408,10 +402,10 @@ fn start_cover_downloads(
                     "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{}/library_600x900.jpg",
                     id
                 );
-                if let Ok(resp) = client.get(&url).send() {
-                    if resp.status().is_success() {
-                        if let Ok(bytes) = resp.bytes() {
-                            if bytes.len() > 1000 {
+                if let Ok(resp) = client.get(&url).send()
+                    && resp.status().is_success()
+                        && let Ok(bytes) = resp.bytes()
+                            && bytes.len() > 1000 {
                                 let file_path = covers_dir.join(format!("{}.jpg", slug));
                                 if std::fs::write(&file_path, &bytes).is_ok() {
                                     let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
@@ -422,9 +416,6 @@ fn start_cover_downloads(
                                     downloaded = true;
                                 }
                             }
-                        }
-                    }
-                }
             }
 
             if !downloaded {
@@ -451,14 +442,14 @@ fn start_cover_downloads(
 
                 if !emulator_name.is_empty() {
                     // Try Cemu (Wii U) GameTDB Cover logic
-                    if emulator_name == "Cemu" {
-                        if let Some(product_code) = resolve_wiiu_product_code(&clean_title) {
+                    if emulator_name == "Cemu"
+                        && let Some(product_code) = resolve_wiiu_product_code(&clean_title) {
                             for region in &["US", "EN", "JA"] {
                                 let url = format!("https://art.gametdb.com/wiiu/cover/{}/{}.jpg", region, product_code);
-                                if let Ok(resp) = client.get(&url).send() {
-                                    if resp.status().is_success() {
-                                        if let Ok(bytes) = resp.bytes() {
-                                            if bytes.len() > 1000 {
+                                if let Ok(resp) = client.get(&url).send()
+                                    && resp.status().is_success()
+                                        && let Ok(bytes) = resp.bytes()
+                                            && bytes.len() > 1000 {
                                                 let file_path = covers_dir.join(format!("{}.jpg", slug));
                                                 if std::fs::write(&file_path, &bytes).is_ok() {
                                                     let encoded =
@@ -471,29 +462,25 @@ fn start_cover_downloads(
                                                     break;
                                                 }
                                             }
-                                        }
-                                    }
-                                }
                             }
                         }
-                    }
 
                     // Try Yuzu/Ryujinx (Switch) Tinfoil Cover scraping
-                    if (emulator_name == "Yuzu" || emulator_name == "Ryujinx") && !downloaded {
-                        if let Some(tid) = title_id {
+                    if (emulator_name == "Yuzu" || emulator_name == "Ryujinx") && !downloaded
+                        && let Some(tid) = title_id {
                             let url = format!("https://tinfoil.io/Title/{}", tid.to_lowercase());
-                            if let Ok(resp) = client.get(&url).send() {
-                                if resp.status().is_success() {
-                                    if let Ok(html) = resp.text() {
-                                        if let Some(pos) = html.find("og:image") {
-                                            if let Some(content_pos) = html[pos..].find("content=\"") {
-                                                if let Some(end_pos) = html[pos + content_pos + 9..].find('"') {
+                            if let Ok(resp) = client.get(&url).send()
+                                && resp.status().is_success()
+                                    && let Ok(html) = resp.text()
+                                        && let Some(pos) = html.find("og:image")
+                                            && let Some(content_pos) = html[pos..].find("content=\"")
+                                                && let Some(end_pos) = html[pos + content_pos + 9..].find('"') {
                                                     let img_url =
                                                         &html[pos + content_pos + 9..pos + content_pos + 9 + end_pos];
-                                                    if let Ok(img_resp) = client.get(img_url).send() {
-                                                        if img_resp.status().is_success() {
-                                                            if let Ok(bytes) = img_resp.bytes() {
-                                                                if bytes.len() > 1000 {
+                                                    if let Ok(img_resp) = client.get(img_url).send()
+                                                        && img_resp.status().is_success()
+                                                            && let Ok(bytes) = img_resp.bytes()
+                                                                && bytes.len() > 1000 {
                                                                     let file_path =
                                                                         covers_dir.join(format!("{}.png", slug));
                                                                     if std::fs::write(&file_path, &bytes).is_ok() {
@@ -510,17 +497,8 @@ fn start_cover_downloads(
                                                                         downloaded = true;
                                                                     }
                                                                 }
-                                                            }
-                                                        }
-                                                    }
                                                 }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
-                    }
 
                     // Fallback to standard Libretro Named Boxarts exact match
                     if !downloaded {
@@ -547,10 +525,10 @@ fn start_cover_downloads(
                                 repo, github_title
                             );
 
-                            if let Ok(resp) = client.get(&libretro_url).send() {
-                                if resp.status().is_success() {
-                                    if let Ok(bytes) = resp.bytes() {
-                                        if bytes.len() > 1000 {
+                            if let Ok(resp) = client.get(&libretro_url).send()
+                                && resp.status().is_success()
+                                    && let Ok(bytes) = resp.bytes()
+                                        && bytes.len() > 1000 {
                                             let file_path = covers_dir.join(format!("{}.png", slug));
                                             if std::fs::write(&file_path, &bytes).is_ok() {
                                                 let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
@@ -561,9 +539,6 @@ fn start_cover_downloads(
                                                 downloaded = true;
                                             }
                                         }
-                                    }
-                                }
-                            }
                         }
                     }
 
@@ -581,14 +556,13 @@ fn start_cover_downloads(
                             .header("Authorization", format!("Bearer {}", supabase_anon_key))
                             .json(&req_payload)
                             .send()
-                        {
-                            if resp.status().is_success() {
-                                if let Ok(json_res) = resp.json::<serde_json::Value>() {
-                                    if let Some(cover_url) = json_res.get("coverUrl").and_then(|v| v.as_str()) {
-                                        if let Ok(img_resp) = client.get(cover_url).send() {
-                                            if img_resp.status().is_success() {
-                                                if let Ok(bytes) = img_resp.bytes() {
-                                                    if bytes.len() > 1000 {
+                            && resp.status().is_success()
+                                && let Ok(json_res) = resp.json::<serde_json::Value>()
+                                    && let Some(cover_url) = json_res.get("coverUrl").and_then(|v| v.as_str())
+                                        && let Ok(img_resp) = client.get(cover_url).send()
+                                            && img_resp.status().is_success()
+                                                && let Ok(bytes) = img_resp.bytes()
+                                                    && bytes.len() > 1000 {
                                                         let file_path = covers_dir.join(format!("{}.jpg", slug));
                                                         if std::fs::write(&file_path, &bytes).is_ok() {
                                                             let encoded = base64::engine::general_purpose::STANDARD
@@ -600,13 +574,6 @@ fn start_cover_downloads(
                                                             downloaded = true;
                                                         }
                                                     }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -684,8 +651,8 @@ fn find_game_install_dir(root_path: &Path, game_title: &str, candidate_dirs: &[S
 
     if let Ok(entries) = std::fs::read_dir(root_path) {
         for entry in entries.filter_map(|e| e.ok()) {
-            if let Ok(file_type) = entry.file_type() {
-                if file_type.is_dir() {
+            if let Ok(file_type) = entry.file_type()
+                && file_type.is_dir() {
                     let folder_name = entry.file_name().to_string_lossy().to_string();
                     let normalized_folder = normalize_name(&folder_name);
 
@@ -696,7 +663,6 @@ fn find_game_install_dir(root_path: &Path, game_title: &str, candidate_dirs: &[S
                         }
                     }
                 }
-            }
         }
     }
 
@@ -787,15 +753,14 @@ fn get_latest_modified_time(save_path: &str) -> Option<String> {
         if !entry.file_type().is_file() {
             continue;
         }
-        if let Ok(metadata) = entry.metadata() {
-            if let Ok(modified) = metadata.modified() {
+        if let Ok(metadata) = entry.metadata()
+            && let Ok(modified) = metadata.modified() {
                 match latest {
                     Some(current) if modified > current => latest = Some(modified),
                     None => latest = Some(modified),
                     _ => {}
                 }
             }
-        }
     }
 
     latest.map(|t| {
@@ -996,11 +961,10 @@ pub async fn get_games(app: tauri::AppHandle) -> Result<Vec<FrontendGame>, Strin
 
         let app_data_dir = app.path().app_data_dir().ok();
         let mut cache = SCAN_CACHE.lock().unwrap();
-        if cache.is_empty() {
-            if let Some(ref dir) = app_data_dir {
+        if cache.is_empty()
+            && let Some(ref dir) = app_data_dir {
                 *cache = load_scan_cache(dir);
             }
-        }
 
         // Collect all known game names from backups + scan cache + custom games
         let mut all_names: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
@@ -1031,17 +995,15 @@ pub async fn get_games(app: tauri::AppHandle) -> Result<Vec<FrontendGame>, Strin
 
             if fg.cover == "/placeholder.svg" {
                 let mut steam_id = None;
-                if let Some(game_meta) = api.manifest.0.get(name) {
-                    if let Some(sid) = game_meta.steam.id {
+                if let Some(game_meta) = api.manifest.0.get(name)
+                    && let Some(sid) = game_meta.steam.id {
                         steam_id = Some(sid);
                     }
-                }
                 let mut title_id = None;
-                if let Some(cg) = api.config.custom_games.iter().find(|g| g.name == *name) {
-                    if let Some(first_file) = cg.files.first() {
+                if let Some(cg) = api.config.custom_games.iter().find(|g| g.name == *name)
+                    && let Some(first_file) = cg.files.first() {
                         title_id = extract_title_id_from_path(first_file);
                     }
-                }
                 games_to_download.push((fg.id.clone(), name.clone(), steam_id, title_id));
             }
 
@@ -1151,17 +1113,15 @@ pub async fn scan_games(app: tauri::AppHandle) -> Result<Vec<FrontendGame>, Stri
 
             if fg.cover == "/placeholder.svg" {
                 let mut steam_id = None;
-                if let Some(game_meta) = api.manifest.0.get(name) {
-                    if let Some(sid) = game_meta.steam.id {
+                if let Some(game_meta) = api.manifest.0.get(name)
+                    && let Some(sid) = game_meta.steam.id {
                         steam_id = Some(sid);
                     }
-                }
                 let mut title_id = None;
-                if let Some(cg) = api.config.custom_games.iter().find(|g| g.name == *name) {
-                    if let Some(first_file) = cg.files.first() {
+                if let Some(cg) = api.config.custom_games.iter().find(|g| g.name == *name)
+                    && let Some(first_file) = cg.files.first() {
                         title_id = extract_title_id_from_path(first_file);
                     }
-                }
                 games_to_download.push((fg.id.clone(), name.clone(), steam_id, title_id));
             }
 
@@ -1225,17 +1185,15 @@ pub async fn get_game_details(app: tauri::AppHandle, game_title: String) -> Resu
 
         if fg.cover == "/placeholder.svg" {
             let mut steam_id = None;
-            if let Some(game_meta) = api.manifest.0.get(&name) {
-                if let Some(sid) = game_meta.steam.id {
+            if let Some(game_meta) = api.manifest.0.get(&name)
+                && let Some(sid) = game_meta.steam.id {
                     steam_id = Some(sid);
                 }
-            }
             let mut title_id = None;
-            if let Some(cg) = api.config.custom_games.iter().find(|g| g.name == name) {
-                if let Some(first_file) = cg.files.first() {
+            if let Some(cg) = api.config.custom_games.iter().find(|g| g.name == name)
+                && let Some(first_file) = cg.files.first() {
                     title_id = extract_title_id_from_path(first_file);
                 }
-            }
             start_cover_downloads(&app, vec![(fg.id.clone(), name.clone(), steam_id, title_id)]);
         }
 
@@ -1303,11 +1261,10 @@ pub async fn toggle_backup_locked(game_title: String, backup_id: String, locked:
 
 pub fn load_system_tray_setting(app_data_dir: &Path) -> bool {
     let config_path = app_data_dir.join("ludocard.json");
-    if let Ok(content) = std::fs::read_to_string(&config_path) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+    if let Ok(content) = std::fs::read_to_string(&config_path)
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
             return json.get("system_tray").and_then(|v| v.as_bool()).unwrap_or(true);
         }
-    }
     true
 }
 
@@ -1328,8 +1285,8 @@ const DEFAULT_SUPABASE_ANON_KEY: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ey
 
 pub fn load_supabase_settings(app_data_dir: &Path) -> (String, String) {
     let config_path = app_data_dir.join("ludocard.json");
-    if let Ok(content) = std::fs::read_to_string(&config_path) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+    if let Ok(content) = std::fs::read_to_string(&config_path)
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
             let url = json
                 .get("supabase_url")
                 .and_then(|v| v.as_str())
@@ -1344,7 +1301,6 @@ pub fn load_supabase_settings(app_data_dir: &Path) -> (String, String) {
                 .to_string();
             return (url, key);
         }
-    }
     (DEFAULT_SUPABASE_URL.to_string(), DEFAULT_SUPABASE_ANON_KEY.to_string())
 }
 
@@ -1366,14 +1322,12 @@ pub fn is_autostart_enabled() -> bool {
     use winreg::RegKey;
     use winreg::enums::HKEY_CURRENT_USER;
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run_key) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run") {
-        if let Ok(val) = run_key.get_value::<String, _>("Ludocard") {
-            if let Ok(exe) = std::env::current_exe() {
+    if let Ok(run_key) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run")
+        && let Ok(val) = run_key.get_value::<String, _>("Ludocard")
+            && let Ok(exe) = std::env::current_exe() {
                 let exe_str = exe.to_string_lossy();
                 return val.contains(&*exe_str);
             }
-        }
-    }
     false
 }
 
@@ -1575,7 +1529,7 @@ pub async fn get_roots() -> Result<Vec<FrontendRoot>, String> {
                 for (path, store) in detected {
                     api.config.roots.push(Root::new(path, store));
                 }
-                let _ = api.config.save();
+                api.config.save();
             }
         }
 
@@ -1616,8 +1570,8 @@ pub async fn open_game_folder(game_title: String, folder_type: String, save_path
                     return Err("Diretório de backup não configurado.".to_string());
                 }
                 // Ludosavi stores game backups directly in {backup_base}/{sanitized_game_title}
-                let game_backup_path = Path::new(&backup_base).join(sanitize_game_title(&game_title));
-                game_backup_path
+                
+                Path::new(&backup_base).join(sanitize_game_title(&game_title))
             }
             "game" => {
                 let mut resolved_path = None;
@@ -1649,14 +1603,13 @@ pub async fn open_game_folder(game_title: String, folder_type: String, save_path
                         use winreg::RegKey;
                         use winreg::enums::*;
                         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-                        if let Ok(steam_key) = hkcu.open_subkey("Software\\Valve\\Steam") {
-                            if let Ok(steam_path) = steam_key.get_value::<String, _>("SteamPath") {
+                        if let Ok(steam_key) = hkcu.open_subkey("Software\\Valve\\Steam")
+                            && let Ok(steam_path) = steam_key.get_value::<String, _>("SteamPath") {
                                 let steam_common = Path::new(&steam_path).join("steamapps").join("common");
                                 if let Some(p) = find_game_install_dir(&steam_common, &game_title, &candidate_dirs) {
                                     resolved_path = Some(p);
                                 }
                             }
-                        }
                     }
                 }
 
@@ -1697,25 +1650,23 @@ fn autodetect_launchers() -> Vec<(StrictPath, Store)> {
 
         // 1. Steam
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        if let Ok(steam_key) = hkcu.open_subkey("Software\\Valve\\Steam") {
-            if let Ok(steam_path) = steam_key.get_value::<String, _>("SteamPath") {
+        if let Ok(steam_key) = hkcu.open_subkey("Software\\Valve\\Steam")
+            && let Ok(steam_path) = steam_key.get_value::<String, _>("SteamPath") {
                 let path = Path::new(&steam_path).join("steamapps").join("common");
                 if path.exists() {
                     detected.push((StrictPath::new(path.to_string_lossy().to_string()), Store::Steam));
                 }
             }
-        }
 
         // 2. GOG Galaxy
         let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        if let Ok(gog_key) = hklm.open_subkey("SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths") {
-            if let Ok(gog_path) = gog_key.get_value::<String, _>("client") {
+        if let Ok(gog_key) = hklm.open_subkey("SOFTWARE\\WOW6432Node\\GOG.com\\GalaxyClient\\paths")
+            && let Ok(gog_path) = gog_key.get_value::<String, _>("client") {
                 let path = Path::new(&gog_path);
                 if path.exists() {
                     detected.push((StrictPath::new(path.to_string_lossy().to_string()), Store::Gog));
                 }
             }
-        }
 
         for path in &["C:\\Program Files (x86)\\GOG Galaxy\\Games", "C:\\GOG Games"] {
             let p = Path::new(path);
@@ -1883,11 +1834,10 @@ pub async fn select_save_file(start_dir: Option<String>) -> Result<Option<String
             let path = Path::new(dir);
             if path.is_dir() {
                 builder = builder.set_directory(dir);
-            } else if let Some(parent) = path.parent() {
-                if parent.is_dir() {
+            } else if let Some(parent) = path.parent()
+                && parent.is_dir() {
                     builder = builder.set_directory(parent);
                 }
-            }
         }
         builder.pick_file()
     });
@@ -2139,8 +2089,8 @@ fn import_ludocard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
         let backup_path = target_dir.parent().unwrap_or(target_dir).join(&backup_name);
 
         // Create safety backup of existing saves
-        if let Ok(backup_file) = std::fs::File::create(&backup_path) {
-            if let Ok(encoder) = zstd::Encoder::new(backup_file, 3) {
+        if let Ok(backup_file) = std::fs::File::create(&backup_path)
+            && let Ok(encoder) = zstd::Encoder::new(backup_file, 3) {
                 // Fast compression for safety backup
                 let mut tar_builder = tar::Builder::new(encoder);
                 let _ = tar_builder.append_dir_all(".", target_dir);
@@ -2148,7 +2098,6 @@ fn import_ludocard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
                     let _ = encoder.finish();
                 }
             }
-        }
     }
 
     // Step 3: Re-open and extract save files with path traversal protection
@@ -2401,7 +2350,7 @@ pub async fn delete_temp_file(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Helper command to package a game backup version from the backup directory into a temp .ludocard archive.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn export_temp_ludocard_backup(
     app: tauri::AppHandle,
@@ -2452,7 +2401,7 @@ pub async fn export_temp_ludocard_backup(
         let live_save_dir = Path::new(&save_path);
 
         // Copy files from backup to the temporary directory with their correct relative paths
-        for (file_key, _) in &backup_version.files {
+        for file_key in backup_version.files.keys() {
             let src_file_path = backup_folder.join(file_key);
             if !src_file_path.exists() {
                 continue;
@@ -2484,13 +2433,9 @@ pub async fn export_temp_ludocard_backup(
             let orig_str = original_abs_path_str.replace('\\', "/");
             let live_str = live_save_dir.to_string_lossy().to_string().replace('\\', "/");
 
-            let relative_path_str = if orig_str.starts_with(&live_str) {
-                let mut rel = &orig_str[live_str.len()..];
-                if rel.starts_with('/') {
-                    rel = &rel[1..];
-                }
-                rel.to_string()
-            } else if cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase()) {
+            let is_match = orig_str.starts_with(&live_str)
+                || (cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase()));
+            let relative_path_str = if is_match {
                 let mut rel = &orig_str[live_str.len()..];
                 if rel.starts_with('/') {
                     rel = &rel[1..];
@@ -2522,7 +2467,7 @@ pub async fn export_temp_ludocard_backup(
             &game_id,
             &checkpoint_title,
             &description,
-            &export_temp_dir.to_string_lossy().to_string(),
+            export_temp_dir.to_string_lossy().as_ref(),
             &temp_archive_path_str,
         );
 
@@ -2547,7 +2492,7 @@ pub async fn export_temp_ludocard_backup(
     .map_err(|e| e.to_string())?
 }
 
-/// Helper command to package a game backup version from the backup directory directly to dest_path.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn export_ludocard_backup(
     app: tauri::AppHandle,
@@ -2599,7 +2544,7 @@ pub async fn export_ludocard_backup(
         let live_save_dir = Path::new(&save_path);
 
         // Copy files from backup to the temporary directory with their correct relative paths
-        for (file_key, _) in &backup_version.files {
+        for file_key in backup_version.files.keys() {
             let src_file_path = backup_folder.join(file_key);
             if !src_file_path.exists() {
                 continue;
@@ -2628,13 +2573,9 @@ pub async fn export_ludocard_backup(
             let orig_str = original_abs_path_str.replace('\\', "/");
             let live_str = live_save_dir.to_string_lossy().to_string().replace('\\', "/");
 
-            let relative_path_str = if orig_str.starts_with(&live_str) {
-                let mut rel = &orig_str[live_str.len()..];
-                if rel.starts_with('/') {
-                    rel = &rel[1..];
-                }
-                rel.to_string()
-            } else if cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase()) {
+            let is_match = orig_str.starts_with(&live_str)
+                || (cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase()));
+            let relative_path_str = if is_match {
                 let mut rel = &orig_str[live_str.len()..];
                 if rel.starts_with('/') {
                     rel = &rel[1..];
@@ -2663,7 +2604,7 @@ pub async fn export_ludocard_backup(
             &game_id,
             &checkpoint_title,
             &description,
-            &export_temp_dir.to_string_lossy().to_string(),
+            export_temp_dir.to_string_lossy().as_ref(),
             &dest_path,
         );
 
@@ -2761,13 +2702,11 @@ fn get_gpu_info() -> String {
     if let Ok(class_key) = hklm.open_subkey(class_path) {
         let mut gpus = Vec::new();
         for name in class_key.enum_keys().filter_map(|r| r.ok()) {
-            if let Ok(subkey) = class_key.open_subkey(&name) {
-                if let Ok(desc) = subkey.get_value::<String, _>("DriverDesc") {
-                    if !desc.contains("Microsoft Basic Display Adapter") && !desc.contains("Software Device") {
+            if let Ok(subkey) = class_key.open_subkey(&name)
+                && let Ok(desc) = subkey.get_value::<String, _>("DriverDesc")
+                    && !desc.contains("Microsoft Basic Display Adapter") && !desc.contains("Software Device") {
                         gpus.push(desc);
                     }
-                }
-            }
         }
         if !gpus.is_empty() {
             return gpus.join(", ");
@@ -2821,8 +2760,8 @@ pub async fn detect_game_config_files(game_title: String) -> Result<Vec<String>,
             .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
         let mut config_files = Vec::new();
-        if let Some(game_data) = scan_output.games.get(&game_title) {
-            if let ApiGame::Operative { files, .. } = game_data {
+        if let Some(game_data) = scan_output.games.get(&game_title)
+            && let ApiGame::Operative { files, .. } = game_data {
                 for file_path in files.keys() {
                     let path = Path::new(file_path);
                     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
@@ -2857,7 +2796,6 @@ pub async fn detect_game_config_files(game_title: String) -> Result<Vec<String>,
                     }
                 }
             }
-        }
         Ok(config_files)
     })
     .await
@@ -2893,8 +2831,8 @@ pub async fn create_preset_safety_backup(
             .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
         let mut config_files = Vec::new();
-        if let Some(game_data) = scan_output.games.get(&game_title) {
-            if let ApiGame::Operative { files, .. } = game_data {
+        if let Some(game_data) = scan_output.games.get(&game_title)
+            && let ApiGame::Operative { files, .. } = game_data {
                 for file_path in files.keys() {
                     let path = Path::new(file_path);
                     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
@@ -2929,7 +2867,6 @@ pub async fn create_preset_safety_backup(
                     }
                 }
             }
-        }
 
         let mut manifest_mapping = HashMap::new();
 
@@ -3011,9 +2948,7 @@ pub async fn export_temp_ludocard_preset(
         std::fs::create_dir_all(&export_temp_dir).map_err(|e| format!("Falha ao criar diretório temporário: {}", e))?;
 
         let live_save_path = Path::new(&save_path);
-        let live_save_dir = if live_save_path.is_file() {
-            live_save_path.parent().unwrap_or(live_save_path)
-        } else if live_save_path.extension().is_some() {
+        let live_save_dir = if live_save_path.is_file() || live_save_path.extension().is_some() {
             live_save_path.parent().unwrap_or(live_save_path)
         } else {
             live_save_path
@@ -3028,16 +2963,10 @@ pub async fn export_temp_ludocard_preset(
             }
 
             let orig_str = file_path_str.replace('\\', "/");
-            let relative_path_str = if is_live_str_valid && orig_str.starts_with(&live_str) {
-                let mut rel = &orig_str[live_str.len()..];
-                if rel.starts_with('/') {
-                    rel = &rel[1..];
-                }
-                rel.to_string()
-            } else if is_live_str_valid
-                && cfg!(target_os = "windows")
-                && orig_str.to_lowercase().starts_with(&live_str.to_lowercase())
-            {
+            let is_match = is_live_str_valid
+                && (orig_str.starts_with(&live_str)
+                    || (cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase())));
+            let relative_path_str = if is_match {
                 let mut rel = &orig_str[live_str.len()..];
                 if rel.starts_with('/') {
                     rel = &rel[1..];
@@ -3055,7 +2984,7 @@ pub async fn export_temp_ludocard_preset(
                 let _ = std::fs::create_dir_all(parent);
             }
 
-            std::fs::copy(&file_path, &dest_file_path)
+            std::fs::copy(file_path, &dest_file_path)
                 .map_err(|e| format!("Falha ao copiar arquivo para pasta temporária: {}", e))?;
         }
 
@@ -3069,7 +2998,7 @@ pub async fn export_temp_ludocard_preset(
             &game_id,
             &preset_title,
             &description,
-            &export_temp_dir.to_string_lossy().to_string(),
+            export_temp_dir.to_string_lossy().as_ref(),
             &temp_archive_path_str,
         );
 
@@ -3142,12 +3071,11 @@ pub async fn save_local_preset(
                 hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}")
             {
                 for subkey_name in class_key.enum_keys().filter_map(|x| x.ok()) {
-                    if let Ok(driver_key) = class_key.open_subkey(&subkey_name) {
-                        if let Ok(driver_desc) = driver_key.get_value::<String, _>("DriverDesc") {
+                    if let Ok(driver_key) = class_key.open_subkey(&subkey_name)
+                        && let Ok(driver_desc) = driver_key.get_value::<String, _>("DriverDesc") {
                             gpu = driver_desc;
                             break;
                         }
-                    }
                 }
             }
         }
@@ -3211,13 +3139,11 @@ pub async fn list_local_presets(app: tauri::AppHandle, game_id: String) -> Resul
             for entry in entries.flatten() {
                 if entry.path().is_dir() {
                     let manifest_path = entry.path().join("manifest.json");
-                    if manifest_path.exists() {
-                        if let Ok(content) = std::fs::read_to_string(manifest_path) {
-                            if let Ok(preset) = serde_json::from_str::<LocalPreset>(&content) {
+                    if manifest_path.exists()
+                        && let Ok(content) = std::fs::read_to_string(manifest_path)
+                            && let Ok(preset) = serde_json::from_str::<LocalPreset>(&content) {
                                 list.push(preset);
                             }
-                        }
-                    }
                 }
             }
         }
@@ -3326,9 +3252,7 @@ pub async fn export_local_preset_archive(
         std::fs::create_dir_all(&export_temp_dir).map_err(|e| format!("Falha ao criar diretório temporário: {}", e))?;
 
         let live_save_path = Path::new(&save_path);
-        let live_save_dir = if live_save_path.is_file() {
-            live_save_path.parent().unwrap_or(live_save_path)
-        } else if live_save_path.extension().is_some() {
+        let live_save_dir = if live_save_path.is_file() || live_save_path.extension().is_some() {
             live_save_path.parent().unwrap_or(live_save_path)
         } else {
             live_save_path
@@ -3343,16 +3267,10 @@ pub async fn export_local_preset_archive(
             }
 
             let orig_str = original_path_str.replace('\\', "/");
-            let relative_path_str = if is_live_str_valid && orig_str.starts_with(&live_str) {
-                let mut rel = &orig_str[live_str.len()..];
-                if rel.starts_with('/') {
-                    rel = &rel[1..];
-                }
-                rel.to_string()
-            } else if is_live_str_valid
-                && cfg!(target_os = "windows")
-                && orig_str.to_lowercase().starts_with(&live_str.to_lowercase())
-            {
+            let is_match = is_live_str_valid
+                && (orig_str.starts_with(&live_str)
+                    || (cfg!(target_os = "windows") && orig_str.to_lowercase().starts_with(&live_str.to_lowercase())));
+            let relative_path_str = if is_match {
                 let mut rel = &orig_str[live_str.len()..];
                 if rel.starts_with('/') {
                     rel = &rel[1..];
@@ -3383,7 +3301,7 @@ pub async fn export_local_preset_archive(
             &preset.game_id,
             &preset.title,
             &preset.description,
-            &export_temp_dir.to_string_lossy().to_string(),
+            export_temp_dir.to_string_lossy().as_ref(),
             &temp_archive_path_str,
         );
 
@@ -3409,13 +3327,11 @@ pub async fn export_local_preset_archive(
 
 pub fn load_emulators_setting(app_data_dir: &Path) -> Vec<String> {
     let config_path = app_data_dir.join("ludocard.json");
-    if let Ok(content) = std::fs::read_to_string(&config_path) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-            if let Some(arr) = json.get("emulators").and_then(|v| v.as_array()) {
+    if let Ok(content) = std::fs::read_to_string(&config_path)
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
+            && let Some(arr) = json.get("emulators").and_then(|v| v.as_array()) {
                 return arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
             }
-        }
-    }
     Vec::new()
 }
 
@@ -3669,11 +3585,10 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
             let mut command = std::process::Command::new(api.config.apps.rclone.path.raw());
             command.args(args);
 
-            if !api.config.apps.rclone.arguments.is_empty() {
-                if let Some(parts) = shlex::split(&api.config.apps.rclone.arguments) {
+            if !api.config.apps.rclone.arguments.is_empty()
+                && let Some(parts) = shlex::split(&api.config.apps.rclone.arguments) {
                     command.args(parts);
                 }
-            }
 
             #[cfg(target_os = "windows")]
             {
@@ -3791,11 +3706,10 @@ pub async fn check_cloud_conflict(app: tauri::AppHandle, game_title: String) -> 
             let mut command = std::process::Command::new(api.config.apps.rclone.path.raw());
             command.args(args);
 
-            if !api.config.apps.rclone.arguments.is_empty() {
-                if let Some(parts) = shlex::split(&api.config.apps.rclone.arguments) {
+            if !api.config.apps.rclone.arguments.is_empty()
+                && let Some(parts) = shlex::split(&api.config.apps.rclone.arguments) {
                     command.args(parts);
                 }
-            }
 
             #[cfg(target_os = "windows")]
             {
@@ -3824,47 +3738,44 @@ pub async fn check_cloud_conflict(app: tauri::AppHandle, game_title: String) -> 
         let latest_local = local_mapping.as_ref().and_then(|m| m.backups.back());
         let latest_remote = remote_mapping.as_ref().and_then(|m| m.backups.back());
 
-        match (latest_local, latest_remote) {
-            (Some(local), Some(remote)) => {
-                // Check if timestamps are different (by more than 2 seconds)
-                let diff_seconds = (local.when.timestamp() - remote.when.timestamp()).abs();
-                if diff_seconds > 2 {
-                    let local_bytes: u64 = local.files.values().map(|f| f.size).sum();
-                    let remote_bytes: u64 = remote.files.values().map(|f| f.size).sum();
+        if let (Some(local), Some(remote)) = (latest_local, latest_remote) {
+            // Check if timestamps are different (by more than 2 seconds)
+            let diff_seconds = (local.when.timestamp() - remote.when.timestamp()).abs();
+            if diff_seconds > 2 {
+                let local_bytes: u64 = local.files.values().map(|f| f.size).sum();
+                let remote_bytes: u64 = remote.files.values().map(|f| f.size).sum();
 
-                    let is_local_newer = local.when > remote.when;
+                let is_local_newer = local.when > remote.when;
 
-                    let format_size = |bytes: u64| {
-                        if bytes < 1024 * 1024 {
-                            format!("{:.2} KB", bytes as f64 / 1024.0)
-                        } else {
-                            format!("{:.2} MB", bytes as f64 / (1024.0 * 1024.0))
-                        }
-                    };
+                let format_size = |bytes: u64| {
+                    if bytes < 1024 * 1024 {
+                        format!("{:.2} KB", bytes as f64 / 1024.0)
+                    } else {
+                        format!("{:.2} MB", bytes as f64 / (1024.0 * 1024.0))
+                    }
+                };
 
-                    let local_local_time = local.when.with_timezone(&chrono::Local);
-                    let remote_local_time = remote.when.with_timezone(&chrono::Local);
+                let local_local_time = local.when.with_timezone(&chrono::Local);
+                let remote_local_time = remote.when.with_timezone(&chrono::Local);
 
-                    return Ok(Some(CloudConflict {
-                        game_title,
-                        local: ConflictVersionInfo {
-                            date: local_local_time.format("%d %b %Y, %H:%M:%S").to_string(),
-                            size_formatted: format_size(local_bytes),
-                            is_newer: is_local_newer,
-                            is_older: !is_local_newer,
-                            label: "Este PC".to_string(),
-                        },
-                        remote: ConflictVersionInfo {
-                            date: remote_local_time.format("%d %b %Y, %H:%M:%S").to_string(),
-                            size_formatted: format_size(remote_bytes),
-                            is_newer: !is_local_newer,
-                            is_older: is_local_newer,
-                            label: "Nuvem".to_string(),
-                        },
-                    }));
-                }
+                return Ok(Some(CloudConflict {
+                    game_title,
+                    local: ConflictVersionInfo {
+                        date: local_local_time.format("%d %b %Y, %H:%M:%S").to_string(),
+                        size_formatted: format_size(local_bytes),
+                        is_newer: is_local_newer,
+                        is_older: !is_local_newer,
+                        label: "Este PC".to_string(),
+                    },
+                    remote: ConflictVersionInfo {
+                        date: remote_local_time.format("%d %b %Y, %H:%M:%S").to_string(),
+                        size_formatted: format_size(remote_bytes),
+                        is_newer: !is_local_newer,
+                        is_older: is_local_newer,
+                        label: "Nuvem".to_string(),
+                    },
+                }));
             }
-            _ => {}
         }
 
         Ok(None)
@@ -3938,8 +3849,8 @@ async fn save_profile_state_internal(
         let game_title = game_title.to_string();
         move || -> Result<HashMap<String, String>, String> {
             let mut new_mapping = HashMap::new();
-            if let Some(game_data) = scan_output.games.get(&game_title) {
-                if let ApiGame::Operative { files, .. } = game_data {
+            if let Some(game_data) = scan_output.games.get(&game_title)
+                && let ApiGame::Operative { files, .. } = game_data {
                     // Copy files and build new mapping
                     for (index, file_path_str) in files.keys().enumerate() {
                         let file_path = Path::new(file_path_str);
@@ -3952,7 +3863,6 @@ async fn save_profile_state_internal(
                         }
                     }
                 }
-            }
 
             // Clean up files in profile dir that are no longer in new mapping
             for key in mapping.keys() {
@@ -3995,13 +3905,11 @@ pub async fn list_save_profiles(app: tauri::AppHandle, game_id: String) -> Resul
             for entry in entries.flatten() {
                 if entry.path().is_dir() {
                     let manifest_path = entry.path().join("manifest.json");
-                    if manifest_path.exists() {
-                        if let Ok(content) = std::fs::read_to_string(manifest_path) {
-                            if let Ok(profile) = serde_json::from_str::<SaveProfile>(&content) {
+                    if manifest_path.exists()
+                        && let Ok(content) = std::fs::read_to_string(manifest_path)
+                            && let Ok(profile) = serde_json::from_str::<SaveProfile>(&content) {
                                 list.push(profile);
                             }
-                        }
-                    }
                 }
             }
         }
@@ -4080,15 +3988,12 @@ pub async fn create_save_profile(
                 for entry in entries.flatten() {
                     if entry.path().is_dir() {
                         let manifest_path = entry.path().join("manifest.json");
-                        if manifest_path.exists() {
-                            if let Ok(content) = std::fs::read_to_string(&manifest_path) {
-                                if let Ok(profile) = serde_json::from_str::<SaveProfile>(&content) {
-                                    if profile.active {
+                        if manifest_path.exists()
+                            && let Ok(content) = std::fs::read_to_string(&manifest_path)
+                                && let Ok(profile) = serde_json::from_str::<SaveProfile>(&content)
+                                    && profile.active {
                                         return Ok(Some(profile.id));
                                     }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -4150,10 +4055,10 @@ pub async fn create_save_profile(
                 for entry in entries.flatten() {
                     if entry.path().is_dir() {
                         let manifest_path = entry.path().join("manifest.json");
-                        if manifest_path.exists() {
-                            if let Ok(content) = std::fs::read_to_string(&manifest_path) {
-                                if let Ok(mut other_profile) = serde_json::from_str::<SaveProfile>(&content) {
-                                    if other_profile.id != profile_id && other_profile.active {
+                        if manifest_path.exists()
+                            && let Ok(content) = std::fs::read_to_string(&manifest_path)
+                                && let Ok(mut other_profile) = serde_json::from_str::<SaveProfile>(&content)
+                                    && other_profile.id != profile_id && other_profile.active {
                                         other_profile.active = false;
                                         let updated_content =
                                             serde_json::to_string_pretty(&other_profile).map_err(|e| {
@@ -4163,9 +4068,6 @@ pub async fn create_save_profile(
                                             format!("Falha ao gravar manifesto do perfil antigo: {}", e)
                                         })?;
                                     }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -4196,8 +4098,8 @@ pub async fn create_save_profile(
                     })
                     .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
-                if let Some(game_data) = scan_output.games.get(&game_title) {
-                    if let ApiGame::Operative { files, .. } = game_data {
+                if let Some(game_data) = scan_output.games.get(&game_title)
+                    && let ApiGame::Operative { files, .. } = game_data {
                         for file_path_str in files.keys() {
                             let path = Path::new(file_path_str);
                             if path.exists() && path.is_file() {
@@ -4206,7 +4108,6 @@ pub async fn create_save_profile(
                             }
                         }
                     }
-                }
                 Ok(())
             }
         })
@@ -4257,15 +4158,12 @@ pub async fn switch_save_profile(
                 for entry in entries.flatten() {
                     if entry.path().is_dir() {
                         let manifest_path = entry.path().join("manifest.json");
-                        if manifest_path.exists() {
-                            if let Ok(content) = std::fs::read_to_string(&manifest_path) {
-                                if let Ok(profile) = serde_json::from_str::<SaveProfile>(&content) {
-                                    if profile.active {
+                        if manifest_path.exists()
+                            && let Ok(content) = std::fs::read_to_string(&manifest_path)
+                                && let Ok(profile) = serde_json::from_str::<SaveProfile>(&content)
+                                    && profile.active {
                                         return Ok(Some(profile.id));
                                     }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -4295,8 +4193,8 @@ pub async fn switch_save_profile(
                 })
                 .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
-            if let Some(game_data) = scan_output.games.get(&game_title) {
-                if let ApiGame::Operative { files, .. } = game_data {
+            if let Some(game_data) = scan_output.games.get(&game_title)
+                && let ApiGame::Operative { files, .. } = game_data {
                     for file_path_str in files.keys() {
                         let path = Path::new(file_path_str);
                         if path.exists() && path.is_file() {
@@ -4305,7 +4203,6 @@ pub async fn switch_save_profile(
                         }
                     }
                 }
-            }
             Ok(())
         }
     })
@@ -4369,9 +4266,9 @@ pub async fn switch_save_profile(
                 for entry in entries.flatten() {
                     if entry.path().is_dir() {
                         let manifest_path = entry.path().join("manifest.json");
-                        if manifest_path.exists() {
-                            if let Ok(content) = std::fs::read_to_string(&manifest_path) {
-                                if let Ok(mut profile) = serde_json::from_str::<SaveProfile>(&content) {
+                        if manifest_path.exists()
+                            && let Ok(content) = std::fs::read_to_string(&manifest_path)
+                                && let Ok(mut profile) = serde_json::from_str::<SaveProfile>(&content) {
                                     let was_active = profile.active;
                                     profile.active = profile.id == profile_id;
                                     if was_active != profile.active {
@@ -4381,8 +4278,6 @@ pub async fn switch_save_profile(
                                             .map_err(|e| format!("Falha ao gravar manifesto do perfil: {}", e))?;
                                     }
                                 }
-                            }
-                        }
                     }
                 }
             }
@@ -4403,18 +4298,15 @@ pub async fn delete_save_profile(app: tauri::AppHandle, game_id: String, profile
 
         // Safety check: is it active?
         let manifest_path = profile_dir.join("manifest.json");
-        if manifest_path.exists() {
-            if let Ok(content) = std::fs::read_to_string(&manifest_path) {
-                if let Ok(profile) = serde_json::from_str::<SaveProfile>(&content) {
-                    if profile.active {
+        if manifest_path.exists()
+            && let Ok(content) = std::fs::read_to_string(&manifest_path)
+                && let Ok(profile) = serde_json::from_str::<SaveProfile>(&content)
+                    && profile.active {
                         return Err(
                             "Não é possível excluir o perfil de save ativo. Alterne para outro perfil primeiro."
                                 .to_string(),
                         );
                     }
-                }
-            }
-        }
 
         if profile_dir.exists() {
             std::fs::remove_dir_all(&profile_dir)

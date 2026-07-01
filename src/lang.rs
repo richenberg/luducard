@@ -397,13 +397,11 @@ impl Translator {
             }
 
             if line.starts_with(' ') || line.starts_with('\t') {
-                if trimmed.starts_with('.') {
-                    if let Some(pos) = trimmed.find('=') {
-                        let attr_name = trimmed[1..pos].trim();
-                        if !current_primary.is_empty() {
-                            let key = format!("{}.{}", current_primary, attr_name);
-                            translations.insert(key.clone(), translate(&key));
-                        }
+                if trimmed.starts_with('.') && let Some(pos) = trimmed.find('=') {
+                    let attr_name = trimmed[1..pos].trim();
+                    if !current_primary.is_empty() {
+                        let key = format!("{}.{}", current_primary, attr_name);
+                        translations.insert(key.clone(), translate(&key));
                     }
                 }
             } else {

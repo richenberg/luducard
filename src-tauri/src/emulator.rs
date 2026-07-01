@@ -27,10 +27,10 @@ fn document_dir() -> Option<PathBuf> {
 /// Helper to read custom MLC path from Cemu settings.xml
 fn get_cemu_mlc_path(cemu_dir: &Path) -> PathBuf {
     let settings_path = cemu_dir.join("settings.xml");
-    if settings_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&settings_path) {
-            if let Some(start) = content.find("<mlc_path>") {
-                if let Some(end) = content[start..].find("</mlc_path>") {
+    if settings_path.exists()
+        && let Ok(content) = std::fs::read_to_string(&settings_path)
+            && let Some(start) = content.find("<mlc_path>")
+                && let Some(end) = content[start..].find("</mlc_path>") {
                     let path_str = content[start + 10..start + end].trim();
                     if !path_str.is_empty() {
                         let mlc_path = PathBuf::from(path_str);
@@ -39,27 +39,23 @@ fn get_cemu_mlc_path(cemu_dir: &Path) -> PathBuf {
                         }
                     }
                 }
-            }
-        }
-    }
     cemu_dir.join("mlc01")
 }
 
 /// Helper to read custom NAND path from Yuzu qt-config.ini
 fn get_yuzu_nand_path(emulator_dir: &Path) -> Option<PathBuf> {
     let mut config_path = emulator_dir.join("user").join("config").join("qt-config.ini");
-    if !config_path.exists() {
-        if let Some(appdata) = appdata_dir() {
+    if !config_path.exists()
+        && let Some(appdata) = appdata_dir() {
             config_path = appdata.join("yuzu").join("config").join("qt-config.ini");
         }
-    }
 
-    if config_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&config_path) {
+    if config_path.exists()
+        && let Ok(content) = std::fs::read_to_string(&config_path) {
             for line in content.lines() {
                 let trimmed = line.trim();
-                if trimmed.starts_with("nand_directory") {
-                    if let Some(pos) = trimmed.find('=') {
+                if trimmed.starts_with("nand_directory")
+                    && let Some(pos) = trimmed.find('=') {
                         let path_val = trimmed[pos + 1..].trim();
                         let path_clean = path_val.trim_matches('"');
                         if !path_clean.is_empty() {
@@ -69,10 +65,8 @@ fn get_yuzu_nand_path(emulator_dir: &Path) -> Option<PathBuf> {
                             }
                         }
                     }
-                }
             }
         }
-    }
     None
 }
 
@@ -222,11 +216,10 @@ fn decode_wii_title_id(hex_str: &str) -> Option<String> {
                 return None;
             }
         }
-        if let Ok(s) = String::from_utf8(bytes) {
-            if s.chars().all(|c| c.is_ascii_alphanumeric()) {
+        if let Ok(s) = String::from_utf8(bytes)
+            && s.chars().all(|c| c.is_ascii_alphanumeric()) {
                 return Some(s);
             }
-        }
     }
     None
 }
@@ -353,17 +346,16 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
         }
         "Ryujinx" => {
             let mut save_root = emulator_dir.join("portable").join("bis").join("user").join("save");
-            if !save_root.exists() {
-                if let Some(appdata) = appdata_dir() {
+            if !save_root.exists()
+                && let Some(appdata) = appdata_dir() {
                     save_root = appdata.join("Ryujinx").join("bis").join("user").join("save");
                 }
-            }
 
-            if save_root.exists() {
-                if let Ok(profiles) = std::fs::read_dir(&save_root) {
+            if save_root.exists()
+                && let Ok(profiles) = std::fs::read_dir(&save_root) {
                     for profile in profiles.flatten() {
-                        if profile.path().is_dir() {
-                            if let Ok(titles) = std::fs::read_dir(profile.path()) {
+                        if profile.path().is_dir()
+                            && let Ok(titles) = std::fs::read_dir(profile.path()) {
                                 for title in titles.flatten() {
                                     let name_str = title.file_name().to_string_lossy().to_string();
                                     if title.path().is_dir() && is_title_id(&name_str) {
@@ -388,17 +380,15 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                                     }
                                 }
                             }
-                        }
                     }
                 }
-            }
         }
         "Dolphin" => {
             let user_path = get_dolphin_user_path(emulator_dir);
             let wii_title_root = user_path.join("Wii").join("title").join("00010000");
 
-            if wii_title_root.exists() {
-                if let Ok(titles) = std::fs::read_dir(&wii_title_root) {
+            if wii_title_root.exists()
+                && let Ok(titles) = std::fs::read_dir(&wii_title_root) {
                     for title in titles.flatten() {
                         let name_str = title.file_name().to_string_lossy().to_string();
                         if title.path().is_dir() && is_wii_hex_id(&name_str) {
@@ -418,13 +408,12 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                         }
                     }
                 }
-            }
         }
         "Cemu" => {
             let mlc_path = get_cemu_mlc_path(emulator_dir);
             let save_root = mlc_path.join("usr").join("save").join("00050000");
-            if save_root.exists() {
-                if let Ok(titles) = std::fs::read_dir(&save_root) {
+            if save_root.exists()
+                && let Ok(titles) = std::fs::read_dir(&save_root) {
                     for title in titles.flatten() {
                         let name_str = title.file_name().to_string_lossy().to_string();
                         if title.path().is_dir() && is_wii_hex_id(&name_str) {
@@ -444,24 +433,22 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                         }
                     }
                 }
-            }
         }
         "RetroArch" => {
             let mut saves_dir = emulator_dir.join("saves");
-            if !saves_dir.exists() {
-                if let Some(appdata) = appdata_dir() {
+            if !saves_dir.exists()
+                && let Some(appdata) = appdata_dir() {
                     saves_dir = appdata.join("RetroArch").join("saves");
                 }
-            }
 
-            if saves_dir.exists() {
-                if let Ok(entries) = std::fs::read_dir(&saves_dir) {
+            if saves_dir.exists()
+                && let Ok(entries) = std::fs::read_dir(&saves_dir) {
                     for entry in entries.flatten() {
                         let path = entry.path();
                         if path.is_file() {
                             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
-                            if ext == "srm" || ext == "sav" {
-                                if let Some(stem) = path.file_stem() {
+                            if (ext == "srm" || ext == "sav")
+                                && let Some(stem) = path.file_stem() {
                                     let game_title = stem.to_string_lossy().to_string();
                                     saves.push(DetectedSave {
                                         game_title,
@@ -469,22 +456,19 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                                         emulator_name: "RetroArch".to_string(),
                                     });
                                 }
-                            }
                         }
                     }
                 }
-            }
         }
         "PCSX2" => {
             let mut memcards_dir = emulator_dir.join("memcards");
-            if !memcards_dir.exists() {
-                if let Some(doc_dir) = document_dir() {
+            if !memcards_dir.exists()
+                && let Some(doc_dir) = document_dir() {
                     memcards_dir = doc_dir.join("PCSX2").join("memcards");
                 }
-            }
 
-            if memcards_dir.exists() {
-                if let Ok(entries) = std::fs::read_dir(&memcards_dir) {
+            if memcards_dir.exists()
+                && let Ok(entries) = std::fs::read_dir(&memcards_dir) {
                     for entry in entries.flatten() {
                         let path = entry.path();
                         if path.is_dir() {
@@ -499,15 +483,13 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                         }
                     }
                 }
-            }
         }
         "mGBA" => {
             let mut saves_dir = emulator_dir.join("saves");
-            if !saves_dir.exists() {
-                if let Some(doc_dir) = document_dir() {
+            if !saves_dir.exists()
+                && let Some(doc_dir) = document_dir() {
                     saves_dir = doc_dir.join("mGBA").join("saves");
                 }
-            }
 
             let search_dir = if saves_dir.exists() {
                 saves_dir
@@ -520,8 +502,8 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                     let path = entry.path();
                     if path.is_file() {
                         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
-                        if ext == "sav" {
-                            if let Some(stem) = path.file_stem() {
+                        if ext == "sav"
+                            && let Some(stem) = path.file_stem() {
                                 let game_title = stem.to_string_lossy().to_string();
                                 saves.push(DetectedSave {
                                     game_title,
@@ -529,27 +511,25 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                                     emulator_name: "mGBA".to_string(),
                                 });
                             }
-                        }
                     }
                 }
             }
         }
         "Citra" => {
             let mut sdmc_root = emulator_dir.join("sdmc").join("Nintendo 3DS");
-            if !sdmc_root.exists() {
-                if let Some(appdata) = appdata_dir() {
+            if !sdmc_root.exists()
+                && let Some(appdata) = appdata_dir() {
                     sdmc_root = appdata.join("Citra").join("sdmc").join("Nintendo 3DS");
                 }
-            }
 
             if sdmc_root.exists() {
                 for entry in WalkDir::new(&sdmc_root).into_iter().flatten() {
                     let path = entry.path();
                     if path.is_dir() {
                         let name_str = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                        if is_wii_hex_id(&name_str) {
-                            if let Some(parent) = path.parent() {
-                                if parent.file_name().unwrap_or_default().to_string_lossy() == "00040000" {
+                        if is_wii_hex_id(&name_str)
+                            && let Some(parent) = path.parent()
+                                && parent.file_name().unwrap_or_default().to_string_lossy() == "00040000" {
                                     let save_data_dir = path.join("data").join("00000001");
                                     if save_data_dir.exists() {
                                         let game_title = match name_str.to_lowercase().as_str() {
@@ -582,22 +562,19 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                                         });
                                     }
                                 }
-                            }
-                        }
                     }
                 }
             }
         }
         "PPSSPP" => {
             let mut savedata_dir = emulator_dir.join("memstick").join("PSP").join("SAVEDATA");
-            if !savedata_dir.exists() {
-                if let Some(doc_dir) = document_dir() {
+            if !savedata_dir.exists()
+                && let Some(doc_dir) = document_dir() {
                     savedata_dir = doc_dir.join("PPSSPP").join("PSP").join("SAVEDATA");
                 }
-            }
 
-            if savedata_dir.exists() {
-                if let Ok(entries) = std::fs::read_dir(&savedata_dir) {
+            if savedata_dir.exists()
+                && let Ok(entries) = std::fs::read_dir(&savedata_dir) {
                     for entry in entries.flatten() {
                         let path = entry.path();
                         if path.is_dir() {
@@ -612,7 +589,6 @@ pub fn scan_emulator_saves(emulator_name: &str, path_str: &str) -> Vec<DetectedS
                         }
                     }
                 }
-            }
         }
         _ => {}
     }
@@ -714,23 +690,18 @@ fn online_lookup_switch(title_id: &str) -> Option<String> {
         .ok()?;
     let id_lower = title_id.to_lowercase();
     let url = format!("https://tinfoil.io/Title/{}", id_lower);
-    if let Ok(resp) = client.get(&url).send() {
-        if resp.status().is_success() {
-            if let Ok(html) = resp.text() {
-                if let Some(pos) = html.find("og:title") {
-                    if let Some(content_pos) = html[pos..].find("content=\"") {
-                        if let Some(end_pos) = html[pos + content_pos + 9..].find('"') {
+    if let Ok(resp) = client.get(&url).send()
+        && resp.status().is_success()
+            && let Ok(html) = resp.text()
+                && let Some(pos) = html.find("og:title")
+                    && let Some(content_pos) = html[pos..].find("content=\"")
+                        && let Some(end_pos) = html[pos + content_pos + 9..].find('"') {
                             let name = &html[pos + content_pos + 9..pos + content_pos + 9 + end_pos];
                             let cleaned = name.trim().to_string();
                             if !cleaned.is_empty() {
                                 return Some(cleaned);
                             }
                         }
-                    }
-                }
-            }
-        }
-    }
     None
 }
 
@@ -740,9 +711,9 @@ fn online_lookup_wiiu(title_id: &str) -> Option<String> {
         .build()
         .ok()?;
     let url = "https://raw.githubusercontent.com/Laf111/CEMU-Batch-Framework/master/resources/WiiU-Titles-Library.csv";
-    if let Ok(resp) = client.get(url).send() {
-        if resp.status().is_success() {
-            if let Ok(content) = resp.text() {
+    if let Ok(resp) = client.get(url).send()
+        && resp.status().is_success()
+            && let Ok(content) = resp.text() {
                 let id_upper = title_id.to_uppercase();
                 for line in content.lines() {
                     let line_upper = line.to_uppercase();
@@ -761,7 +732,5 @@ fn online_lookup_wiiu(title_id: &str) -> Option<String> {
                     }
                 }
             }
-        }
-    }
     None
 }
