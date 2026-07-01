@@ -460,7 +460,6 @@ impl Ludusavi {
     }
 
     pub fn set_backup_locked(&mut self, game: &str, backup_id: &str, locked: bool) -> Result<(), Error> {
-        
         let mut layout = self.layout.game_layout(game);
         layout.set_backup_locked(&BackupId::Named(backup_id.to_string()), locked);
         layout.save();

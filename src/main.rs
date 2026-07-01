@@ -187,7 +187,7 @@ fn launch_ludocard() -> Result<(), std::io::Error> {
     exe_path.push("Ludocard.exe");
     #[cfg(not(target_os = "windows"))]
     exe_path.push("Ludocard");
-    
+
     if exe_path.exists() {
         std::process::Command::new(exe_path).spawn()?;
         Ok(())
@@ -195,7 +195,7 @@ fn launch_ludocard() -> Result<(), std::io::Error> {
         Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "Ludocard executable not found",
-        ))  
+        ))
     }
 }
 

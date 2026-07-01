@@ -677,5 +677,3 @@ impl Rclone {
         RcloneProcess::launch(self.app.path.raw().into(), self.args(&args))
     }
 }
-
-

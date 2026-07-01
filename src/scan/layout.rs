@@ -159,12 +159,7 @@ impl Backup {
     pub fn size_bytes(&self) -> u64 {
         match self {
             Self::Full(x) => x.files.values().map(|f| f.size).sum(),
-            Self::Differential(x) => x
-                .files
-                .values()
-                .filter_map(|f| f.as_ref())
-                .map(|f| f.size)
-                .sum(),
+            Self::Differential(x) => x.files.values().filter_map(|f| f.as_ref()).map(|f| f.size).sum(),
         }
     }
 
