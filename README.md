@@ -28,41 +28,39 @@ Tired of manually tweaking `.ini` and `.cfg` files to optimize your game's graph
 
 ---
 
-## 🛠️ Complete Feature Roadmap & Status
+## 🛠️ Complete Feature List
 
-### 🟢 1. Core Mechanics & Frontend (Completed)
-- **Modern UI (React + Tailwind v4 + Vite)**: A premium-looking dashboard with a sidebar, fluid navigation, and responsive sections (Library, Scan, Cloud, Settings, Support).
-- **Tauri Commands (Rust Bridge)**: Performance-oriented Rust commands to list libraries (`get_games`), backup/restore saves (`backup_game` / `restore_game`), and manage settings.
-- **Smart Active Detection**: Prevents false-positive game detections by checking if the game's executable (`.exe`) is actually present in game store installation folders (Steam, Epic, GOG, Heroic, Lutris, etc.).
-- **Smart Library Sorting**: Sort your library by "Recently Played" (based on save file write times), "Size", or alphabetical "A-Z".
-- **Local or Cloud Backup Selection**: Flexible backup button with a dropdown selector to choose between local backups or cloud syncing.
+### 🎮 Interface & Game Library
+- **Beautiful and Simple Interface**: A modern, easy-to-navigate dashboard to organize and view all your games in one place.
+- **Fast Backups & Restores**: Quickly save or restore your progress with a single click, without slowing down your computer.
+- **Smart Game Finder**: Checks if games are actually installed on your computer (supporting Steam, Epic Games, GOG, and others) so it only shows games you actually have.
+- **Easy Sorting**: Sort your list of games by the ones you played recently, by file size, or in alphabetical order.
+- **Choose Where to Save**: Easily select whether to save your files locally on your computer or sync them to the cloud.
 
-### 🟢 2. Automation & System Integration (Completed)
-- **File Watcher (Active Save Monitor)**: Monitors save folders in real-time. When you close a game, it triggers a silent backup in the background.
-- **System Tray Integration**: Clicking the close window button minimizes Ludocard to the Windows system tray (near the clock), continuing background monitoring with close to zero RAM/CPU consumption.
-- **Run at Windows Startup**: Toggle option in settings to launch the app automatically with Windows.
+### 🤖 Automation & Background Actions
+- **Automatic Backup on Close**: The app runs quietly in the background and automatically saves your progress the moment you close your game.
+- **Minimize to Taskbar (Tray)**: Close the main window and let the app work quietly in the background near the clock, using almost zero computer memory.
+- **Start with Windows**: Start the app automatically when you turn on your computer so you never forget to back up your saves.
 
-### 🟢 3. Advanced Backup Features (Completed)
-- **Version Pinning (Pin Backup)**: "Pin" or lock specific backups in your timeline (e.g., before making a major choice in an RPG) to prevent them from being auto-deleted when the backup retention limit is reached.
-- **Portable Mode**: Save all backups and configuration files inside the executable's folder, allowing you to run Ludocard entirely from a USB drive or external hard disk.
-- **Game Settings Backup**: Go beyond saves and back up graphic/control configuration folders (often located in separate AppData or Documents folders).
-- **Multiple Save Profiles**: Separate your gameplay styles (e.g., Modded vs. Vanilla, Character A vs. Character B). Switch active folders instantly.
-- **Visual Conflict Assistant**: Side-by-side comparison screen (e.g., *"This PC (Older - 10MB)"* vs. *"Cloud (Newer - 12MB)"*) when local and cloud saves drift.
+### 🛡️ Advanced Save Protection
+- **Lock Special Saves**: "Pin" or lock specific saves (like right before a major choice in an RPG) to make sure they are never automatically deleted.
+- **Portable Mode (USB Friendly)**: Run the entire app and store all your backups directly on a USB drive or external hard drive so you can play on any computer.
+- **Back Up Settings & Controls**: Go beyond save games and back up your game's graphic, volume, and button settings.
+- **Multiple Save Profiles**: Create separate profiles for the same game (like one for mods, one for clean gameplay, or one for another family member) and swap between them instantly.
+- **Save Comparison Assistant**: If your local saves and cloud saves don't match, a clear screen will show you which one is newer and let you choose which one to keep.
 
-### 🟢 4. Gamer Tools & UX (Completed)
-- **Global Emergency Quick-Save**: A customizable keyboard shortcut (e.g., `Ctrl + Shift + S`) that performs an instant save-state of your active game, accompanied by a subtle Steam-like toast notification and chime.
-- **Campaign Notes (The Captain's Log)**: An editable text field inside each game card to write down notes about your build, objectives, or current checklist.
-- **Automatic Cover Downloads**: Automatically fetches vertical game cover art from Steam's API or SteamGridDB, eliminating boring placeholders.
+### 🕹️ Emulators Support
+- **Emulator Support**: Automatically detects and manages save files from popular console emulators (like Switch, PlayStation, Wii, GBA, etc.).
+- **Friendly Emulator Names**: Automatically renames complex emulator game folders into readable game titles (e.g., "[Yuzu] The Legend of Zelda" instead of code numbers).
+- **Emulator Badges**: Colorful labels in your library that show you exactly which console or emulator each game belongs to.
 
-### 🟢 5. Emulator Support & Title Detection (Completed)
-- **Emulator Integration**: Automatically detects and manages saves from major emulators (Yuzu, Ryujinx, Dolphin, PCSX2, RetroArch, mGBA, Citra, etc.).
-- **Smart Rom & Title ID Mapping**: Reads Switch/Wii Title IDs or GBA/PS2 Rom file names to register them under friendly names (e.g., `[Yuzu] The Legend of Zelda: Tears of the Kingdom`).
-- **Premium Emulation Badges**: Visual tags with custom-colored branding for each emulator platform.
-
-### 🟢 6. Project Support & Administration (Completed)
-- **Support Page (`/support`)**: Integrated donation screen showing server costs (Cloudflare R2, Supabase) with quick links for Itch.io and PIX support.
-- **Admin Control Panel**: Hidden/password-protected dashboard to manage cloud saves, delete corrupted or offensive presets, and monitor Cloudflare R2 quota usage.
-- **Multi-language Support (Fluent)**: Fully localized into English, Portuguese, Spanish, Russian, and Simplified Chinese.
+### 💖 Extra Tools for Gamers
+- **Panic Quick-Save Button**: Press a simple shortcut on your keyboard (like `Ctrl + Shift + S`) to instantly save your game status, complete with a quick notification sound.
+- **Game Notes**: Write quick notes directly on each game's card to keep track of your goals, builds, or where you left off in your adventure.
+- **Automatic Game Cover Art**: Automatically downloads beautiful cover art for your games so your library looks organized and clean.
+- **Support the Creator**: A simple screen where you can support the project's cloud server costs.
+- **Admin Dashboard**: A secure, password-protected area for the developers to manage shared community files and monitor cloud storage.
+- **Multiple Languages**: Fully translated into English, Portuguese, Spanish, Russian, and Simplified Chinese.
 
 ---
 
