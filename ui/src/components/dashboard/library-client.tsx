@@ -96,12 +96,12 @@ function GameCard({ game, selected, onSelectedChange, onBackup, onRestore }: Gam
   const status = statusConfig[game.status]
   const cleanTitle = cleanGameTitle(game.title)
   const statusLabel = game.status === "ok"
-    ? t("ludocard-status-synchronized", "Sincronizado")
+    ? t("luducard-status-synchronized", "Sincronizado")
     : game.status === "pending"
-      ? t("ludocard-status-pending", "Backup pendente")
-      : t("ludocard-status-none", "Sem backup")
+      ? t("luducard-status-pending", "Backup pendente")
+      : t("luducard-status-none", "Sem backup")
 
-  const displayLastBackup = game.lastBackup === "Nunca" ? t("ludocard-never", "Nunca") : game.lastBackup
+  const displayLastBackup = game.lastBackup === "Nunca" ? t("luducard-never", "Nunca") : game.lastBackup
 
   const [localNotes, setLocalNotes] = useState(game.notes || "")
 
@@ -117,7 +117,7 @@ function GameCard({ game, selected, onSelectedChange, onBackup, onRestore }: Gam
         await invoke("save_campaign_note", { gameId: game.id, note: localNotes });
         game.notes = localNotes;
       } catch (err) {
-        toast.error(`Falha ao salvar anotação: ${err}`);
+        toast.error(`Falha ao salvar anotaÃ§Ã£o: ${err}`);
       }
     } else {
       game.notes = localNotes;
@@ -131,7 +131,7 @@ function GameCard({ game, selected, onSelectedChange, onBackup, onRestore }: Gam
           checked={selected}
           onCheckedChange={(c) => onSelectedChange(c === true)}
           className="border-white/40 bg-black/60 backdrop-blur data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-          aria-label={`${t("ludocard-select", "Selecionar")} ${cleanTitle}`}
+          aria-label={`${t("luducard-select", "Selecionar")} ${cleanTitle}`}
         />
       </div>
 
@@ -172,7 +172,7 @@ function GameCard({ game, selected, onSelectedChange, onBackup, onRestore }: Gam
           value={localNotes}
           onChange={(e) => setLocalNotes(e.target.value)}
           onBlur={saveNotes}
-          placeholder={t("ludocard-diario-bordo-placeholder", "Diário de Bordo (anotações)...")}
+          placeholder={t("luducard-diario-bordo-placeholder", "DiÃ¡rio de Bordo (anotaÃ§Ãµes)...")}
           className="w-full min-h-[42px] max-h-[80px] resize-y bg-background/50 border border-border/40 hover:border-border/80 focus:border-primary/50 rounded p-1.5 text-[11px] leading-normal outline-none transition-colors text-foreground placeholder:text-muted-foreground/40 font-normal"
         />
       </div>
@@ -185,7 +185,7 @@ function GameCard({ game, selected, onSelectedChange, onBackup, onRestore }: Gam
           className="shadow-lg hover:pointer-events-auto"
         >
           <ArrowUpToLine data-icon="inline-start" />
-          {t("ludocard-backup", "Backup")}
+          {t("luducard-backup", "Backup")}
         </Button>
         <Button
           size="sm"
@@ -194,7 +194,7 @@ function GameCard({ game, selected, onSelectedChange, onBackup, onRestore }: Gam
           className="shadow-lg hover:pointer-events-auto"
         >
           <ArrowDownToLine data-icon="inline-start" />
-          {t("ludocard-restore", "Restaurar")}
+          {t("luducard-restore", "Restaurar")}
         </Button>
       </div>
     </div>
@@ -206,12 +206,12 @@ function GameRow({ game, selected, onSelectedChange, onBackup, onRestore }: Game
   const status = statusConfig[game.status]
   const cleanTitle = cleanGameTitle(game.title)
   const statusLabel = game.status === "ok"
-    ? t("ludocard-status-synchronized", "Sincronizado")
+    ? t("luducard-status-synchronized", "Sincronizado")
     : game.status === "pending"
-      ? t("ludocard-status-pending", "Backup pendente")
-      : t("ludocard-status-none", "Sem backup")
+      ? t("luducard-status-pending", "Backup pendente")
+      : t("luducard-status-none", "Sem backup")
 
-  const displayLastBackup = game.lastBackup === "Nunca" ? t("ludocard-never", "Nunca") : game.lastBackup
+  const displayLastBackup = game.lastBackup === "Nunca" ? t("luducard-never", "Nunca") : game.lastBackup
 
   const [localNotes, setLocalNotes] = useState(game.notes || "")
 
@@ -227,7 +227,7 @@ function GameRow({ game, selected, onSelectedChange, onBackup, onRestore }: Game
         await invoke("save_campaign_note", { gameId: game.id, note: localNotes });
         game.notes = localNotes;
       } catch (err) {
-        toast.error(`Falha ao salvar anotação: ${err}`);
+        toast.error(`Falha ao salvar anotaÃ§Ã£o: ${err}`);
       }
     } else {
       game.notes = localNotes;
@@ -239,7 +239,7 @@ function GameRow({ game, selected, onSelectedChange, onBackup, onRestore }: Game
       <Checkbox
         checked={selected}
         onCheckedChange={(c) => onSelectedChange(c === true)}
-        aria-label={`${t("ludocard-select", "Selecionar")} ${cleanTitle}`}
+        aria-label={`${t("luducard-select", "Selecionar")} ${cleanTitle}`}
         className="ml-1"
       />
       <Link to={`/game/${game.id}`} className="shrink-0">
@@ -270,26 +270,26 @@ function GameRow({ game, selected, onSelectedChange, onBackup, onRestore }: Game
               e.currentTarget.blur();
             }
           }}
-          placeholder={t("ludocard-diario-bordo-placeholder-short", "Diário de Bordo...")}
+          placeholder={t("luducard-diario-bordo-placeholder-short", "DiÃ¡rio de Bordo...")}
           className="mt-1 w-full bg-background/30 border border-border/40 hover:border-border/80 focus:border-primary/50 rounded px-2 py-0.5 text-[10px] outline-none transition-colors text-foreground placeholder:text-muted-foreground/40 font-normal"
         />
       </div>
       <div className="hidden w-24 shrink-0 flex-col items-end text-xs sm:flex">
         <span className="font-medium text-foreground">{formatSize(game.sizeMB)}</span>
-        <span className="text-muted-foreground">{t("ludocard-current-save", "Save atual")}</span>
+        <span className="text-muted-foreground">{t("luducard-current-save", "Save atual")}</span>
       </div>
       <div className="hidden w-28 shrink-0 flex-col items-end text-xs md:flex">
         <span className="font-medium text-foreground">{displayLastBackup}</span>
-        <span className="text-muted-foreground">{t("ludocard-last-backup", "Último backup")}</span>
+        <span className="text-muted-foreground">{t("luducard-last-backup", "Ãšltimo backup")}</span>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        <Button size="icon-sm" variant="ghost" onClick={() => onBackup(game.title)} title={t("ludocard-manual-backup", "Backup manual")}>
+        <Button size="icon-sm" variant="ghost" onClick={() => onBackup(game.title)} title={t("luducard-manual-backup", "Backup manual")}>
           <ArrowUpToLine />
-          <span className="sr-only">{t("ludocard-manual-backup", "Backup manual")}</span>
+          <span className="sr-only">{t("luducard-manual-backup", "Backup manual")}</span>
         </Button>
-        <Button size="icon-sm" variant="ghost" onClick={() => onRestore(game.title)} title={t("ludocard-restore", "Restaurar")}>
+        <Button size="icon-sm" variant="ghost" onClick={() => onRestore(game.title)} title={t("luducard-restore", "Restaurar")}>
           <ArrowDownToLine />
-          <span className="sr-only">{t("ludocard-restore", "Restaurar")}</span>
+          <span className="sr-only">{t("luducard-restore", "Restaurar")}</span>
         </Button>
       </div>
     </div>
@@ -316,7 +316,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
 
   const handleBackup = async (title: string) => {
     if (isTauri) {
-      const id = toast.loading(`${t("ludocard-starting-backup-for", "Iniciando backup de")} "${title}"...`);
+      const id = toast.loading(`${t("luducard-starting-backup-for", "Iniciando backup de")} "${title}"...`);
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         const conflict = await invoke<any>("check_cloud_conflict", { gameTitle: title });
@@ -327,13 +327,13 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
           return;
         }
         await invoke("backup_game", { gameTitle: title });
-        toast.success(`${t("ludocard-backup-completed-for", "Backup de")} "${title}" ${t("ludocard-completed", "concluído!")}`, { id });
+        toast.success(`${t("luducard-backup-completed-for", "Backup de")} "${title}" ${t("luducard-completed", "concluÃ­do!")}`, { id });
         loadGames(true);
       } catch (err) {
-        toast.error(`${t("ludocard-backup-failed-for", "Falha no backup de")} "${title}": ${err}`, { id });
+        toast.error(`${t("luducard-backup-failed-for", "Falha no backup de")} "${title}": ${err}`, { id });
       }
     } else {
-      toast.success(`[Mock] Backup de "${title}" concluído!`);
+      toast.success(`[Mock] Backup de "${title}" concluÃ­do!`);
     }
   };
 
@@ -342,17 +342,17 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
     const title = conflictInfo.gameTitle;
     const id = toast.loading(
       direction === "local"
-        ? `Resolvendo conflito: mantendo a versão local de "${title}"...`
-        : `Resolvendo conflito: baixando a versão da nuvem de "${title}"...`
+        ? `Resolvendo conflito: mantendo a versÃ£o local de "${title}"...`
+        : `Resolvendo conflito: baixando a versÃ£o da nuvem de "${title}"...`
     );
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       if (direction === "local") {
         await invoke("backup_game", { gameTitle: title });
-        toast.success(`Versão local de "${title}" salva na nuvem!`, { id });
+        toast.success(`VersÃ£o local de "${title}" salva na nuvem!`, { id });
       } else {
         await invoke("restore_game", { gameTitle: title, backupId: null });
-        toast.success(`Versão da nuvem de "${title}" restaurada!`, { id });
+        toast.success(`VersÃ£o da nuvem de "${title}" restaurada!`, { id });
       }
       setConflictModalOpen(false);
       setConflictInfo(null);
@@ -364,17 +364,17 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
 
   const handleRestore = async (title: string) => {
     if (isTauri) {
-      const id = toast.loading(`${t("ludocard-restoring-backup-for", "Restaurando backup de")} "${title}"...`);
+      const id = toast.loading(`${t("luducard-restoring-backup-for", "Restaurando backup de")} "${title}"...`);
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("restore_game", { gameTitle: title });
-        toast.success(`${t("ludocard-restore-completed-for", "Restauração de")} "${title}" ${t("ludocard-completed-fem", "concluída!")}`, { id });
+        toast.success(`${t("luducard-restore-completed-for", "RestauraÃ§Ã£o de")} "${title}" ${t("luducard-completed-fem", "concluÃ­da!")}`, { id });
         loadGames(true);
       } catch (err) {
-        toast.error(`${t("ludocard-restore-failed-for", "Falha ao restaurar")} "${title}": ${err}`, { id });
+        toast.error(`${t("luducard-restore-failed-for", "Falha ao restaurar")} "${title}": ${err}`, { id });
       }
     } else {
-      toast.success(`[Mock] Restauração de "${title}" concluída!`);
+      toast.success(`[Mock] RestauraÃ§Ã£o de "${title}" concluÃ­da!`);
     }
   };
 
@@ -434,7 +434,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
     return (
       <div className="flex h-[400px] flex-col items-center justify-center gap-2">
         <Loader2 className="size-8 animate-spin text-primary" />
-        <span className="text-sm text-muted-foreground">{t("ludocard-loading-library", "Carregando biblioteca de jogos...")}</span>
+        <span className="text-sm text-muted-foreground">{t("luducard-loading-library", "Carregando biblioteca de jogos...")}</span>
       </div>
     )
   }
@@ -445,24 +445,24 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           icon={Gamepad2}
-          label={t("ludocard-monitored-games", "Jogos monitorados")}
+          label={t("luducard-monitored-games", "Jogos monitorados")}
           value={String(stats.totalGames)}
           accent="text-primary"
         />
         <StatCard
           icon={HardDrive}
-          label={t("ludocard-stored-saves", "Saves armazenados")}
+          label={t("luducard-stored-saves", "Saves armazenados")}
           value={formatSize(stats.totalSizeMB)}
         />
         <StatCard
           icon={Cloud}
-          label={t("ludocard-cloud-synced", "Sincronizados na nuvem")}
+          label={t("luducard-cloud-synced", "Sincronizados na nuvem")}
           value={`${stats.cloudSynced}/${stats.totalGames}`}
           accent="text-primary"
         />
         <StatCard
           icon={TimerReset}
-          label={t("ludocard-pending-saves-plural", "Backups pendentes")}
+          label={t("luducard-pending-saves-plural", "Backups pendentes")}
           value={String(stats.pending)}
           accent="text-amber-400"
         />
@@ -476,7 +476,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("ludocard-search-games", "Pesquisar jogos...")}
+              placeholder={t("luducard-search-games", "Pesquisar jogos...")}
               className="pl-9 pr-9"
             />
             {query && (
@@ -486,7 +486,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
                 size="icon"
                 className="absolute right-1 top-1/2 size-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setQuery("")}
-                aria-label={t("ludocard-clear-search", "Limpar pesquisa")}
+                aria-label={t("luducard-clear-search", "Limpar pesquisa")}
               >
                 <X className="size-4" />
               </Button>
@@ -500,7 +500,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
               onCheckedChange={handleSelectAllToggle}
             />
             <label htmlFor="select-all-library" className="text-xs font-medium cursor-pointer select-none text-muted-foreground">
-              {t("ludocard-select-all", "Selecionar todos")} ({filtered.filter(g => selected[g.id]).length}/{filtered.length})
+              {t("luducard-select-all", "Selecionar todos")} ({filtered.filter(g => selected[g.id]).length}/{filtered.length})
             </label>
           </div>
         </div>
@@ -508,11 +508,11 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Select value={platform} onValueChange={(v) => setPlatform(v as Platform | "all")}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder={t("ludocard-platform", "Plataforma")} />
+              <SelectValue placeholder={t("luducard-platform", "Plataforma")} />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="all">{t("ludocard-all-platforms", "Todas plataformas")}</SelectItem>
+                <SelectItem value="all">{t("luducard-all-platforms", "Todas plataformas")}</SelectItem>
                 <SelectItem value="Steam">Steam</SelectItem>
                 <SelectItem value="Epic">Epic</SelectItem>
                 <SelectItem value="GOG">GOG</SelectItem>
@@ -525,13 +525,13 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as "name" | "recent" | "size")}>
             <SelectTrigger className="w-[190px]">
               <ArrowUpDown className="size-4 mr-1.5 shrink-0 text-muted-foreground" />
-              <SelectValue placeholder={t("ludocard-sort-by", "Ordenar por")} />
+              <SelectValue placeholder={t("luducard-sort-by", "Ordenar por")} />
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="name">{t("ludocard-sort-name", "Nome (A-Z)")}</SelectItem>
-                <SelectItem value="recent">{t("ludocard-sort-recent", "Jogados recentemente")}</SelectItem>
-                <SelectItem value="size">{t("ludocard-sort-size", "Tamanho do save")}</SelectItem>
+                <SelectItem value="name">{t("luducard-sort-name", "Nome (A-Z)")}</SelectItem>
+                <SelectItem value="recent">{t("luducard-sort-recent", "Jogados recentemente")}</SelectItem>
+                <SelectItem value="size">{t("luducard-sort-size", "Tamanho do save")}</SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -541,7 +541,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
             onClick={() => setOnlyInstalled((p) => !p)}
           >
             <Gamepad2 data-icon="inline-start" />
-            {t("ludocard-installed", "Instalados")}
+            {t("luducard-installed", "Instalados")}
           </Button>
 
           <Button
@@ -549,7 +549,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
             onClick={() => setOnlyPending((p) => !p)}
           >
             <AlertTriangle data-icon="inline-start" />
-            {t("ludocard-pending", "Pendentes")}
+            {t("luducard-pending", "Pendentes")}
           </Button>
 
           <ToggleGroup
@@ -561,10 +561,10 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
             variant="outline"
             spacing={0}
           >
-            <ToggleGroupItem value="grid" aria-label={t("ludocard-grid-view", "Visualização em grade")}>
+            <ToggleGroupItem value="grid" aria-label={t("luducard-grid-view", "VisualizaÃ§Ã£o em grade")}>
               <LayoutGrid />
             </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label={t("ludocard-list-view", "Visualização em lista")}>
+            <ToggleGroupItem value="list" aria-label={t("luducard-list-view", "VisualizaÃ§Ã£o em lista")}>
               <List />
             </ToggleGroupItem>
           </ToggleGroup>
@@ -573,7 +573,7 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
 
       {/* Results */}
       <div className="text-xs text-muted-foreground font-medium px-1 -mb-2">
-        {t("ludocard-showing", "Exibindo")} {filtered.length} {t("ludocard-of", "de")} {games.length} {games.length === 1 ? t("ludocard-game", "jogo") : t("ludocard-games-plural", "jogos")}
+        {t("luducard-showing", "Exibindo")} {filtered.length} {t("luducard-of", "de")} {games.length} {games.length === 1 ? t("luducard-game", "jogo") : t("luducard-games-plural", "jogos")}
       </div>
 
       {filtered.length === 0 ? (
@@ -584,13 +584,13 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
             </EmptyMedia>
             <EmptyTitle>
               {games.length === 0 
-                ? "Você ainda não tem jogos" 
-                : t("ludocard-no-games-found", "Nenhum jogo encontrado")}
+                ? "VocÃª ainda nÃ£o tem jogos" 
+                : t("luducard-no-games-found", "Nenhum jogo encontrado")}
             </EmptyTitle>
             <EmptyDescription>
               {games.length === 0
-                ? "Adicione caminhos ou realize um escaneamento para começar."
-                : t("ludocard-adjust-filters-desc", "Ajuste os filtros ou escaneie suas pastas para adicionar novos jogos.")}
+                ? "Adicione caminhos ou realize um escaneamento para comeÃ§ar."
+                : t("luducard-adjust-filters-desc", "Ajuste os filtros ou escaneie suas pastas para adicionar novos jogos.")}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

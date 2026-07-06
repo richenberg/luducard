@@ -9,7 +9,7 @@ status = Stato
 cli-unrecognized-games = Nessuna informazione per questi giochi:
 cli-unable-to-request-confirmation = Impossibile richiedere conferma.
     .winpty-workaround = Se stai usando un emulatore Bash (come Git Bash), prova ad eseguire winpty.
-cli-backup-id-with-multiple-games = Impossibile specificare l'ID di backup quando si ripristinano più giochi.
+cli-backup-id-with-multiple-games = Impossibile specificare l'ID di backup quando si ripristinano piÃ¹ giochi.
 cli-invalid-backup-id = ID Backup invalido.
 badge-failed = FALLITO
 badge-duplicates = DUPLICATI
@@ -17,14 +17,14 @@ badge-duplicated = DUPLICATO
 badge-ignored = IGNORATO
 badge-redirected-from = DA: { $path }
 badge-redirecting-to = A: { $path }
-some-entries-failed = Alcune voci non sono riuscite a elaborare; cerca { badge-failed } nell'output per i dettagli. Controlla se è possibile accedere a questi file o se i loro percorsi sono molto lunghi.
+some-entries-failed = Alcune voci non sono riuscite a elaborare; cerca { badge-failed } nell'output per i dettagli. Controlla se Ã¨ possibile accedere a questi file o se i loro percorsi sono molto lunghi.
 cli-game-line-item-redirected = Reindirizzato da: { $path }
 cli-game-line-item-redirecting = Reindirizzamento a: { $path }
 button-backup = Backup
 button-preview = Anteprima
 button-restore = Ripristina
-button-nav-backup = MODALITÀ BACKUP
-button-nav-restore = MODALITÀ RIPRISTINO
+button-nav-backup = MODALITÃ€ BACKUP
+button-nav-restore = MODALITÃ€ RIPRISTINO
 button-nav-custom-games = GIOCHI PERSONALIZZATI
 button-nav-other = ALTRO
 button-add-game = Aggiungi gioco
@@ -53,9 +53,9 @@ button-ignore = Ignora
 no-roots-are-configured = Aggiungi alcune radici per eseguire il backup di ulteriori dati.
 config-is-invalid = Errore: File di configurazione non valido.
 manifest-is-invalid = Errore: File manifest non valido.
-manifest-cannot-be-updated = Errore: Impossibile cercare aggiornamenti del file manifesto. La tua connessione Internet è inattiva?
+manifest-cannot-be-updated = Errore: Impossibile cercare aggiornamenti del file manifesto. La tua connessione Internet Ã¨ inattiva?
 cannot-prepare-backup-target = Errore: Impossibile preparare l'obiettivo di backup (sia creare che svuotare la cartella). Se hai la cartella aperta nel tuo file browser, prova a chiuderla: { $path }
-restoration-source-is-invalid = Errore: la sorgente di ripristino non è valida (o non esiste o non è una directory). Si prega di ricontrollare la posizione: { $path }
+restoration-source-is-invalid = Errore: la sorgente di ripristino non Ã¨ valida (o non esiste o non Ã¨ una directory). Si prega di ricontrollare la posizione: { $path }
 registry-issue = Errore: Alcune voci del registro sono state saltate.
 unable-to-browse-file-system = Errore: Impossibile navigare sul tuo sistema.
 unable-to-open-directory = Errore: impossibile aprire la directory:
@@ -202,16 +202,16 @@ skip-unconstructive-backups = Salta il backup quando i dati saranno rimossi, ma 
 explanation-for-exclude-store-screenshots = Nei backup, escludi screenshot specifici dello store
 explanation-for-exclude-cloud-games = Non eseguire il backup dei giochi con supporto cloud su queste piattaforme
 consider-doing-a-preview =
-    Se non lo hai già fatto, prendi in considerazione di fare un'anteprima prima in modo che non ci siano
+    Se non lo hai giÃ  fatto, prendi in considerazione di fare un'anteprima prima in modo che non ci siano
     sorprese.
 confirm-backup =
     Sei sicuro di voler procedere con il backup? { $path-action ->
         [merge] Nuovi dati di salvataggio verranno uniti nella cartella di destinazione:
-       *[create] La cartella di destinazione verrà creata:
+       *[create] La cartella di destinazione verrÃ  creata:
     }
 confirm-restore =
     Sei sicuro di voler procedere con il ripristino?
-    Questo sovrascriverà tutti i file attuali con i backup da qui:
+    Questo sovrascriverÃ  tutti i file attuali con i backup da qui:
 confirm-cloud-upload =
     Vuoi sostituire i tuoi file cloud con quelli locali?
     I tuoi file cloud ({ $cloud-path }) diventeranno una copia esatta dei tuoi file locali ({ $local-path }).
@@ -239,15 +239,15 @@ suffix-no-confirmation = senza conferma
 suffix-restart-required = riavvio richiesto
 prefix-error = Errore: { $message }
 prefix-warning = Attenzione: { $message }
-cloud-app-unavailable = I backup cloud sono disabilitati perché { $app } non è disponibile.
-cloud-not-configured = I backup cloud sono disabilitati perché non è stato configurato alcun sistema cloud.
-cloud-path-invalid = I backup cloud sono disabilitati perché il percorso di backup non è valido.
+cloud-app-unavailable = I backup cloud sono disabilitati perchÃ© { $app } non Ã¨ disponibile.
+cloud-not-configured = I backup cloud sono disabilitati perchÃ© non Ã¨ stato configurato alcun sistema cloud.
+cloud-path-invalid = I backup cloud sono disabilitati perchÃ© il percorso di backup non Ã¨ valido.
 game-is-unrecognized = Ludusavi non riconosce questo gioco.
 game-has-nothing-to-restore = Questo gioco non dispone di un backup da ripristinare.
 launch-game-after-error = Avviare comunque il gioco?
 game-did-not-launch = Lancio del gioco fallito.
-backup-is-newer-than-current-data = Il backup esistente è più recente dei dati attuali.
-backup-is-older-than-current-data = Il backup esistente è più vecchio dei dati attuali.
+backup-is-newer-than-current-data = Il backup esistente Ã¨ piÃ¹ recente dei dati attuali.
+backup-is-older-than-current-data = Il backup esistente Ã¨ piÃ¹ vecchio dei dati attuali.
 back-up-specific-game =
     .confirm = Backup dei dati di salvataggio per { $game }?
     .failed = Backup dei dati di salvataggio di { $game } non riuscito
@@ -255,7 +255,7 @@ restore-specific-game =
     .confirm = Ripristina i dati di salvataggio per { $game }?
     .failed = Ripristino dei dati di salvataggio per { $game } non riuscito
 new-version-check = Controlla automaticamente gli aggiornamenti dell'applicazione
-new-version-available = Un aggiornamento dell'applicazione è disponibile: { $version }. Vuoi visualizzare le note di rilascio?
+new-version-available = Un aggiornamento dell'applicazione Ã¨ disponibile: { $version }. Vuoi visualizzare le note di rilascio?
 custom-game-will-override = Questo gioco personalizzato sovrascrive una voce del manifesto
 custom-game-will-extend = Questo gioco personalizzato estende una voce del manifesto
-operation-will-only-include-listed-games = Questo processerà solo i giochi che sono attualmente elencati
+operation-will-only-include-listed-games = Questo processerÃ  solo i giochi che sono attualmente elencati

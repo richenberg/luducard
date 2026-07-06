@@ -30,8 +30,8 @@ button-nav-other = OVERIG
 button-add-game = Game toevoegen
 button-continue = Doorgaan
 button-cancel = Annuleren
-button-cancelling = Bezig met annuleren…
-button-okay = Oké
+button-cancelling = Bezig met annulerenâ€¦
+button-okay = OkÃ©
 button-select-all = Alles selecteren
 button-deselect-all = Niets selecteren
 button-enable-all = Alles inschakelen
@@ -64,7 +64,7 @@ unable-to-configure-cloud = Cloud kon niet ingesteld worden.
 unable-to-synchronize-with-cloud = Cloud kon niet gesynchroniseerd worden.
 cloud-synchronize-conflict = Je lokale back-ups en cloudback-ups zijn met elkaar in conflict. Voer een upload of download uit om dit op te lossen.
 command-unlaunched = Opdracht is niet gestart: { $command }
-command-terminated = Opdracht plotseling beëindigd: { $command }
+command-terminated = Opdracht plotseling beÃ«indigd: { $command }
 command-failed = Opdracht mislukt met code { $code }: { $command }
 processed-games =
     { $total-games } { $total-games ->
@@ -154,7 +154,7 @@ label-primary-manifest = Primary manifest
 # This refers to how we integrate a custom game with the manifest data.
 label-integration = Integratie
 # This is a folder name where a specific game is installed
-label-installed-name = Geïnstalleerde naam
+label-installed-name = GeÃ¯nstalleerde naam
 store-ea = EA
 store-epic = Epic
 store-gog = GOG

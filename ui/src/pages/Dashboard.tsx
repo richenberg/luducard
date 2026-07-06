@@ -49,7 +49,7 @@ export default function Dashboard() {
     const toastId = toast.loading(
       target === "cloud"
         ? "Fazendo backup e sincronizando com a nuvem..."
-        : t("ludocard-toast-backing-up", "Fazendo backup dos jogos selecionados...")
+        : t("luducard-toast-backing-up", "Fazendo backup dos jogos selecionados...")
     );
     try {
       const { invoke } = await import("@tauri-apps/api/core");
@@ -80,15 +80,15 @@ export default function Dashboard() {
         // Run test/upload connection check to trigger sync or confirm everything uploaded
         try {
           await invoke("test_cloud_connection");
-          toast.success("Backup e upload para nuvem concluídos com sucesso!", { id: toastId });
+          toast.success("Backup e upload para nuvem concluÃ­dos com sucesso!", { id: toastId });
         } catch (cloudErr) {
-          toast.warning("Backup local concluído, mas falhou ao enviar para a nuvem.", { id: toastId });
+          toast.warning("Backup local concluÃ­do, mas falhou ao enviar para a nuvem.", { id: toastId });
         }
       } else {
-        toast.success(t("ludocard-toast-backup-success", "Backup concluído com sucesso!"), { id: toastId });
+        toast.success(t("luducard-toast-backup-success", "Backup concluÃ­do com sucesso!"), { id: toastId });
       }
     } catch (err) {
-      toast.error(`${t("ludocard-toast-backup-failed", "Falha no backup:")} ${err}`, { id: toastId });
+      toast.error(`${t("luducard-toast-backup-failed", "Falha no backup:")} ${err}`, { id: toastId });
     } finally {
       setBackingUp(false);
     }
@@ -99,17 +99,17 @@ export default function Dashboard() {
     const title = conflictInfo.gameTitle;
     const id = toast.loading(
       direction === "local"
-        ? `Resolvendo conflito: mantendo a versão local de "${title}"...`
-        : `Resolvendo conflito: baixando a versão da nuvem de "${title}"...`
+        ? `Resolvendo conflito: mantendo a versÃ£o local de "${title}"...`
+        : `Resolvendo conflito: baixando a versÃ£o da nuvem de "${title}"...`
     );
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       if (direction === "local") {
         await invoke("backup_game", { gameTitle: title });
-        toast.success(`Versão local de "${title}" salva na nuvem!`, { id });
+        toast.success(`VersÃ£o local de "${title}" salva na nuvem!`, { id });
       } else {
         await invoke("restore_game", { gameTitle: title, backupId: null });
-        toast.success(`Versão da nuvem de "${title}" restaurada!`, { id });
+        toast.success(`VersÃ£o da nuvem de "${title}" restaurada!`, { id });
       }
       setConflictModalOpen(false);
       setConflictInfo(null);
@@ -120,7 +120,7 @@ export default function Dashboard() {
 
   const backupButtonLabel = selectedCount > 0
     ? `${t("button-backup", "Fazer backup")} (${selectedCount}/${games.length})`
-    : `${t("ludocard-backup-all", "Fazer backup de todos")} (${games.length}/${games.length})`;
+    : `${t("luducard-backup-all", "Fazer backup de todos")} (${games.length}/${games.length})`;
 
   const renderActions = () => {
     if (cloudSyncEnabled) {
@@ -178,8 +178,8 @@ export default function Dashboard() {
   return (
     <>
       <AppShell
-        title={t("ludocard-library", "Biblioteca")}
-        description={t("ludocard-dashboard-desc", "Gerencie e proteja os saves dos seus jogos")}
+        title={t("luducard-library", "Biblioteca")}
+        description={t("luducard-dashboard-desc", "Gerencie e proteja os saves dos seus jogos")}
         actions={renderActions()}
       >
         <LibraryClient selected={selected} setSelected={setSelected} />

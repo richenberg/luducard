@@ -34,7 +34,7 @@ pub const SKIP: &str = "<skip>";
 pub const APP_DIR_NAME: &str = "ludusavi";
 #[allow(unused)]
 pub const LINUX_APP_ID: &str = "com.mtkennerly.ludusavi";
-const PORTABLE_FLAG_FILE_NAME: &str = "ludocard.portable";
+const PORTABLE_FLAG_FILE_NAME: &str = "luducard.portable";
 pub const INVALID_FILE_CHARS: &[char] = &['\\', '/', ':', '*', '?', '"', '<', '>', '|', '\0'];
 
 pub static STEAM_DECK: LazyLock<bool> =

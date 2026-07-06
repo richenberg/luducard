@@ -2,12 +2,12 @@
 members = [".", "src-tauri"]
 
 [package]
-name = "ludocard"
+name = "luducard"
 version = "0.1.0"
 authors = ["Richenberg <metal-richard@hotmail.com>"]
 edition = "2024"
-description = "Ludocard - A lightweight game save manager for PC (Ludosavi Fork)"
-repository = "https://github.com/richenberg/ludocard"
+description = "Luducard - A lightweight game save manager for PC (Ludosavi Fork)"
+repository = "https://github.com/richenberg/luducard"
 readme = "README.md"
 license = "MIT"
 [lib]
@@ -15,7 +15,7 @@ name = "ludusavi"
 path = "src/lib.rs"
 
 [[bin]]
-name = "ludocard"
+name = "luducard"
 path = "src/main.rs"
 required-features = ["app"]
 

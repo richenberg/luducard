@@ -26,9 +26,9 @@ static HOTKEY_SENDER: LazyLock<Mutex<Option<Sender<HotkeyControl>>>> = LazyLock:
 
 static HOTKEY_THREAD_ID: LazyLock<Mutex<Option<u32>>> = LazyLock::new(|| Mutex::new(None));
 
-/// Loads quick-save settings from ludocard.json.
+/// Loads quick-save settings from luducard.json.
 pub fn load_quick_save_settings(app_data_dir: &Path) -> (bool, String) {
-    let config_path = app_data_dir.join("ludocard.json");
+    let config_path = app_data_dir.join("luducard.json");
     if let Ok(content) = std::fs::read_to_string(&config_path)
         && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
     {
@@ -43,9 +43,9 @@ pub fn load_quick_save_settings(app_data_dir: &Path) -> (bool, String) {
     (true, "Ctrl+Shift+S".to_string())
 }
 
-/// Saves quick-save settings to ludocard.json.
+/// Saves quick-save settings to luducard.json.
 pub fn save_quick_save_settings(app_data_dir: &Path, enabled: bool, shortcut: &str) {
-    let config_path = app_data_dir.join("ludocard.json");
+    let config_path = app_data_dir.join("luducard.json");
     let mut json: serde_json::Value = if let Ok(content) = std::fs::read_to_string(&config_path) {
         serde_json::from_str(&content).unwrap_or(serde_json::json!({}))
     } else {
@@ -346,7 +346,7 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
             None => {
                 log::warn!("[Hotkey] Could not determine foreground process path.");
                 crate::watcher::show_notification(
-                    "Ludocard - Quick-Save",
+                    "Luducard - Quick-Save",
                     "Não foi possível detectar o jogo em primeiro plano.",
                 );
                 return;
@@ -362,7 +362,7 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
                 Ok(()) => {
                     log::info!("[Hotkey] Quick-save successful for game: {}", game_title);
                     crate::watcher::show_notification(
-                        "Ludocard - Quick-Save Manual",
+                        "Luducard - Quick-Save Manual",
                         &format!("Backup do jogo \"{}\" salvo com sucesso! ✅", game_title),
                     );
                     play_notification_sound();
@@ -370,7 +370,7 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
                 Err(e) => {
                     log::error!("[Hotkey] Quick-save failed for game: {}. Error: {}", game_title, e);
                     crate::watcher::show_notification(
-                        "Ludocard - Falha no Quick-Save",
+                        "Luducard - Falha no Quick-Save",
                         &format!("Erro ao fazer backup de \"{}\": {}", game_title, e),
                     );
                 }
@@ -386,7 +386,7 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
                 exe_path
             );
             crate::watcher::show_notification(
-                "Ludocard - Quick-Save",
+                "Luducard - Quick-Save",
                 &format!(
                     "O executável em primeiro plano ({}) não corresponde a nenhum jogo cadastrado.",
                     file_name

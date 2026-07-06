@@ -1,46 +1,46 @@
 ludusavi = Ludusavi
-language = ภาษา
-game-name = ชื่อเกม
-total-games = เกม
-file-size = ขนาด
-file-location = ที่ตั้งไฟล์
-overall = ภาพรวม
-status = สถานะ
-cli-unrecognized-games = ไม่มีข้อมูลสำหรับเกมนี้
-cli-unable-to-request-confirmation = ไม่สามารถร้องขอการยืนยันได้
-    .winpty-workaround = ถ้าคุณกำลังใช้ Bash emulator (เหมือน Git Bash), ลองรัน winpty
-cli-backup-id-with-multiple-games = ไม่สามารถระบุ backup ID เมื่อกำลังคืนค่าหลายเกมได้
-cli-invalid-backup-id = Backup ID ไม่ถูกต้อง
-badge-failed = ล้มเหลว
-badge-duplicates = ซ้ำกัน
+language = à¸ à¸²à¸©à¸²
+game-name = à¸Šà¸·à¹ˆà¸­à¹€à¸à¸¡
+total-games = à¹€à¸à¸¡
+file-size = à¸‚à¸™à¸²à¸”
+file-location = à¸—à¸µà¹ˆà¸•à¸±à¹‰à¸‡à¹„à¸Ÿà¸¥à¹Œ
+overall = à¸ à¸²à¸žà¸£à¸§à¸¡
+status = à¸ªà¸–à¸²à¸™à¸°
+cli-unrecognized-games = à¹„à¸¡à¹ˆà¸¡à¸µà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¸³à¸«à¸£à¸±à¸šà¹€à¸à¸¡à¸™à¸µà¹‰
+cli-unable-to-request-confirmation = à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸£à¹‰à¸­à¸‡à¸‚à¸­à¸à¸²à¸£à¸¢à¸·à¸™à¸¢à¸±à¸™à¹„à¸”à¹‰
+    .winpty-workaround = à¸–à¹‰à¸²à¸„à¸¸à¸“à¸à¸³à¸¥à¸±à¸‡à¹ƒà¸Šà¹‰ Bash emulator (à¹€à¸«à¸¡à¸·à¸­à¸™ Git Bash), à¸¥à¸­à¸‡à¸£à¸±à¸™ winpty
+cli-backup-id-with-multiple-games = à¹„à¸¡à¹ˆà¸ªà¸²à¸¡à¸²à¸£à¸–à¸£à¸°à¸šà¸¸ backup ID à¹€à¸¡à¸·à¹ˆà¸­à¸à¸³à¸¥à¸±à¸‡à¸„à¸·à¸™à¸„à¹ˆà¸²à¸«à¸¥à¸²à¸¢à¹€à¸à¸¡à¹„à¸”à¹‰
+cli-invalid-backup-id = Backup ID à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡
+badge-failed = à¸¥à¹‰à¸¡à¹€à¸«à¸¥à¸§
+badge-duplicates = à¸‹à¹‰à¸³à¸à¸±à¸™
 badge-duplicated = DUPLICATED
-badge-ignored = ละเว้น
-badge-redirected-from = จาก: { $path }
-badge-redirecting-to = ไปยัง: { $path }
+badge-ignored = à¸¥à¸°à¹€à¸§à¹‰à¸™
+badge-redirected-from = à¸ˆà¸²à¸: { $path }
+badge-redirecting-to = à¹„à¸›à¸¢à¸±à¸‡: { $path }
 some-entries-failed = Some entries failed to process; look for { badge-failed } in the output for details. Double check whether you can access those files or whether their paths are very long.
-cli-game-line-item-redirected = เปลี่ยนเส้นทางจาก: { $path }
-cli-game-line-item-redirecting = เปลี่ยนเส้นทางไปยัง: { $path }
-button-backup = สำรองข้อมูล
-button-preview = แสดงตัวอย่าง
-button-restore = คืนค่า
-button-nav-backup = โหมดสำรองข้อมูล
-button-nav-restore = โหมดคืนค่าข้อมูล
-button-nav-custom-games = เกมที่กำหนดเอง
-button-nav-other = อื่นๆ
-button-add-game = เพิ่มเกม
-button-continue = ดำเนินการต่อ
-button-cancel = ยกเลิก
-button-cancelling = กำลังยกเลิก...
-button-okay = ตกลง
-button-select-all = เลือกทั้งหมด
-button-deselect-all = ไม่เลือกทั้งหมด
-button-enable-all = เปิดทั้งหมด
-button-disable-all = ปิดทั้งหมด
+cli-game-line-item-redirected = à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹€à¸ªà¹‰à¸™à¸—à¸²à¸‡à¸ˆà¸²à¸: { $path }
+cli-game-line-item-redirecting = à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹€à¸ªà¹‰à¸™à¸—à¸²à¸‡à¹„à¸›à¸¢à¸±à¸‡: { $path }
+button-backup = à¸ªà¸³à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥
+button-preview = à¹à¸ªà¸”à¸‡à¸•à¸±à¸§à¸­à¸¢à¹ˆà¸²à¸‡
+button-restore = à¸„à¸·à¸™à¸„à¹ˆà¸²
+button-nav-backup = à¹‚à¸«à¸¡à¸”à¸ªà¸³à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥
+button-nav-restore = à¹‚à¸«à¸¡à¸”à¸„à¸·à¸™à¸„à¹ˆà¸²à¸‚à¹‰à¸­à¸¡à¸¹à¸¥
+button-nav-custom-games = à¹€à¸à¸¡à¸—à¸µà¹ˆà¸à¸³à¸«à¸™à¸”à¹€à¸­à¸‡
+button-nav-other = à¸­à¸·à¹ˆà¸™à¹†
+button-add-game = à¹€à¸žà¸´à¹ˆà¸¡à¹€à¸à¸¡
+button-continue = à¸”à¸³à¹€à¸™à¸´à¸™à¸à¸²à¸£à¸•à¹ˆà¸­
+button-cancel = à¸¢à¸à¹€à¸¥à¸´à¸
+button-cancelling = à¸à¸³à¸¥à¸±à¸‡à¸¢à¸à¹€à¸¥à¸´à¸...
+button-okay = à¸•à¸à¸¥à¸‡
+button-select-all = à¹€à¸¥à¸·à¸­à¸à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”
+button-deselect-all = à¹„à¸¡à¹ˆà¹€à¸¥à¸·à¸­à¸à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”
+button-enable-all = à¹€à¸›à¸´à¸”à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”
+button-disable-all = à¸›à¸´à¸”à¸—à¸±à¹‰à¸‡à¸«à¸¡à¸”
 button-customize = Customize
-button-exit = ออก
+button-exit = à¸­à¸­à¸
 button-comment = Comment
-button-lock = ล็อค
-button-unlock = ปลดล็อค
+button-lock = à¸¥à¹‡à¸­à¸„
+button-unlock = à¸›à¸¥à¸”à¸¥à¹‡à¸­à¸„
 # This opens a download page.
 button-get-app = Get { $app }
 button-validate = Validate
@@ -77,11 +77,11 @@ processed-games-subset =
        *[other] games
     }
 processed-size-subset = { $processed-size } of { $total-size }
-field-backup-target = สำรองไปยัง:
-field-restore-source = คืนค่าจาก:
+field-backup-target = à¸ªà¸³à¸£à¸­à¸‡à¹„à¸›à¸¢à¸±à¸‡:
+field-restore-source = à¸„à¸·à¸™à¸„à¹ˆà¸²à¸ˆà¸²à¸:
 field-custom-files = Paths:
 field-custom-registry = Registry:
-field-sort = เรียงตาม:
+field-sort = à¹€à¸£à¸µà¸¢à¸‡à¸•à¸²à¸¡:
 field-redirect-source =
     .placeholder = Source (original location)
 field-redirect-target =
@@ -91,12 +91,12 @@ field-backup-excluded-items = Backup exclusions:
 field-redirects = Redirects:
 # This appears next to the number of full backups that you'd like to keep.
 # A full backup includes all save files for a game.
-field-retention-full = เต็มรูปแบบ:
+field-retention-full = à¹€à¸•à¹‡à¸¡à¸£à¸¹à¸›à¹à¸šà¸š:
 # This appears next to the number of differential backups that you'd like to keep.
 # A differential backup includes only the files that have changed since the last full backup.
 field-retention-differential = Differential:
-field-backup-format = รูปแบบ:
-field-backup-compression = การบีบอัด:
+field-backup-format = à¸£à¸¹à¸›à¹à¸šà¸š:
+field-backup-compression = à¸à¸²à¸£à¸šà¸µà¸šà¸­à¸±à¸”:
 # The compression level determines how much compresison we perform.
 field-backup-compression-level = Level:
 label-manifest = Manifest
@@ -109,36 +109,36 @@ label-removed = Removed
 label-comment = Comment
 label-unchanged = Unchanged
 label-backup = Backup
-label-scan = สแกน
-label-filter = ตัวกรอง
+label-scan = à¸ªà¹à¸à¸™
+label-filter = à¸•à¸±à¸§à¸à¸£à¸­à¸‡
 label-unique = Unique
-label-complete = สมบูรณ์
-label-partial = บางส่วน
-label-enabled = เปิดใช้งาน
-label-disabled = ปิดใช้งาน
+label-complete = à¸ªà¸¡à¸šà¸¹à¸£à¸“à¹Œ
+label-partial = à¸šà¸²à¸‡à¸ªà¹ˆà¸§à¸™
+label-enabled = à¹€à¸›à¸´à¸”à¹ƒà¸Šà¹‰à¸‡à¸²à¸™
+label-disabled = à¸›à¸´à¸”à¹ƒà¸Šà¹‰à¸‡à¸²à¸™
 # https://en.wikipedia.org/wiki/Thread_(computing)
 label-threads = Threads
 label-cloud = Cloud
 # A "remote" is what Rclone calls cloud systems like Google Drive.
 label-remote = Remote
 label-remote-name = Remote name
-label-folder = โฟลเดอร์
+label-folder = à¹‚à¸Ÿà¸¥à¹€à¸”à¸­à¸£à¹Œ
 # An executable file
 label-executable = Executable
 # Options given to a command line program
 label-arguments = Arguments
 label-url = URL
 # https://en.wikipedia.org/wiki/Host_(network)
-label-host = โฮส
+label-host = à¹‚à¸®à¸ª
 # https://en.wikipedia.org/wiki/Port_(computer_networking)
-label-port = พอร์ต
-label-username = ชื่อผู้ใช้
-label-password = รหัสผ่าน
+label-port = à¸žà¸­à¸£à¹Œà¸•
+label-username = à¸Šà¸·à¹ˆà¸­à¸œà¸¹à¹‰à¹ƒà¸Šà¹‰
+label-password = à¸£à¸«à¸±à¸ªà¸œà¹ˆà¸²à¸™
 # This is a specific website or service that provides some cloud functionality.
 # For example, Nextcloud and Owncloud are providers of WebDAV services.
 label-provider = Provider
 label-custom = Custom
-label-none = ไม่มี
+label-none = à¹„à¸¡à¹ˆà¸¡à¸µ
 label-change-count = Changes: { $total }
 label-unscanned = Unscanned
 # This refers to a local file on the computer
@@ -182,21 +182,21 @@ store-other-mac = Mac drive
 store-other = Other
 backup-format-simple = Simple
 backup-format-zip = Zip
-compression-none = ไม่มี
+compression-none = à¹„à¸¡à¹ˆà¸¡à¸µ
 # "Deflate" is a proper noun: https://en.wikipedia.org/wiki/Deflate
 compression-deflate = Deflate
 compression-bzip2 = Bzip2
 compression-zstd = Zstd
-theme = ธีม
-theme-light = สว่าง
-theme-dark = มืด
+theme = à¸˜à¸µà¸¡
+theme-light = à¸ªà¸§à¹ˆà¸²à¸‡
+theme-dark = à¸¡à¸·à¸”
 redirect-bidirectional = Bidirectional
 reverse-redirects-when-restoring = Reverse sequence of redirects when restoring
 show-disabled-games = Show disabled games
-show-unchanged-games = แสดงเกมที่ไม่ได้เปลี่ยนแปลง
-show-unscanned-games = แสดงเกมที่ไม่ได้สแกน
+show-unchanged-games = à¹à¸ªà¸”à¸‡à¹€à¸à¸¡à¸—à¸µà¹ˆà¹„à¸¡à¹ˆà¹„à¸”à¹‰à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹à¸›à¸¥à¸‡
+show-unscanned-games = à¹à¸ªà¸”à¸‡à¹€à¸à¸¡à¸—à¸µà¹ˆà¹„à¸¡à¹ˆà¹„à¸”à¹‰à¸ªà¹à¸à¸™
 override-max-threads = Override max threads
-synchronize-automatically = ซิงค์อัตโนมัติ
+synchronize-automatically = à¸‹à¸´à¸‡à¸„à¹Œà¸­à¸±à¸•à¹‚à¸™à¸¡à¸±à¸•à¸´
 prefer-alias-display = Display alias instead of original name
 skip-unconstructive-backups = Skip backup when data would be removed, but not added or updated
 explanation-for-exclude-store-screenshots = In backups, exclude store-specific screenshots
@@ -222,26 +222,26 @@ confirm-cloud-download =
     Local files will be updated or deleted as necessary.
 confirm-add-missing-roots = Add these roots?
 no-missing-roots = No additional roots found.
-loading = กำลังโหลด...
-preparing-backup-target = กำลังเตรียมการสำรอง directory...
-updating-manifest = กำลังอัพเดต Manifest
-no-cloud-changes = ไม่มีการเปลี่ยนแปลงที่จะซิงค์
+loading = à¸à¸³à¸¥à¸±à¸‡à¹‚à¸«à¸¥à¸”...
+preparing-backup-target = à¸à¸³à¸¥à¸±à¸‡à¹€à¸•à¸£à¸µà¸¢à¸¡à¸à¸²à¸£à¸ªà¸³à¸£à¸­à¸‡ directory...
+updating-manifest = à¸à¸³à¸¥à¸±à¸‡à¸­à¸±à¸žà¹€à¸”à¸• Manifest
+no-cloud-changes = à¹„à¸¡à¹ˆà¸¡à¸µà¸à¸²à¸£à¹€à¸›à¸¥à¸µà¹ˆà¸¢à¸™à¹à¸›à¸¥à¸‡à¸—à¸µà¹ˆà¸ˆà¸°à¸‹à¸´à¸‡à¸„à¹Œ
 backups-are-valid = Your backups are valid.
 backups-are-invalid =
     These games' backups appear to be invalid.
     Do you want to create new full backups for these games?
-saves-found = พบเซฟเกม
-no-saves-found = ไม่พบเซฟเกม
+saves-found = à¸žà¸šà¹€à¸‹à¸Ÿà¹€à¸à¸¡
+no-saves-found = à¹„à¸¡à¹ˆà¸žà¸šà¹€à¸‹à¸Ÿà¹€à¸à¸¡
 # This is tacked on to form something like "Back up (no confirmation)",
 # meaning we would perform an action without asking the user if they're sure.
 suffix-no-confirmation = no confirmation
 # This is shown when a setting will only take effect after closing and reopening Ludusavi.
-suffix-restart-required = ต้อง Restart ใหม่
-prefix-error = ข้อผิดพลาด : { $message }
-prefix-warning = คำเตือน: { $message }
-cloud-app-unavailable = การสำรองผ่าน Cloud ถูกปิดใช้งานเพราะ { $app } ไม่พร้อมใช้งาน
-cloud-not-configured = การสำรองผ่าน Cloud ถูกปิดใช้งานเพราะไม่มีระบบ Cloud ถูกตั้งค่าไว้
-cloud-path-invalid = การสำรองผ่าน Cloud ถูกปิดใช้งานเพราะเส้นทางสำรองข้อมูลไม่ถูกต้อง
+suffix-restart-required = à¸•à¹‰à¸­à¸‡ Restart à¹ƒà¸«à¸¡à¹ˆ
+prefix-error = à¸‚à¹‰à¸­à¸œà¸´à¸”à¸žà¸¥à¸²à¸” : { $message }
+prefix-warning = à¸„à¸³à¹€à¸•à¸·à¸­à¸™: { $message }
+cloud-app-unavailable = à¸à¸²à¸£à¸ªà¸³à¸£à¸­à¸‡à¸œà¹ˆà¸²à¸™ Cloud à¸–à¸¹à¸à¸›à¸´à¸”à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹€à¸žà¸£à¸²à¸° { $app } à¹„à¸¡à¹ˆà¸žà¸£à¹‰à¸­à¸¡à¹ƒà¸Šà¹‰à¸‡à¸²à¸™
+cloud-not-configured = à¸à¸²à¸£à¸ªà¸³à¸£à¸­à¸‡à¸œà¹ˆà¸²à¸™ Cloud à¸–à¸¹à¸à¸›à¸´à¸”à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹€à¸žà¸£à¸²à¸°à¹„à¸¡à¹ˆà¸¡à¸µà¸£à¸°à¸šà¸š Cloud à¸–à¸¹à¸à¸•à¸±à¹‰à¸‡à¸„à¹ˆà¸²à¹„à¸§à¹‰
+cloud-path-invalid = à¸à¸²à¸£à¸ªà¸³à¸£à¸­à¸‡à¸œà¹ˆà¸²à¸™ Cloud à¸–à¸¹à¸à¸›à¸´à¸”à¹ƒà¸Šà¹‰à¸‡à¸²à¸™à¹€à¸žà¸£à¸²à¸°à¹€à¸ªà¹‰à¸™à¸—à¸²à¸‡à¸ªà¸³à¸£à¸­à¸‡à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¹„à¸¡à¹ˆà¸–à¸¹à¸à¸•à¹‰à¸­à¸‡
 game-is-unrecognized = Ludusavi does not recognize this game.
 game-has-nothing-to-restore = This game does not have a backup to restore.
 launch-game-after-error = Launch the game anyway?

@@ -49,22 +49,22 @@ interface TagInfo {
 }
 
 const PREDEFINED_PRESET_TAGS: TagInfo[] = [
-  { name: "Performance", description: "Otimizações focadas em ganho de FPS e fluidez." },
-  { name: "Qualidade / Visual", description: "Otimizações focadas em qualidade gráfica máxima." },
-  { name: "Balanced", description: "Equilíbrio ideal entre fidelidade visual e taxa de FPS." },
-  { name: "Steam Deck", description: "Perfil otimizado especificamente para a tela e bateria do Steam Deck/portáteis." },
+  { name: "Performance", description: "OtimizaÃ§Ãµes focadas em ganho de FPS e fluidez." },
+  { name: "Qualidade / Visual", description: "OtimizaÃ§Ãµes focadas em qualidade grÃ¡fica mÃ¡xima." },
+  { name: "Balanced", description: "EquilÃ­brio ideal entre fidelidade visual e taxa de FPS." },
+  { name: "Steam Deck", description: "Perfil otimizado especificamente para a tela e bateria do Steam Deck/portÃ¡teis." },
   { name: "Potato Mode", description: "Para rodar em PCs super antigos e notebooks modestos." },
   { name: "Controles / Layout", description: "Mapeamento customizado de controles, gamepad ou hotkeys." },
-  { name: "Ray Tracing Opt", description: "Configuração refinada com traçado de raio ativo, visando boa taxa de quadros." },
-  { name: "4K Ready", description: "Otimizações focadas em TVs e monitores 4K de alta definição." },
-  { name: "VR Ready", description: "Configurações ajustadas para taxa de FPS ideal em realidade virtual." }
+  { name: "Ray Tracing Opt", description: "ConfiguraÃ§Ã£o refinada com traÃ§ado de raio ativo, visando boa taxa de quadros." },
+  { name: "4K Ready", description: "OtimizaÃ§Ãµes focadas em TVs e monitores 4K de alta definiÃ§Ã£o." },
+  { name: "VR Ready", description: "ConfiguraÃ§Ãµes ajustadas para taxa de FPS ideal em realidade virtual." }
 ]
 
 const kindColors: Record<BackupKind | string, string> = {
-  Automático: "text-primary",
+  AutomÃ¡tico: "text-primary",
   Manual: "text-sky-300",
   "Antes de fechar": "text-amber-300",
-  Restauração: "text-violet-300",
+  RestauraÃ§Ã£o: "text-violet-300",
 }
 
 const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ !== undefined;
@@ -97,7 +97,7 @@ function StatusPill({
           active ? "text-primary" : "text-muted-foreground",
         )}
       >
-        {active ? t("ludocard-active", "Ativo") : t("ludocard-disabled", "Desativado")}
+        {active ? t("luducard-active", "Ativo") : t("luducard-disabled", "Desativado")}
       </span>
     </div>
   )
@@ -132,7 +132,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         await invoke("save_campaign_note", { gameId: game.id, note: localNotes });
         game.notes = localNotes;
       } catch (err) {
-        toast.error(`Falha ao salvar anotação: ${err}`);
+        toast.error(`Falha ao salvar anotaÃ§Ã£o: ${err}`);
       }
     } else {
       game.notes = localNotes;
@@ -245,17 +245,17 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     const title = conflictInfo.gameTitle;
     const id = toast.loading(
       direction === "local"
-        ? `Resolvendo conflito: mantendo a versão local de "${title}"...`
-        : `Resolvendo conflito: baixando a versão da nuvem de "${title}"...`
+        ? `Resolvendo conflito: mantendo a versÃ£o local de "${title}"...`
+        : `Resolvendo conflito: baixando a versÃ£o da nuvem de "${title}"...`
     );
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       if (direction === "local") {
         await invoke("backup_game", { gameTitle: title });
-        toast.success(`Versão local de "${title}" salva na nuvem!`, { id });
+        toast.success(`VersÃ£o local de "${title}" salva na nuvem!`, { id });
       } else {
         await invoke("restore_game", { gameTitle: title, backupId: null });
-        toast.success(`Versão da nuvem de "${title}" restaurada!`, { id });
+        toast.success(`VersÃ£o da nuvem de "${title}" restaurada!`, { id });
       }
       setConflictModalOpen(false);
       setConflictInfo(null);
@@ -271,35 +271,35 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("restore_game", { gameTitle: game.title, backupId: null });
-        toast.success(`Versão mais recente de "${game.title}" restaurada!`, { id });
+        toast.success(`VersÃ£o mais recente de "${game.title}" restaurada!`, { id });
         if (onRefresh) onRefresh();
       } catch (err) {
         toast.error(`Falha ao restaurar: ${err}`, { id });
       }
     } else {
-      toast.info(`[Mock] Restaurando versão mais recente de "${game.title}"`);
+      toast.info(`[Mock] Restaurando versÃ£o mais recente de "${game.title}"`);
     }
   };
 
   const handleRestoreVersion = async (versionId: string, versionDate: string) => {
     if (isTauri) {
-      const id = toast.loading(`Restaurando versão "${versionId}" de "${game.title}"...`);
+      const id = toast.loading(`Restaurando versÃ£o "${versionId}" de "${game.title}"...`);
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("restore_game", { gameTitle: game.title, backupId: versionId });
-        toast.success(`Versão de ${versionDate} restaurada!`, { id });
+        toast.success(`VersÃ£o de ${versionDate} restaurada!`, { id });
         if (onRefresh) onRefresh();
       } catch (err) {
-        toast.error(`Falha ao restaurar versão: ${err}`, { id });
+        toast.error(`Falha ao restaurar versÃ£o: ${err}`, { id });
       }
     } else {
-      toast.info(`[Mock] Restaurando versão de ${versionDate}`);
+      toast.info(`[Mock] Restaurando versÃ£o de ${versionDate}`);
     }
   };
 
   const handleExportBackupVersion = async (backupId: string, backupDate: string, backupTime: string) => {
     if (!isTauri) {
-      toast.info(`[Mock] Exportando backup de "${game.title}" (${backupDate}) como .ludocard`);
+      toast.info(`[Mock] Exportando backup de "${game.title}" (${backupDate}) como .luducard`);
       return;
     }
     try {
@@ -308,17 +308,17 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       const slugName = game.id.replace(/[^a-z0-9-]/gi, "-");
       const formattedDate = backupDate.replace(/[^a-z0-9-]/gi, "-");
       const formattedTime = backupTime.replace(/[^a-z0-9-]/gi, "-");
-      const destPath = await invoke<string | null>("save_ludocard_dialog", {
-        defaultName: `${slugName}_backup_${formattedDate}_${formattedTime}.ludocard`,
+      const destPath = await invoke<string | null>("save_luducard_dialog", {
+        defaultName: `${slugName}_backup_${formattedDate}_${formattedTime}.luducard`,
       });
       if (!destPath) return;
 
       const toastId = toast.loading(`Compactando backup de "${game.title}"...`);
-      const metadata = await invoke<any>("export_ludocard_backup", {
+      const metadata = await invoke<any>("export_luducard_backup", {
         gameTitle: game.title,
         gameId: game.id,
         checkpointTitle: `Backup de ${game.title} - ${backupDate} ${backupTime}`,
-        description: `Exportado a partir do backup local realizado em ${backupDate} às ${backupTime}.`,
+        description: `Exportado a partir do backup local realizado em ${backupDate} Ã s ${backupTime}.`,
         backupPath: game.backupPath || "",
         backupId: backupId,
         savePath: game.savePath,
@@ -328,7 +328,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       const compressedMB = (metadata.compressedSizeBytes / (1024 * 1024)).toFixed(1);
       const originalMB = (metadata.totalSizeBytes / (1024 * 1024)).toFixed(1);
       toast.success(
-        `Exportado com sucesso! ${originalMB} MB → ${compressedMB} MB compactado`,
+        `Exportado com sucesso! ${originalMB} MB â†’ ${compressedMB} MB compactado`,
         { id: toastId }
       );
     } catch (err) {
@@ -341,8 +341,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       const nextLocked = !currentLocked;
       const id = toast.loading(
         nextLocked
-          ? `Bloqueando versão "${versionId}"...`
-          : `Desbloqueando versão "${versionId}"...`
+          ? `Bloqueando versÃ£o "${versionId}"...`
+          : `Desbloqueando versÃ£o "${versionId}"...`
       );
       try {
         const { invoke } = await import("@tauri-apps/api/core");
@@ -353,22 +353,22 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         });
         toast.success(
           nextLocked
-            ? "Versão bloqueada com sucesso! Ela não será deletada automaticamente."
-            : "Versão desbloqueada com sucesso.",
+            ? "VersÃ£o bloqueada com sucesso! Ela nÃ£o serÃ¡ deletada automaticamente."
+            : "VersÃ£o desbloqueada com sucesso.",
           { id }
         );
         if (onRefresh) onRefresh();
       } catch (err) {
-        toast.error(`Falha ao alterar status da versão: ${err}`, { id });
+        toast.error(`Falha ao alterar status da versÃ£o: ${err}`, { id });
       }
     } else {
-      toast.info(`[Mock] Alterado bloqueio da versão "${versionId}" para ${!currentLocked}`);
+      toast.info(`[Mock] Alterado bloqueio da versÃ£o "${versionId}" para ${!currentLocked}`);
     }
   };
 
   const handleOpenFolder = async (folderType: "game" | "save" | "backup") => {
     if (!isTauri) {
-      toast.info(`[Mock] Abrindo pasta de ${folderType === "game" ? "instalação" : folderType === "save" ? "saves" : "backups"} para ${game.title}`);
+      toast.info(`[Mock] Abrindo pasta de ${folderType === "game" ? "instalaÃ§Ã£o" : folderType === "save" ? "saves" : "backups"} para ${game.title}`);
       return;
     }
     try {
@@ -386,20 +386,20 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   const handleExportSave = async () => {
     if (!isTauri) {
-      toast.info(`[Mock] Exportando save de "${game.title}" como .ludocard`);
+      toast.info(`[Mock] Exportando save de "${game.title}" como .luducard`);
       return;
     }
     try {
       const { invoke } = await import("@tauri-apps/api/core");
 
       const slugName = game.id.replace(/[^a-z0-9-]/gi, "-");
-      const destPath = await invoke<string | null>("save_ludocard_dialog", {
-        defaultName: `${slugName}.ludocard`,
+      const destPath = await invoke<string | null>("save_luducard_dialog", {
+        defaultName: `${slugName}.luducard`,
       });
       if (!destPath) return;
 
       const toastId = toast.loading(`Compactando save de "${game.title}"...`);
-      const metadata = await invoke<any>("export_ludocard_save", {
+      const metadata = await invoke<any>("export_luducard_save", {
         gameTitle: game.title,
         gameId: game.id,
         checkpointTitle: `Save de ${game.title}`,
@@ -411,7 +411,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       const compressedMB = (metadata.compressedSizeBytes / (1024 * 1024)).toFixed(1);
       const originalMB = (metadata.totalSizeBytes / (1024 * 1024)).toFixed(1);
       toast.success(
-        `Exportado com sucesso! ${originalMB} MB → ${compressedMB} MB compactado`,
+        `Exportado com sucesso! ${originalMB} MB â†’ ${compressedMB} MB compactado`,
         { id: toastId }
       );
     } catch (err) {
@@ -453,7 +453,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             r2Path: item.r2_path,
             fileSize: Number(item.file_size || 0),
             description: item.description || "",
-            authorName: item.author_name || "Anônimo",
+            authorName: item.author_name || "AnÃ´nimo",
             userUuid: item.user_uuid,
             cpu: item.cpu || "",
             gpu: item.gpu || "",
@@ -468,7 +468,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           }))
           setPresets(mapped)
         } else {
-          toast.error("Erro ao carregar presets comunitários.")
+          toast.error("Erro ao carregar presets comunitÃ¡rios.")
         }
       } else {
         setIsConfigured(false)
@@ -494,7 +494,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           gameId: game.id,
           gameTitle: game.title,
           title: "Meu Perfil - Ultra Performance",
-          description: "Desativa sombras volumétricas e reduz resolução de texturas secundárias. Perfeito para manter 60fps constantes.",
+          description: "Desativa sombras volumÃ©tricas e reduz resoluÃ§Ã£o de texturas secundÃ¡rias. Perfeito para manter 60fps constantes.",
           cpu: "Intel Core i5-10400F",
           gpu: "NVIDIA GeForce GTX 1660 Super",
           ram: "16 GB",
@@ -523,7 +523,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           id: "mock-1",
           gameId: game.id,
           title: "Campanha Vanilla",
-          description: "Minha primeira campanha sem modificações, progresso inicial.",
+          description: "Minha primeira campanha sem modificaÃ§Ãµes, progresso inicial.",
           createdAt: "2026-06-30T15:30:00Z",
           active: true
         },
@@ -555,7 +555,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   const handleCreateSaveProfile = async () => {
     if (!newProfileTitle.trim()) {
-      toast.error("Por favor, informe um título para o perfil.")
+      toast.error("Por favor, informe um tÃ­tulo para o perfil.")
       return
     }
     const toastId = toast.loading("Criando novo perfil de save...")
@@ -607,7 +607,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
   }
 
   const handleDeleteSaveProfile = async (profileId: string, profileTitle: string) => {
-    if (!confirm(`Tem certeza de que deseja excluir o perfil "${profileTitle}"? Todos os saves deste perfil serão deletados permanentemente.`)) {
+    if (!confirm(`Tem certeza de que deseja excluir o perfil "${profileTitle}"? Todos os saves deste perfil serÃ£o deletados permanentemente.`)) {
       return
     }
     const toastId = toast.loading(`Excluindo perfil "${profileTitle}"...`)
@@ -619,7 +619,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           profileId
         })
       }
-      toast.success(`Perfil "${profileTitle}" excluído com sucesso!`, { id: toastId })
+      toast.success(`Perfil "${profileTitle}" excluÃ­do com sucesso!`, { id: toastId })
       fetchSaveProfiles()
     } catch (err: any) {
       console.error(err)
@@ -629,7 +629,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   // Load safety backup status & presets
   useEffect(() => {
-    const safety = localStorage.getItem(`ludocard_preset_safety_${game.id}`)
+    const safety = localStorage.getItem(`luducard_preset_safety_${game.id}`)
     setHasCrashSafetyBackup(safety === "true")
     if (activeTab === "presets") {
       fetchGamePresets()
@@ -642,10 +642,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
   // Save Local Preset
   const handleSaveLocalPreset = async (title: string, description: string, files: string[]) => {
     if (files.length === 0) {
-      toast.error("Selecione pelo menos um arquivo de configuração.")
+      toast.error("Selecione pelo menos um arquivo de configuraÃ§Ã£o.")
       return
     }
-    const id = toast.loading("Salvando configurações locais como preset...")
+    const id = toast.loading("Salvando configuraÃ§Ãµes locais como preset...")
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -669,7 +669,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   // Apply Local Preset
   const handleApplyLocalPreset = async (preset: any) => {
-    const id = toast.loading(`Iniciando Seguro-Crash para configurações de ${game.title}...`)
+    const id = toast.loading(`Iniciando Seguro-Crash para configuraÃ§Ãµes de ${game.title}...`)
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -678,7 +678,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           gameId: game.id,
           presetId: preset.id,
         })
-        localStorage.setItem(`ludocard_preset_safety_${game.id}`, "true")
+        localStorage.setItem(`luducard_preset_safety_${game.id}`, "true")
         setHasCrashSafetyBackup(true)
       } else {
         await new Promise(r => setTimeout(r, 1000))
@@ -723,7 +723,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   // Apply Preset (Community)
   const handleApplyPreset = async (preset: any) => {
-    const toastId = toast.loading("Iniciando Seguro-Crash para salvaguardar configurações...")
+    const toastId = toast.loading("Iniciando Seguro-Crash para salvaguardar configuraÃ§Ãµes...")
     try {
       const { invoke } = await import("@tauri-apps/api/core")
 
@@ -733,11 +733,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           gameTitle: game.title,
           gameId: game.id,
         })
-        localStorage.setItem(`ludocard_preset_safety_${game.id}`, "true")
+        localStorage.setItem(`luducard_preset_safety_${game.id}`, "true")
         setHasCrashSafetyBackup(true)
       }
 
-      toast.loading("Baixando e aplicando preset de configurações otimizadas...", { id: toastId })
+      toast.loading("Baixando e aplicando preset de configuraÃ§Ãµes otimizadas...", { id: toastId })
 
       // Step 2: Get download url
       let downloadUrl = ""
@@ -760,7 +760,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
       // Step 3: Inject files (falls back to mock if not configured)
       if (isTauri && downloadUrl) {
-        await invoke("download_and_import_ludocard", {
+        await invoke("download_and_import_luducard", {
           downloadUrl,
           targetSaveDir: game.savePath,
         })
@@ -789,7 +789,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         await new Promise(r => setTimeout(r, 1500))
       }
 
-      toast.success("Preset comunitário injetado com sucesso! Salvo na sua biblioteca local.", { id: toastId })
+      toast.success("Preset comunitÃ¡rio injetado com sucesso! Salvo na sua biblioteca local.", { id: toastId })
       fetchGamePresets()
       fetchLocalPresets()
     } catch (err) {
@@ -800,7 +800,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   // Restore Original Configurations (Undo)
   const handleUndoPreset = async () => {
-    const toastId = toast.loading("Restaurando arquivos de configurações originais do Seguro-Crash...")
+    const toastId = toast.loading("Restaurando arquivos de configuraÃ§Ãµes originais do Seguro-Crash...")
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -811,9 +811,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         await new Promise(r => setTimeout(r, 1200))
       }
 
-      localStorage.removeItem(`ludocard_preset_safety_${game.id}`)
+      localStorage.removeItem(`luducard_preset_safety_${game.id}`)
       setHasCrashSafetyBackup(false)
-      toast.success("Configuração original restaurada com sucesso! Saves intocados.", { id: toastId })
+      toast.success("ConfiguraÃ§Ã£o original restaurada com sucesso! Saves intocados.", { id: toastId })
     } catch (err) {
       console.error(err)
       toast.error(`Falha ao restaurar backup Seguro-Crash: ${err}`, { id: toastId })
@@ -866,7 +866,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           body: JSON.stringify({ preset_id: presetId })
         })
       }
-      toast.success("Denúncia enviada! Preset será ocultado da comunidade se receber 3 denúncias.")
+      toast.success("DenÃºncia enviada! Preset serÃ¡ ocultado da comunidade se receber 3 denÃºncias.")
       
       // Update local state and hide if reports count reaches 3
       setPresets(prev => prev.map(p => {
@@ -876,7 +876,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         return p
       }).filter(p => p.id !== presetId || p.reportsCount < 3))
     } catch (err) {
-      toast.error("Falha ao enviar denúncia.")
+      toast.error("Falha ao enviar denÃºncia.")
     }
   }
 
@@ -929,7 +929,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
   const handlePublishPreset = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!presetTitle) {
-      toast.error("Por favor, preencha o título do preset.")
+      toast.error("Por favor, preencha o tÃ­tulo do preset.")
       return
     }
 
@@ -937,9 +937,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     let tempPath = ""
     try {
       const { invoke } = await import("@tauri-apps/api/core")
-      const toastId = toast.loading("Empacotando arquivos de configuração...")
+      const toastId = toast.loading("Empacotando arquivos de configuraÃ§Ã£o...")
 
-      // Step 1: Export preset files to a temporary .ludocard archive
+      // Step 1: Export preset files to a temporary .luducard archive
       if (isTauri) {
         let presetInfo;
         if (selectedLocalPresetForShare) {
@@ -950,11 +950,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           });
         } else {
           if (selectedConfigFiles.length === 0) {
-            toast.error("Selecione pelo menos um arquivo de configuração.")
+            toast.error("Selecione pelo menos um arquivo de configuraÃ§Ã£o.")
             setPublishing(false)
             return
           }
-          presetInfo = await invoke<any>("export_temp_ludocard_preset", {
+          presetInfo = await invoke<any>("export_temp_luducard_preset", {
             gameTitle: game.title,
             gameId: game.id,
             presetTitle: presetTitle,
@@ -989,7 +989,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
           if (!edgeRes.ok) {
             const errData = await edgeRes.json().catch(() => ({}))
-            throw new Error(errData.error || `Erro de cota ou limite no repositório.`);
+            throw new Error(errData.error || `Erro de cota ou limite no repositÃ³rio.`);
           }
 
           const { uploadUrl, r2Path } = await edgeRes.json()
@@ -1021,7 +1021,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               r2_path: r2Path,
               file_size: fileSize,
               description: presetDesc,
-              author_name: authorName || "Anônimo",
+              author_name: authorName || "AnÃ´nimo",
               user_uuid: clientUuid,
               cpu,
               gpu,
@@ -1034,7 +1034,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           if (!dbRes.ok) {
             const errText = await dbRes.text()
             if (errText.includes("enforce_user_preset_quota_trigger")) {
-              throw new Error("Você atingiu o limite de 5 presets ativos na nuvem.")
+              throw new Error("VocÃª atingiu o limite de 5 presets ativos na nuvem.")
             }
             throw new Error(`Falha ao registrar preset: ${errText}`)
           }
@@ -1094,7 +1094,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <div className="flex flex-wrap items-center gap-2">
               <PlatformBadge platform={game.platform} emulator={game.emulator} />
               <span className="text-xs text-muted-foreground">
-                {game.backups.length} {t("ludocard-saved-versions", "versões salvas")}
+                {game.backups.length} {t("luducard-saved-versions", "versÃµes salvas")}
               </span>
             </div>
             <h2 className="text-balance text-2xl font-bold leading-tight sm:text-3xl">
@@ -1111,14 +1111,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleBackup}>
                 <ArrowUpToLine data-icon="inline-start" />
-                {t("ludocard-backup-now", "Fazer backup agora")}
+                {t("luducard-backup-now", "Fazer backup agora")}
               </Button>
               <Button
                 variant="secondary"
                 onClick={handleRestoreLatest}
               >
                 <ArrowDownToLine data-icon="inline-start" />
-                {t("ludocard-restore-latest", "Restaurar última")}
+                {t("luducard-restore-latest", "Restaurar Ãºltima")}
               </Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-1">
@@ -1126,38 +1126,38 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenFolder("game")}
-                title={t("ludocard-open-game-folder-desc", "Abrir pasta de instalação do jogo no Windows Explorer")}
+                title={t("luducard-open-game-folder-desc", "Abrir pasta de instalaÃ§Ã£o do jogo no Windows Explorer")}
               >
                 <Folder className="size-3.5" data-icon="inline-start" />
-                {t("ludocard-game-folder", "Pasta do Jogo")}
+                {t("luducard-game-folder", "Pasta do Jogo")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenFolder("save")}
-                title={t("ludocard-open-save-folder-desc", "Abrir pasta onde os saves ativos ficam armazenados")}
+                title={t("luducard-open-save-folder-desc", "Abrir pasta onde os saves ativos ficam armazenados")}
               >
                 <FolderSync className="size-3.5" data-icon="inline-start" />
-                {t("ludocard-save-folder", "Pasta do Save")}
+                {t("luducard-save-folder", "Pasta do Save")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenFolder("backup")}
-                title={t("ludocard-open-backup-folder-desc", "Abrir pasta de backup de saves do Ludocard")}
+                title={t("luducard-open-backup-folder-desc", "Abrir pasta de backup de saves do Luducard")}
               >
                 <Package className="size-3.5" data-icon="inline-start" />
-                {t("ludocard-backup-folder", "Pasta de Backups")}
+                {t("luducard-backup-folder", "Pasta de Backups")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExportSave}
-                title={t("ludocard-export-save-desc", "Exportar save como arquivo .ludocard compactado para compartilhar")}
+                title={t("luducard-export-save-desc", "Exportar save como arquivo .luducard compactado para compartilhar")}
                 className="border-primary/30 text-primary hover:bg-primary/10"
               >
                 <Share2 className="size-3.5" data-icon="inline-start" />
-                {t("ludocard-export-save", "Exportar Save (.ludocard)")}
+                {t("luducard-export-save", "Exportar Save (.luducard)")}
               </Button>
             </div>
           </div>
@@ -1169,32 +1169,32 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         <div className="flex flex-col gap-4 lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("ludocard-status", "Status")}</CardTitle>
+              <CardTitle className="text-base">{t("luducard-status", "Status")}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-2.5">
               <StatusPill
                 active={game.autoBackup}
-                label={t("ludocard-file-watcher", "Backup automático")}
+                label={t("luducard-file-watcher", "Backup automÃ¡tico")}
                 onIcon={Zap}
                 offIcon={Zap}
               />
               <StatusPill
                 active={game.cloudSync}
-                label={t("ludocard-cloud-sync", "Sincronização na nuvem")}
+                label={t("luducard-cloud-sync", "SincronizaÃ§Ã£o na nuvem")}
                 onIcon={Cloud}
                 offIcon={CloudOff}
               />
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <span className="flex items-center gap-2 text-sm">
                   <HardDrive className="size-4 text-muted-foreground" />
-                  {t("ludocard-saves-on-pc", "Saves no PC")}
+                  {t("luducard-saves-on-pc", "Saves no PC")}
                 </span>
                 <span className="text-xs font-medium">{formatSize(game.sizeMB)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <span className="flex items-center gap-2 text-sm">
                   <Package className="size-4 text-muted-foreground" />
-                  {t("ludocard-total-backups", "Total em backups")}
+                  {t("luducard-total-backups", "Total em backups")}
                 </span>
                 <span className="text-xs font-medium">{formatSize(game.backupsSizeMB || 0)}</span>
               </div>
@@ -1205,10 +1205,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Gamepad2 className="size-4 text-primary" />
-                {t("ludocard-campaign-notes", "Diário de Bordo")}
+                {t("luducard-campaign-notes", "DiÃ¡rio de Bordo")}
               </CardTitle>
               <CardDescription className="text-xs">
-                {t("ludocard-campaign-notes-desc", "Anotações rápidas sobre o seu progresso")}
+                {t("luducard-campaign-notes-desc", "AnotaÃ§Ãµes rÃ¡pidas sobre o seu progresso")}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-1">
@@ -1216,7 +1216,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 value={localNotes}
                 onChange={(e) => setLocalNotes(e.target.value)}
                 onBlur={saveNotes}
-                placeholder={t("ludocard-campaign-notes-placeholder", "Escreva anotações rápidas sobre o seu progresso neste jogo...")}
+                placeholder={t("luducard-campaign-notes-placeholder", "Escreva anotaÃ§Ãµes rÃ¡pidas sobre o seu progresso neste jogo...")}
                 className="w-full min-h-[100px] resize-y bg-muted/40 border border-border focus:border-primary/50 rounded-md p-2.5 text-xs leading-normal outline-none transition-colors text-foreground placeholder:text-muted-foreground/40 font-normal"
               />
             </CardContent>
@@ -1224,18 +1224,18 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("ludocard-quick-preferences", "Preferências rápidas")}</CardTitle>
+              <CardTitle className="text-base">{t("luducard-quick-preferences", "PreferÃªncias rÃ¡pidas")}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <label className="flex items-center justify-between gap-2">
-                <span className="text-sm">{t("ludocard-file-watcher", "Backup automático")}</span>
+                <span className="text-sm">{t("luducard-file-watcher", "Backup automÃ¡tico")}</span>
                 <Switch
                   checked={game.autoBackup}
                   disabled={true} /* Controlled by main settings config */
                 />
               </label>
               <label className="flex items-center justify-between gap-2">
-                <span className="text-sm">{t("ludocard-cloud-sync", "Enviar para a nuvem")}</span>
+                <span className="text-sm">{t("luducard-cloud-sync", "Enviar para a nuvem")}</span>
                 <Switch
                   checked={game.cloudSync}
                   disabled={true} /* Controlled by main settings config */
@@ -1259,10 +1259,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 )}
                 <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground/90">
                   {activeTab === "saves"
-                    ? t("ludocard-save-history", "Histórico de Saves")
+                    ? t("luducard-save-history", "HistÃ³rico de Saves")
                     : activeTab === "presets"
-                    ? t("ludocard-config-presets", "Presets de Configuração")
-                    : t("ludocard-save-profiles-title", "Perfis de Saves (Modding)")}
+                    ? t("luducard-config-presets", "Presets de ConfiguraÃ§Ã£o")
+                    : t("luducard-save-profiles-title", "Perfis de Saves (Modding)")}
                 </CardTitle>
               </div>
 
@@ -1277,7 +1277,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t("ludocard-saves-timeline", "Linha do Tempo (Saves)")}
+                  {t("luducard-saves-timeline", "Linha do Tempo (Saves)")}
                 </button>
                 <button
                   onClick={() => setActiveTab("presets")}
@@ -1288,7 +1288,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t("ludocard-presets-configs", "Presets & Configurações")}
+                  {t("luducard-presets-configs", "Presets & ConfiguraÃ§Ãµes")}
                 </button>
                 <button
                   onClick={() => setActiveTab("profiles")}
@@ -1299,7 +1299,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t("ludocard-save-profiles-tab", "Perfis de Save")}
+                  {t("luducard-save-profiles-tab", "Perfis de Save")}
                 </button>
               </div>
             </div>
@@ -1314,9 +1314,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                     <EmptyMedia variant="icon">
                       <CloudOff />
                     </EmptyMedia>
-                    <EmptyTitle>{t("ludocard-no-backups-yet", "Nenhum backup ainda")}</EmptyTitle>
+                    <EmptyTitle>{t("luducard-no-backups-yet", "Nenhum backup ainda")}</EmptyTitle>
                     <EmptyDescription>
-                      {t("ludocard-do-first-backup-desc", "Faça o primeiro backup deste jogo para começar a linha do tempo.")}
+                      {t("luducard-do-first-backup-desc", "FaÃ§a o primeiro backup deste jogo para comeÃ§ar a linha do tempo.")}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -1341,7 +1341,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">
-                              {b.date} às {b.time}
+                              {b.date} Ã s {b.time}
                             </span>
                             {b.cloud ? (
                               <Cloud className="size-3.5 text-primary" />
@@ -1360,7 +1360,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                               <span className={cn("font-medium", kindColors[b.kind] || "text-muted-foreground")}>
                                 {b.kind}
                               </span>
-                              <span>•</span>
+                              <span>â€¢</span>
                               <span>{formatSize(b.sizeMB)}</span>
                             </div>
                             
@@ -1396,7 +1396,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                             size="icon-sm"
                             variant={b.locked ? "secondary" : "ghost"}
                             onClick={() => handleToggleLocked(b.id, !!b.locked)}
-                            title={b.locked ? "Desafixar versão (permitir exclusão automática)" : "Fixar/Alfinetar versão (impedir exclusão automática)"}
+                            title={b.locked ? "Desafixar versÃ£o (permitir exclusÃ£o automÃ¡tica)" : "Fixar/Alfinetar versÃ£o (impedir exclusÃ£o automÃ¡tica)"}
                             className={cn(
                               b.locked ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" : "text-muted-foreground hover:text-foreground"
                             )}
@@ -1407,11 +1407,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                           <Button
                             size="icon-sm"
                             variant="ghost"
-                            onClick={() => toast.error("Por favor, gerencie exclusões de backups pelo app central")}
-                            title="Deletar versão"
+                            onClick={() => toast.error("Por favor, gerencie exclusÃµes de backups pelo app central")}
+                            title="Deletar versÃ£o"
                           >
                             <Trash2 />
-                            <span className="sr-only">Deletar versão</span>
+                            <span className="sr-only">Deletar versÃ£o</span>
                           </Button>
                         </div>
                       </div>
@@ -1455,8 +1455,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       <div className="flex items-center gap-2">
                         <SlidersHorizontal className="size-4.5 text-primary" />
                         <div>
-                          <h4 className="text-sm font-semibold">Salvar Configuração Atual</h4>
-                          <p className="text-xs text-muted-foreground">Crie um preset local a partir das configurações ativas do seu jogo.</p>
+                          <h4 className="text-sm font-semibold">Salvar ConfiguraÃ§Ã£o Atual</h4>
+                          <p className="text-xs text-muted-foreground">Crie um preset local a partir das configuraÃ§Ãµes ativas do seu jogo.</p>
                         </div>
                       </div>
                       <Button
@@ -1494,7 +1494,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         <Info className="size-8 text-muted-foreground/60 mb-2" />
                         <h5 className="font-semibold text-sm">Nenhum preset local</h5>
                         <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                          Capture suas configurações de gráficos e controles locais para salvá-las como um preset ou compartilhá-las.
+                          Capture suas configuraÃ§Ãµes de grÃ¡ficos e controles locais para salvÃ¡-las como um preset ou compartilhÃ¡-las.
                         </p>
                       </div>
                     ) : (
@@ -1513,7 +1513,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                 })}
                               >
                                 <h5 className="font-bold text-sm leading-tight text-foreground truncate">{lp.title}</h5>
-                                <p className="line-clamp-1 text-xs text-muted-foreground leading-relaxed mt-0.5">{lp.description || "Sem descrição."}</p>
+                                <p className="line-clamp-1 text-xs text-muted-foreground leading-relaxed mt-0.5">{lp.description || "Sem descriÃ§Ã£o."}</p>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                                 <Button
@@ -1548,9 +1548,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                 <Cpu className="size-2.5" />
                                 {lp.cpu ? `${lp.cpu} | ` : ""}{lp.gpu ? `${lp.gpu} | ` : ""}{lp.ram || ""}
                               </span>
-                              <span>•</span>
+                              <span>â€¢</span>
                               <span>Criado em: {new Date(lp.createdAt).toLocaleDateString("pt-BR")}</span>
-                              <span>•</span>
+                              <span>â€¢</span>
                               <span>{lp.files.length} arquivos mapeados</span>
                             </div>
                           </div>
@@ -1568,7 +1568,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                           <AlertTriangle className="size-4.5 text-red-400 animate-pulse" />
                           <div className="text-xs text-red-400">
                             <span className="font-semibold block">Seguro-Crash Ativo</span>
-                            Você aplicou um preset recentemente. Se houver falhas, restaure as configs originais.
+                            VocÃª aplicou um preset recentemente. Se houver falhas, restaure as configs originais.
                           </div>
                         </div>
                         <Button
@@ -1591,9 +1591,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                     ) : presets.length === 0 ? (
                       <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed border-border rounded-xl bg-card/20">
                         <Info className="size-8 text-muted-foreground/60 mb-2" />
-                        <h5 className="font-semibold text-sm">Nenhum preset comunitário</h5>
+                        <h5 className="font-semibold text-sm">Nenhum preset comunitÃ¡rio</h5>
                         <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                          Não há presets publicados para este jogo na nuvem. Crie um local e compartilhe!
+                          NÃ£o hÃ¡ presets publicados para este jogo na nuvem. Crie um local e compartilhe!
                         </p>
                       </div>
                     ) : (
@@ -1669,7 +1669,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                   <span>Por: <strong className="text-foreground">{preset.authorName}</strong></span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                  <div className="flex items-center gap-1" title="Aprovação">
+                                  <div className="flex items-center gap-1" title="AprovaÃ§Ã£o">
                                     <ThumbsUp className="size-3 text-primary" />
                                     <span className="font-semibold text-foreground">{approvalRatio}%</span>
                                   </div>
@@ -1711,10 +1711,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
                    <div className="flex flex-col gap-1">
                      <h3 className="text-sm font-semibold text-foreground">
-                       {t("ludocard-profiles-header", "Gerenciamento de Perfis de Save")}
+                       {t("luducard-profiles-header", "Gerenciamento de Perfis de Save")}
                      </h3>
                      <p className="text-xs text-muted-foreground">
-                       {t("ludocard-profiles-intro", "Crie campanhas separadas ou separe gameplay com mods. O Ludocard cuidará de trocar e guardar os saves correspondentes automaticamente.")}
+                       {t("luducard-profiles-intro", "Crie campanhas separadas ou separe gameplay com mods. O Luducard cuidarÃ¡ de trocar e guardar os saves correspondentes automaticamente.")}
                      </p>
                    </div>
                    <Button
@@ -1727,14 +1727,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                      className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs py-1.5 h-auto rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 self-start sm:self-auto shrink-0"
                    >
                      <FolderSync className="size-3.5" />
-                     {t("ludocard-create-profile-btn", "Novo Perfil de Save")}
+                     {t("luducard-create-profile-btn", "Novo Perfil de Save")}
                    </Button>
                  </div>
 
                  {loadingProfiles ? (
                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-3">
                      <RefreshCw className="size-8 animate-spin text-primary" />
-                     <span className="text-xs">{t("ludocard-loading-profiles", "Carregando perfis de save...")}</span>
+                     <span className="text-xs">{t("luducard-loading-profiles", "Carregando perfis de save...")}</span>
                    </div>
                  ) : saveProfiles.length === 0 ? (
                    <Empty>
@@ -1742,9 +1742,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                        <EmptyMedia variant="icon">
                          <FolderSync />
                        </EmptyMedia>
-                       <EmptyTitle>{t("ludocard-no-profiles-yet", "Nenhum Perfil de Save")}</EmptyTitle>
+                       <EmptyTitle>{t("luducard-no-profiles-yet", "Nenhum Perfil de Save")}</EmptyTitle>
                        <EmptyDescription>
-                         {t("ludocard-no-profiles-desc", "O jogo está usando os arquivos de save padrão do seu sistema. Crie o primeiro perfil para começar a organizar suas campanhas.")}
+                         {t("luducard-no-profiles-desc", "O jogo estÃ¡ usando os arquivos de save padrÃ£o do seu sistema. Crie o primeiro perfil para comeÃ§ar a organizar suas campanhas.")}
                        </EmptyDescription>
                      </EmptyHeader>
                    </Empty>
@@ -1755,11 +1755,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                        <Info className="size-4 shrink-0 mt-0.5 text-primary" />
                        <div className="flex flex-col gap-1 leading-relaxed">
                          <span className="font-semibold text-primary">
-                           {t("ludocard-active-profile-banner", "Perfil Ativo no Sistema:")} {" "}
-                           {saveProfiles.find(p => p.active)?.title || t("ludocard-none", "Nenhum (Usando saves soltos)")}
+                           {t("luducard-active-profile-banner", "Perfil Ativo no Sistema:")} {" "}
+                           {saveProfiles.find(p => p.active)?.title || t("luducard-none", "Nenhum (Usando saves soltos)")}
                          </span>
                          <span>
-                           {t("ludocard-active-profile-banner-desc", "Ao alternar de perfil, os saves atuais da pasta do jogo são guardados automaticamente no perfil ativo anterior para evitar perda de dados.")}
+                           {t("luducard-active-profile-banner-desc", "Ao alternar de perfil, os saves atuais da pasta do jogo sÃ£o guardados automaticamente no perfil ativo anterior para evitar perda de dados.")}
                          </span>
                        </div>
                      </div>
@@ -1780,11 +1780,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                <span className="font-bold text-sm text-foreground truncate">{p.title}</span>
                                {p.active ? (
                                  <span className="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[9px] font-bold text-emerald-500 select-none">
-                                   {t("ludocard-profile-active-tag", "Ativo no Sistema")}
+                                   {t("luducard-profile-active-tag", "Ativo no Sistema")}
                                  </span>
                                ) : (
                                  <span className="inline-flex items-center rounded-full bg-muted border border-border px-2 py-0.5 text-[9px] font-medium text-muted-foreground select-none">
-                                   {t("ludocard-profile-inactive-tag", "Inativo")}
+                                   {t("luducard-profile-inactive-tag", "Inativo")}
                                  </span>
                                )}
                              </div>
@@ -1794,7 +1794,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                </p>
                              )}
                              <span className="text-[10px] text-muted-foreground/80 mt-1">
-                               {t("ludocard-created-at", "Criado em")}: {new Date(p.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                               {t("luducard-created-at", "Criado em")}: {new Date(p.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                              </span>
                            </div>
 
@@ -1812,7 +1812,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                  ) : (
                                    <FolderSync className="size-3.5" />
                                  )}
-                                 {t("ludocard-activate-profile-btn", "Ativar Perfil")}
+                                 {t("luducard-activate-profile-btn", "Ativar Perfil")}
                                </Button>
                              )}
                              <Button
@@ -1820,7 +1820,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                variant="ghost"
                                disabled={p.active || switchingProfileId !== null}
                                onClick={() => handleDeleteSaveProfile(p.id, p.title)}
-                               title={p.active ? t("ludocard-cant-delete-active", "Não é possível deletar o perfil ativo") : t("ludocard-delete-profile", "Excluir perfil")}
+                               title={p.active ? t("luducard-cant-delete-active", "NÃ£o Ã© possÃ­vel deletar o perfil ativo") : t("luducard-delete-profile", "Excluir perfil")}
                                className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 cursor-pointer disabled:opacity-30"
                              >
                                <Trash2 className="size-4" />
@@ -1845,7 +1845,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-border">
               <div>
                 <CardTitle className="text-base">Detalhes do Backup Local</CardTitle>
-                <CardDescription className="text-xs">Informações da versão e notas de campanha.</CardDescription>
+                <CardDescription className="text-xs">InformaÃ§Ãµes da versÃ£o e notas de campanha.</CardDescription>
               </div>
               <Button
                 variant="ghost"
@@ -1860,7 +1860,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div className="flex flex-col gap-1.5 bg-muted/20 border border-border p-3.5 rounded-xl text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Data e Hora:</span>
-                  <span className="font-semibold text-foreground">{selectedLocalBackup.date} às {selectedLocalBackup.time}</span>
+                  <span className="font-semibold text-foreground">{selectedLocalBackup.date} Ã s {selectedLocalBackup.time}</span>
                 </div>
                 <div className="flex justify-between mt-1">
                   <span className="text-muted-foreground">Tipo de Backup:</span>
@@ -1876,12 +1876,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="local-backup-note" className="text-xs font-semibold text-muted-foreground">
-                  Notas de Campanha / Descrição do Progresso
+                  Notas de Campanha / DescriÃ§Ã£o do Progresso
                 </label>
                 <textarea
                   id="local-backup-note"
                   rows={4}
-                  placeholder="Ex: Parei após derrotar o dragão. Nível 45, build de destreza..."
+                  placeholder="Ex: Parei apÃ³s derrotar o dragÃ£o. NÃ­vel 45, build de destreza..."
                   value={localNote}
                   onChange={(e) => setLocalNote(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary whitespace-pre-wrap leading-relaxed"
@@ -1915,10 +1915,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div>
                 <CardTitle className="text-base flex items-center gap-1.5">
                   <Share2 className="size-4.5 text-primary" />
-                  Compartilhar Preset de Configuração
+                  Compartilhar Preset de ConfiguraÃ§Ã£o
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Salve e envie suas otimizações locais para a comunidade.
+                  Salve e envie suas otimizaÃ§Ãµes locais para a comunidade.
                 </CardDescription>
               </div>
               <Button
@@ -1937,7 +1937,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 <div className="flex flex-col gap-1.5 border border-border rounded-xl p-3 bg-muted/10">
                   <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                     <FolderSync className="size-3.5 text-primary" />
-                    Arquivos de Configuração Detectados:
+                    Arquivos de ConfiguraÃ§Ã£o Detectados:
                   </label>
                   {loadingConfigs ? (
                     <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
@@ -1947,7 +1947,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   ) : configFiles.length === 0 ? (
                     <div className="text-xs text-red-400 bg-red-500/5 border border-red-500/10 p-2.5 rounded-lg flex items-start gap-1.5">
                       <AlertTriangle className="size-4 shrink-0" />
-                      Não foi possível detectar arquivos de configuração usando o mapeamento do Ludosavi.
+                      NÃ£o foi possÃ­vel detectar arquivos de configuraÃ§Ã£o usando o mapeamento do Ludosavi.
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1.5 max-h-[100px] overflow-y-auto border border-border/60 rounded bg-background p-2">
@@ -1981,7 +1981,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 <div className="grid gap-3.5 sm:grid-cols-2">
                   <div className="flex flex-col gap-1.5 sm:col-span-2">
                     <label htmlFor="preset-title" className="text-xs font-semibold text-muted-foreground">
-                      Título do Preset *
+                      TÃ­tulo do Preset *
                     </label>
                     <input
                       id="preset-title"
@@ -2001,7 +2001,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                     <input
                       id="preset-author"
                       type="text"
-                      placeholder="Ex: Anônimo"
+                      placeholder="Ex: AnÃ´nimo"
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2039,12 +2039,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="preset-desc" className="text-xs font-semibold text-muted-foreground">
-                    Descrição (Versão do jogo, melhorias de FPS estimadas, etc.)
+                    DescriÃ§Ã£o (VersÃ£o do jogo, melhorias de FPS estimadas, etc.)
                   </label>
                   <textarea
                     id="preset-desc"
                     rows={2}
-                    placeholder="Ex: Aumenta cerca de 15% do FPS na cidade. Testado na versão 1.63."
+                    placeholder="Ex: Aumenta cerca de 15% do FPS na cidade. Testado na versÃ£o 1.63."
                     value={presetDesc}
                     onChange={(e) => setPresetDesc(e.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary whitespace-pre-wrap"
@@ -2055,7 +2055,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 <div className="flex flex-col gap-2.5 border border-border rounded-xl p-3 bg-muted/10">
                   <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                     <Cpu className="size-3.5 text-primary" />
-                    Hardware Detectado (Especificações do Autor):
+                    Hardware Detectado (EspecificaÃ§Ãµes do Autor):
                   </span>
                   {loadingHardware ? (
                     <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
@@ -2075,7 +2075,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label htmlFor="hw-gpu" className="text-[10px] font-semibold text-muted-foreground">Placa de Vídeo (GPU)</label>
+                        <label htmlFor="hw-gpu" className="text-[10px] font-semibold text-muted-foreground">Placa de VÃ­deo (GPU)</label>
                         <input
                           id="hw-gpu"
                           type="text"
@@ -2085,7 +2085,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label htmlFor="hw-ram" className="text-[10px] font-semibold text-muted-foreground">Memória RAM</label>
+                        <label htmlFor="hw-ram" className="text-[10px] font-semibold text-muted-foreground">MemÃ³ria RAM</label>
                         <input
                           id="hw-ram"
                           type="text"
@@ -2143,13 +2143,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             </CardHeader>
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground font-semibold">Título do Preset:</span>
+                <span className="text-xs text-muted-foreground font-semibold">TÃ­tulo do Preset:</span>
                 <span className="text-sm font-bold text-foreground leading-snug">{selectedDetailPreset.title}</span>
               </div>
 
               {selectedDetailPreset.description && (
                 <div className="flex flex-col gap-1 bg-muted/20 border border-border p-3 rounded-lg">
-                  <span className="text-[11px] text-muted-foreground font-semibold">Descrição / Otimizações:</span>
+                  <span className="text-[11px] text-muted-foreground font-semibold">DescriÃ§Ã£o / OtimizaÃ§Ãµes:</span>
                   <div className="max-h-[160px] overflow-y-auto pr-1.5 scrollbar-thin">
                     <p className="text-xs leading-relaxed text-muted-foreground mt-0.5 whitespace-pre-wrap">{selectedDetailPreset.description}</p>
                   </div>
@@ -2178,7 +2178,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
               <div className="grid grid-cols-2 gap-3 bg-muted/20 border border-border p-3.5 rounded-xl text-xs">
                 <div className="flex flex-col gap-0.5 col-span-2">
-                  <span className="text-muted-foreground font-semibold">Especificações do Autor:</span>
+                  <span className="text-muted-foreground font-semibold">EspecificaÃ§Ãµes do Autor:</span>
                   <span className="font-mono text-foreground mt-0.5 leading-relaxed">
                     {selectedDetailPreset.cpu ? `${selectedDetailPreset.cpu} | ` : ""}{selectedDetailPreset.gpu ? `${selectedDetailPreset.gpu} | ` : ""}{selectedDetailPreset.ram || ""}
                   </span>
@@ -2217,7 +2217,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   Criar Preset Local
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Salve as configurações atuais deste jogo em um perfil local.
+                  Salve as configuraÃ§Ãµes atuais deste jogo em um perfil local.
                 </CardDescription>
               </div>
               <Button
@@ -2231,22 +2231,22 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             </CardHeader>
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="local-preset-title" className="text-xs font-semibold text-muted-foreground">Título do Preset *</label>
+                <label htmlFor="local-preset-title" className="text-xs font-semibold text-muted-foreground">TÃ­tulo do Preset *</label>
                 <input
                   id="local-preset-title"
                   type="text"
-                  placeholder="Ex: Minha Otimização 60fps ou Controles de Voo"
+                  placeholder="Ex: Minha OtimizaÃ§Ã£o 60fps ou Controles de Voo"
                   value={newLocalTitle}
                   onChange={(e) => setNewLocalTitle(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="local-preset-desc" className="text-xs font-semibold text-muted-foreground">Descrição</label>
+                <label htmlFor="local-preset-desc" className="text-xs font-semibold text-muted-foreground">DescriÃ§Ã£o</label>
                 <textarea
                   id="local-preset-desc"
                   rows={2.5}
-                  placeholder="Descreva o que este preset altera (ex: reduz sombras volumétricas para melhor performance)."
+                  placeholder="Descreva o que este preset altera (ex: reduz sombras volumÃ©tricas para melhor performance)."
                   value={newLocalDesc}
                   onChange={(e) => setNewLocalDesc(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2256,7 +2256,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                   <FolderSync className="size-3.5 text-primary" />
-                  Arquivos Incluídos (Detectados automaticamente):
+                  Arquivos IncluÃ­dos (Detectados automaticamente):
                 </span>
                 {loadingConfigs ? (
                   <div className="text-xs text-muted-foreground py-1">Mapeando arquivos...</div>
@@ -2268,7 +2268,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       const name = c.split(/[\\/]/).pop()
                       return (
                         <span key={c} className="text-[10px] text-muted-foreground font-mono truncate" title={c}>
-                          • {name}
+                          â€¢ {name}
                         </span>
                       )
                     })}
@@ -2304,10 +2304,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div>
                 <CardTitle className="text-base flex items-center gap-1.5">
                   <FolderSync className="size-4.5 text-primary" />
-                  {t("ludocard-create-profile-title", "Criar Perfil de Save")}
+                  {t("luducard-create-profile-title", "Criar Perfil de Save")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {t("ludocard-create-profile-desc", "Inicie uma campanha paralela ou isole saves com mods.")}
+                  {t("luducard-create-profile-desc", "Inicie uma campanha paralela ou isole saves com mods.")}
                 </CardDescription>
               </div>
               <Button
@@ -2322,12 +2322,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="save-profile-title" className="text-xs font-semibold text-muted-foreground">
-                  {t("ludocard-profile-name-label", "Nome do Perfil *")}
+                  {t("luducard-profile-name-label", "Nome do Perfil *")}
                 </label>
                 <input
                   id="save-profile-title"
                   type="text"
-                  placeholder={t("ludocard-profile-name-placeholder", "Ex: Minha Campanha Vanilla ou Modded Run")}
+                  placeholder={t("luducard-profile-name-placeholder", "Ex: Minha Campanha Vanilla ou Modded Run")}
                   value={newProfileTitle}
                   onChange={(e) => setNewProfileTitle(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2335,12 +2335,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="save-profile-desc" className="text-xs font-semibold text-muted-foreground">
-                  {t("ludocard-profile-desc-label", "Descrição")}
+                  {t("luducard-profile-desc-label", "DescriÃ§Ã£o")}
                 </label>
                 <textarea
                   id="save-profile-desc"
                   rows={2.5}
-                  placeholder={t("ludocard-profile-desc-placeholder", "Descreva o propósito deste perfil (ex: jogando com a classe guerreiro).")}
+                  placeholder={t("luducard-profile-desc-placeholder", "Descreva o propÃ³sito deste perfil (ex: jogando com a classe guerreiro).")}
                   value={newProfileDesc}
                   onChange={(e) => setNewProfileDesc(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2349,7 +2349,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
               <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/20 p-3 text-xs">
                 <span className="font-semibold text-muted-foreground flex items-center gap-1">
-                  {t("ludocard-creation-options", "Opções de Inicialização:")}
+                  {t("luducard-creation-options", "OpÃ§Ãµes de InicializaÃ§Ã£o:")}
                 </span>
 
                 <div className="flex flex-col gap-2.5">
@@ -2362,9 +2362,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       className="mt-0.5 text-primary focus:ring-primary"
                     />
                     <div className="flex flex-col gap-0.5">
-                      <span>{t("ludocard-clone-current-saves", "Clonar progresso atual")}</span>
+                      <span>{t("luducard-clone-current-saves", "Clonar progresso atual")}</span>
                       <span className="text-[10px] text-muted-foreground font-normal">
-                        {t("ludocard-clone-current-saves-desc", "Copia os saves que atualmente estão na pasta do jogo para este perfil (recomendado).")}
+                        {t("luducard-clone-current-saves-desc", "Copia os saves que atualmente estÃ£o na pasta do jogo para este perfil (recomendado).")}
                       </span>
                     </div>
                   </label>
@@ -2378,9 +2378,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       className="mt-0.5 text-primary focus:ring-primary"
                     />
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-amber-500">{t("ludocard-start-empty", "Começar do zero (Vazio)")}</span>
+                      <span className="text-amber-500">{t("luducard-start-empty", "ComeÃ§ar do zero (Vazio)")}</span>
                       <span className="text-[10px] text-muted-foreground font-normal">
-                        {t("ludocard-start-empty-desc", "A pasta de saves atual do jogo será limpa para você iniciar um progresso 100% novo.")}
+                        {t("luducard-start-empty-desc", "A pasta de saves atual do jogo serÃ¡ limpa para vocÃª iniciar um progresso 100% novo.")}
                       </span>
                     </div>
                   </label>
@@ -2392,14 +2392,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   variant="ghost"
                   onClick={() => setIsCreateProfileModalOpen(false)}
                 >
-                  {t("ludocard-cancel", "Cancelar")}
+                  {t("luducard-cancel", "Cancelar")}
                 </Button>
                 <Button
                   disabled={!newProfileTitle}
                   onClick={handleCreateSaveProfile}
                   className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold"
                 >
-                  {t("ludocard-create-profile-btn", "Criar Perfil")}
+                  {t("luducard-create-profile-btn", "Criar Perfil")}
                 </Button>
               </div>
             </CardContent>

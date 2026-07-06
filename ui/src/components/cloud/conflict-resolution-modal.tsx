@@ -55,10 +55,10 @@ export function ConflictResolutionModal({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-foreground">
-              {t("ludocard-conflict-title", "Conflito de Save Detectado")}
+              {t("luducard-conflict-title", "Conflito de Save Detectado")}
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Os dados de save para <strong className="text-foreground">{conflict.gameTitle}</strong> no seu PC local e na nuvem são diferentes. Escolha qual progresso deseja manter.
+              Os dados de save para <strong className="text-foreground">{conflict.gameTitle}</strong> no seu PC local e na nuvem sÃ£o diferentes. Escolha qual progresso deseja manter.
             </p>
           </div>
         </div>
@@ -83,7 +83,7 @@ export function ConflictResolutionModal({
                   <HardDrive className="size-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">{t("ludocard-conflict-this-pc", "Este PC")}</h3>
+                  <h3 className="font-semibold text-foreground">{t("luducard-conflict-this-pc", "Este PC")}</h3>
                   <span className="text-[10px] text-muted-foreground">Armazenamento Local</span>
                 </div>
               </div>
@@ -105,12 +105,12 @@ export function ConflictResolutionModal({
                 {conflict.local.isNewer ? (
                   <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded font-medium">
                     <CheckCircle2 className="size-3" />
-                    {t("ludocard-conflict-newer", "Mais recente")}
+                    {t("luducard-conflict-newer", "Mais recente")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded font-medium">
                     <AlertCircle className="size-3" />
-                    {t("ludocard-conflict-older", "Mais antigo")}
+                    {t("luducard-conflict-older", "Mais antigo")}
                   </span>
                 )}
               </div>
@@ -127,7 +127,7 @@ export function ConflictResolutionModal({
               ) : (
                 <HardDrive className="size-4 mr-2" />
               )}
-              {t("ludocard-conflict-keep-local", "Manter versão deste PC")}
+              {t("luducard-conflict-keep-local", "Manter versÃ£o deste PC")}
             </Button>
           </div>
 
@@ -149,7 +149,7 @@ export function ConflictResolutionModal({
                   <Cloud className="size-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">{t("ludocard-conflict-cloud", "Nuvem")}</h3>
+                  <h3 className="font-semibold text-foreground">{t("luducard-conflict-cloud", "Nuvem")}</h3>
                   <span className="text-[10px] text-muted-foreground">Backup Remoto</span>
                 </div>
               </div>
@@ -171,12 +171,12 @@ export function ConflictResolutionModal({
                 {conflict.remote.isNewer ? (
                   <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded font-medium">
                     <CheckCircle2 className="size-3" />
-                    {t("ludocard-conflict-newer", "Mais recente")}
+                    {t("luducard-conflict-newer", "Mais recente")}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded font-medium">
                     <AlertCircle className="size-3" />
-                    {t("ludocard-conflict-older", "Mais antigo")}
+                    {t("luducard-conflict-older", "Mais antigo")}
                   </span>
                 )}
               </div>
@@ -193,7 +193,7 @@ export function ConflictResolutionModal({
               ) : (
                 <Cloud className="size-4 mr-2" />
               )}
-              {t("ludocard-conflict-keep-cloud", "Manter versão da Nuvem")}
+              {t("luducard-conflict-keep-cloud", "Manter versÃ£o da Nuvem")}
             </Button>
           </div>
         </div>
@@ -201,14 +201,14 @@ export function ConflictResolutionModal({
         {/* Footer */}
         <div className="p-6 border-t border-border bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-xs text-muted-foreground text-center sm:text-left font-medium">
-            A versão rejeitada será sobrescrita. Esta ação é irreversível.
+            A versÃ£o rejeitada serÃ¡ sobrescrita. Esta aÃ§Ã£o Ã© irreversÃ­vel.
           </span>
           <Button
             variant="ghost"
             disabled={resolving !== null}
             onClick={onClose}
           >
-            {t("ludocard-cancel", "Cancelar")}
+            {t("luducard-cancel", "Cancelar")}
           </Button>
         </div>
 

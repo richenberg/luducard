@@ -1,12 +1,12 @@
 ludusavi = Ludusavi
-language = Språk
+language = SprÃ¥k
 game-name = Namn
 total-games = Spel
 file-size = Storlek
 file-location = Plats
 overall = Sammanlagt
 status = Status
-cli-unrecognized-games = Ingen information för dessa spel:
+cli-unrecognized-games = Ingen information fÃ¶r dessa spel:
 cli-unable-to-request-confirmation = Unable to request confirmation.
     .winpty-workaround = If you are using a Bash emulator (like Git Bash), try running winpty.
 cli-backup-id-with-multiple-games = Cannot specify backup ID when restoring multiple games.

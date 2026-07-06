@@ -31,13 +31,13 @@ export function AppSidebar() {
   const { t } = useI18n()
 
   const navItems = [
-    { title: t("ludocard-library", "Biblioteca"), href: "/", icon: LibraryBig },
-    { title: t("ludocard-scan-and-add", "Escanear & Adicionar"), href: "/scan", icon: ScanLine },
-    { title: t("ludocard-cloud-and-sync", "Nuvem & Sincronização"), href: "/cloud", icon: CloudCog },
-    { title: t("ludocard-save-share-hub", "Save Share HUB"), href: "/community", icon: Users },
-    { title: t("ludocard-preset-share-hub", "Preset Share HUB"), href: "/presets", icon: SlidersHorizontal },
-    { title: t("ludocard-settings", "Configurações"), href: "/settings", icon: Settings },
-    { title: t("ludocard-support-project", "Apoiar o Projeto"), href: "/support", icon: Heart },
+    { title: t("luducard-library", "Biblioteca"), href: "/", icon: LibraryBig },
+    { title: t("luducard-scan-and-add", "Escanear & Adicionar"), href: "/scan", icon: ScanLine },
+    { title: t("luducard-cloud-and-sync", "Nuvem & SincronizaÃ§Ã£o"), href: "/cloud", icon: CloudCog },
+    { title: t("luducard-save-share-hub", "Save Share HUB"), href: "/community", icon: Users },
+    { title: t("luducard-preset-share-hub", "Preset Share HUB"), href: "/presets", icon: SlidersHorizontal },
+    { title: t("luducard-settings", "ConfiguraÃ§Ãµes"), href: "/settings", icon: Settings },
+    { title: t("luducard-support-project", "Apoiar o Projeto"), href: "/support", icon: Heart },
   ]
 
   return (
@@ -53,15 +53,15 @@ export function AppSidebar() {
             </svg>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-semibold leading-none">Ludocard</span>
-            <span className="text-xs text-muted-foreground">{t("ludocard-sidebar-subtitle", "Backup de saves")}</span>
+            <span className="text-sm font-semibold leading-none">Luducard</span>
+            <span className="text-xs text-muted-foreground">{t("luducard-sidebar-subtitle", "Backup de saves")}</span>
           </div>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{t("ludocard-navigation", "Navegação")}</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("luducard-navigation", "NavegaÃ§Ã£o")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
@@ -92,21 +92,21 @@ export function AppSidebar() {
         <div className="rounded-lg border border-border bg-card/60 p-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <HardDriveDownload className="size-3.5 text-primary" />
-            {t("ludocard-library-status", "Status da biblioteca")}
+            {t("luducard-library-status", "Status da biblioteca")}
           </div>
           <div className="mt-2 flex flex-col gap-1.5 text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("ludocard-games", "Jogos")}</span>
+              <span className="text-muted-foreground">{t("luducard-games", "Jogos")}</span>
               <span className="font-medium">{stats.totalGames}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("ludocard-stored-saves", "Saves armazenados")}</span>
+              <span className="text-muted-foreground">{t("luducard-stored-saves", "Saves armazenados")}</span>
               <span className="font-medium">
                 {formatSize(stats.totalSizeMB)}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("ludocard-pending-saves", "Pendentes")}</span>
+              <span className="text-muted-foreground">{t("luducard-pending-saves", "Pendentes")}</span>
               <span className="font-medium text-amber-400">
                 {stats.pending}
               </span>
@@ -115,7 +115,7 @@ export function AppSidebar() {
             {coverProgress.downloading && (
               <div className="mt-1 flex flex-col gap-1.5 border-t border-border/50 pt-2">
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>{t("ludocard-downloading-covers", "Baixando capas...")}</span>
+                  <span>{t("luducard-downloading-covers", "Baixando capas...")}</span>
                   <span className="font-medium text-primary">{coverProgress.percentage}%</span>
                 </div>
                 <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">

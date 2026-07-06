@@ -1,6 +1,6 @@
 [[permission]]
-identifier = "allow-ludocard-commands"
-description = "Allow Ludocard custom commands"
+identifier = "allow-luducard-commands"
+description = "Allow Luducard custom commands"
 commands.allow = [
   "get_games",
   "scan_games",
@@ -20,16 +20,16 @@ commands.allow = [
   "toggle_portable_mode",
   "get_client_uuid",
   "select_save_file",
-  "export_ludocard_save",
-  "read_ludocard_metadata",
-  "import_ludocard_save",
-  "save_ludocard_dialog",
-  "open_ludocard_dialog",
-  "download_and_import_ludocard",
+  "export_luducard_save",
+  "read_luducard_metadata",
+  "import_luducard_save",
+  "save_luducard_dialog",
+  "open_luducard_dialog",
+  "download_and_import_luducard",
   "upload_file_to_url",
-  "export_temp_ludocard_save",
-  "export_temp_ludocard_backup",
-  "export_ludocard_backup",
+  "export_temp_luducard_save",
+  "export_temp_luducard_backup",
+  "export_luducard_backup",
   "delete_temp_file",
   "save_backup_note",
   "save_campaign_note",
@@ -38,7 +38,7 @@ commands.allow = [
   "detect_game_config_files",
   "create_preset_safety_backup",
   "restore_preset_safety_backup",
-  "export_temp_ludocard_preset",
+  "export_temp_luducard_preset",
   "save_local_preset",
   "list_local_presets",
   "delete_local_preset",
@@ -55,4 +55,3 @@ commands.allow = [
   "switch_save_profile",
   "delete_save_profile"
 ]
-

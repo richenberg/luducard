@@ -1,8 +1,8 @@
-# Changelog - Ludocard
+# Changelog - Luducard
 
-All notable changes to the **Ludocard** project will be documented in this file.
+All notable changes to the **Luducard** project will be documented in this file.
 
-This project is a new application based on the core of Ludosavi. The change history of Ludocard starts with this release.
+This project is a new application based on the core of Ludosavi. The change history of Luducard starts with this release.
 
 ## [1.0.0] - 2026-07-01
 ### Added

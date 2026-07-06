@@ -29,7 +29,7 @@ fn main() {
             }
 
             // 1. Create Tray Menu Items
-            let quit_i = tauri::menu::MenuItemBuilder::with_id("quit", "Sair do Ludocard").build(app)?;
+            let quit_i = tauri::menu::MenuItemBuilder::with_id("quit", "Sair do Luducard").build(app)?;
             let show_i = tauri::menu::MenuItemBuilder::with_id("show", "Exibir Janela").build(app)?;
 
             // 2. Build the Menu
@@ -93,7 +93,7 @@ fn main() {
 
                     // Show notification on first minimization
                     if let Ok(dir) = app.path().app_data_dir() {
-                        let config_path = dir.join("ludocard.json");
+                        let config_path = dir.join("luducard.json");
                         let mut first_time = true;
 
                         let mut json: serde_json::Value = if let Ok(content) = std::fs::read_to_string(&config_path) {
@@ -118,7 +118,7 @@ fn main() {
                                 std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
 
                             watcher::show_notification(
-                                "Ludocard em segundo plano",
+                                "Luducard em segundo plano",
                                 "O aplicativo foi minimizado para a bandeja do sistema.",
                             );
                         }
@@ -150,16 +150,16 @@ fn main() {
             // Share Save & Community Checkpoints
             commands::get_client_uuid,
             commands::select_save_file,
-            commands::export_ludocard_save,
-            commands::read_ludocard_metadata,
-            commands::import_ludocard_save,
-            commands::download_and_import_ludocard,
-            commands::save_ludocard_dialog,
-            commands::open_ludocard_dialog,
+            commands::export_luducard_save,
+            commands::read_luducard_metadata,
+            commands::import_luducard_save,
+            commands::download_and_import_luducard,
+            commands::save_luducard_dialog,
+            commands::open_luducard_dialog,
             commands::upload_file_to_url,
-            commands::export_temp_ludocard_save,
-            commands::export_temp_ludocard_backup,
-            commands::export_ludocard_backup,
+            commands::export_temp_luducard_save,
+            commands::export_temp_luducard_backup,
+            commands::export_luducard_backup,
             commands::delete_temp_file,
             commands::save_backup_note,
             commands::save_campaign_note,
@@ -168,7 +168,7 @@ fn main() {
             commands::detect_game_config_files,
             commands::create_preset_safety_backup,
             commands::restore_preset_safety_backup,
-            commands::export_temp_ludocard_preset,
+            commands::export_temp_luducard_preset,
             commands::save_local_preset,
             commands::list_local_presets,
             commands::delete_local_preset,
@@ -183,5 +183,5 @@ fn main() {
             commands::delete_save_profile,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Ludocard");
+        .expect("error while running Luducard");
 }

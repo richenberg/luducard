@@ -1,10 +1,10 @@
-# Contributing to Ludocard
+# Contributing to Luducard
 
-Thank you for your interest in contributing to **Ludocard**! 
+Thank you for your interest in contributing to **Luducard**! 
 
 Join our community on [Discord](https://discord.gg/U2DEbDqgm) to discuss features, get help, or coordinate development!
 
-Ludocard is a community-driven project. As the main application has been built and developed with the support of AI coding assistants, contributions of any kind are welcome.
+Luducard is a community-driven project. As the main application has been built and developed with the support of AI coding assistants, contributions of any kind are welcome.
 
 ## Ways to Contribute
 
@@ -16,7 +16,7 @@ Ludocard is a community-driven project. As the main application has been built a
 
 ## Development Setup
 
-To run a development version of Ludocard locally:
+To run a development version of Luducard locally:
 
 ### 1. Install UI Dependencies
 Navigate to the frontend directory and install Node.js dependencies (using `pnpm` or your preferred package manager):
@@ -32,7 +32,7 @@ npm run tauri dev
 ```
 
 ### 3. Build Production Executable
-To compile a standalone production build (`Ludocard.exe`):
+To compile a standalone production build (`Luducard.exe`):
 ```bash
 npm run tauri build
 ```

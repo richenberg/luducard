@@ -3,8 +3,8 @@ create table if not exists public.public_saves (
   id uuid default gen_random_uuid() primary key,
   game_name text not null,                   -- Name of the game (e.g. Elden Ring)
   title text not null,                       -- Checkpoint title (e.g. "Before Malenia")
-  file_name text not null,                   -- Original filename (e.g. elden-ring.ludocard)
-  r2_path text not null,                     -- Path to R2 bucket file (e.g. saves/game_id/uuid.ludocard)
+  file_name text not null,                   -- Original filename (e.g. elden-ring.luducard)
+  r2_path text not null,                     -- Path to R2 bucket file (e.g. saves/game_id/uuid.luducard)
   file_size bigint not null default 0,       -- File size in bytes for global quota check
   description text,                          -- Detailed notes
   author_name text default 'Anônimo',        -- Author display name
@@ -100,8 +100,8 @@ create table if not exists public.public_presets (
   game_name text not null,                   -- Name of the game (e.g. Cyberpunk 2077)
   game_id text not null,                     -- Game slug (e.g. cyberpunk-2077)
   title text not null,                       -- Preset title (e.g. "Potato Mode")
-  file_name text not null,                   -- Original filename (e.g. cyberpunk-2077_preset.ludocard)
-  r2_path text not null,                     -- Path to R2 bucket file (e.g. presets/game_id/uuid.ludocard)
+  file_name text not null,                   -- Original filename (e.g. cyberpunk-2077_preset.luducard)
+  r2_path text not null,                     -- Path to R2 bucket file (e.g. presets/game_id/uuid.luducard)
   file_size bigint not null default 0,       -- File size in bytes for global quota check
   description text,                          -- Detailed notes
   author_name text default 'Anônimo',        -- Author display name

@@ -23,7 +23,7 @@ pub const MANIFEST_URL: &str =
 
 fn default_backup_dir() -> StrictPath {
     if crate::prelude::is_portable() {
-        crate::prelude::app_dir().joined("ludocard-backups")
+        crate::prelude::app_dir().joined("luducard-backups")
     } else {
         StrictPath::new(format!("{}/ludusavi-backup", CommonPath::Home.get().unwrap())).rendered()
     }

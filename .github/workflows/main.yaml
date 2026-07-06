@@ -12,22 +12,22 @@ jobs:
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
             artifact-name: win64
-            artifact-file: ludocard.exe
+            artifact-file: luducard.exe
             tar: false
           - os: windows-latest
             rust-target: i686-pc-windows-msvc
             artifact-name: win32
-            artifact-file: ludocard.exe
+            artifact-file: luducard.exe
             tar: false
           - os: ubuntu-22.04
             rust-target: x86_64-unknown-linux-gnu
             artifact-name: linux
-            artifact-file: ludocard
+            artifact-file: luducard
             tar: true
           - os: macos-14
             rust-target: aarch64-apple-darwin
             artifact-name: mac
-            artifact-file: ludocard
+            artifact-file: luducard
             tar: true
     runs-on: ${{ matrix.os }}
     steps:
@@ -54,16 +54,16 @@ jobs:
       - if: ${{ matrix.tar }}
         run: |
           cd target/release
-          tar --create --gzip --file=ludocard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}.tar.gz ${{ matrix.artifact-file }}
+          tar --create --gzip --file=luducard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}.tar.gz ${{ matrix.artifact-file }}
       - if: ${{ matrix.tar }}
         uses: actions/upload-artifact@v4
         with:
-          name: ludocard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}
-          path: target/release/ludocard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}.tar.gz
+          name: luducard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}
+          path: target/release/luducard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}.tar.gz
       - if: ${{ !matrix.tar }}
         uses: actions/upload-artifact@v4
         with:
-          name: ludocard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}
+          name: luducard-v${{ env.LUDUSAVI_VERSION }}-${{ matrix.artifact-name }}
           path: target/release/${{ matrix.artifact-file }}
 
   test:

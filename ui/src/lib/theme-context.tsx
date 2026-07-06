@@ -14,7 +14,7 @@ const ThemeContext = createContext<ThemeContextProps>({
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    return (localStorage.getItem("ludocard-theme") as Theme) || "dark";
+    return (localStorage.getItem("luducard-theme") as Theme) || "dark";
   });
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
-    localStorage.setItem("ludocard-theme", newTheme);
+    localStorage.setItem("luducard-theme", newTheme);
     setThemeState(newTheme);
   };
 

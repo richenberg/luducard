@@ -63,10 +63,10 @@ export default function GameDetail() {
 
   if (libraryLoading) {
     return (
-      <AppShell title={t("ludocard-loading", "Carregando...")} description={t("ludocard-fetching-details", "Buscando detalhes do jogo")}>
+      <AppShell title={t("luducard-loading", "Carregando...")} description={t("luducard-fetching-details", "Buscando detalhes do jogo")}>
         <div className="flex h-[400px] flex-col items-center justify-center gap-2">
           <Loader2 className="size-8 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">{t("ludocard-loading-details", "Carregando detalhes do jogo...")}</span>
+          <span className="text-sm text-muted-foreground">{t("luducard-loading-details", "Carregando detalhes do jogo...")}</span>
         </div>
       </AppShell>
     )
@@ -77,14 +77,14 @@ export default function GameDetail() {
   return (
     <AppShell
       title={game.title}
-      description={t("ludocard-details-desc", "Detalhes e histórico de backups")}
+      description={t("luducard-details-desc", "Detalhes e histÃ³rico de backups")}
       actions={
         <Button
           variant="outline"
           render={
             <Link to="/">
               <ArrowLeft data-icon="inline-start" />
-              {t("ludocard-back", "Voltar")}
+              {t("luducard-back", "Voltar")}
             </Link>
           }
         />

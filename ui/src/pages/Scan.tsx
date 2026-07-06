@@ -6,8 +6,8 @@ export default function Scan() {
   const { t } = useI18n()
   return (
     <AppShell
-      title={t("ludocard-scan-title", "Escanear & Adicionar")}
-      description={t("ludocard-scan-desc", "Encontre saves de jogos no seu computador")}
+      title={t("luducard-scan-title", "Escanear & Adicionar")}
+      description={t("luducard-scan-desc", "Encontre saves de jogos no seu computador")}
     >
       <ScanClient />
     </AppShell>

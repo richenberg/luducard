@@ -180,13 +180,13 @@ unsafe fn detach_console(debug: bool) {
     }
 }
 
-fn launch_ludocard() -> Result<(), std::io::Error> {
+fn launch_luducard() -> Result<(), std::io::Error> {
     let mut exe_path = std::env::current_exe()?;
     exe_path.pop();
     #[cfg(target_os = "windows")]
-    exe_path.push("Ludocard.exe");
+    exe_path.push("Luducard.exe");
     #[cfg(not(target_os = "windows"))]
-    exe_path.push("Ludocard");
+    exe_path.push("Luducard");
 
     if exe_path.exists() {
         std::process::Command::new(exe_path).spawn()?;
@@ -194,7 +194,7 @@ fn launch_ludocard() -> Result<(), std::io::Error> {
     } else {
         Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            "Ludocard executable not found",
+            "Luducard executable not found",
         ))
     }
 }
@@ -245,10 +245,10 @@ fn main() {
                 }
             }
 
-            if let Err(e) = launch_ludocard() {
-                log::error!("Failed to launch Ludocard GUI: {e}");
-                eprintln!("Failed to launch Ludocard GUI: {e}");
-                eprintln!("Please execute 'Ludocard' directly or make sure it is in the same directory.");
+            if let Err(e) = launch_luducard() {
+                log::error!("Failed to launch Luducard GUI: {e}");
+                eprintln!("Failed to launch Luducard GUI: {e}");
+                eprintln!("Please execute 'Luducard' directly or make sure it is in the same directory.");
                 failed = true;
             }
         }

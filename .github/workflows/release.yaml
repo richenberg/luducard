@@ -55,8 +55,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Ludocard v__VERSION__'
-          releaseBody: 'See the assets below to download Ludocard v__VERSION__ for your platform.'
+          releaseName: 'Luducard v__VERSION__'
+          releaseBody: 'See the assets below to download Luducard v__VERSION__ for your platform.'
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
@@ -65,24 +65,24 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $binPath = Get-ChildItem -Path . -Filter "Ludocard.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch "bundle" } | Select-Object -First 1 -ExpandProperty FullName
+          $binPath = Get-ChildItem -Path . -Filter "Luducard.exe" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch "bundle" } | Select-Object -First 1 -ExpandProperty FullName
           if (-not $binPath) {
-              $binPath = Get-ChildItem -Path . -Filter "ludocard-tauri.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+              $binPath = Get-ChildItem -Path . -Filter "luducard-tauri.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
           }
           if (-not $binPath) {
-              Write-Error "Could not find the compiled binary Ludocard.exe or ludocard-tauri.exe"
+              Write-Error "Could not find the compiled binary Luducard.exe or luducard-tauri.exe"
               exit 1
           }
           Write-Output "Found binary at: $binPath"
           New-Item -ItemType Directory -Force -Path temp_portable
-          Copy-Item -Path $binPath -Destination temp_portable/Ludocard.exe
-          Compress-Archive -Path temp_portable/* -DestinationPath Ludocard_x64_portable.zip
+          Copy-Item -Path $binPath -Destination temp_portable/Luducard.exe
+          Compress-Archive -Path temp_portable/* -DestinationPath Luducard_x64_portable.zip
 
       - name: upload portable zip (windows only)
         if: matrix.platform == 'windows-latest'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: Ludocard_x64_portable.zip
+          files: Luducard_x64_portable.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

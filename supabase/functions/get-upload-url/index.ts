@@ -46,7 +46,7 @@ serve(async (req) => {
 
     // 2. Generate a unique key for the file to prevent collision
     const fileUuid = crypto.randomUUID()
-    const ext = file_name.includes('.') ? file_name.split('.').pop() : 'ludocard'
+    const ext = file_name.includes('.') ? file_name.split('.').pop() : 'luducard'
     const r2Path = `saves/${game_id}/${fileUuid}.${ext}`
 
     // 3. Create Presigned Put URL

@@ -1,55 +1,55 @@
 ludusavi = Ludusavi
-language = Ngôn ngữ
-game-name = Tên
-total-games = Trò Chơi
-file-size = Kích thước
-file-location = Vị trí
-overall = Tổng thể
-status = Trạng thái
+language = NgÃ´n ngá»¯
+game-name = TÃªn
+total-games = TrÃ² ChÆ¡i
+file-size = KÃ­ch thÆ°á»›c
+file-location = Vá»‹ trÃ­
+overall = Tá»•ng thá»ƒ
+status = Tráº¡ng thÃ¡i
 cli-unrecognized-games = No info for these games:
 cli-unable-to-request-confirmation = Unable to request confirmation.
     .winpty-workaround = If you are using a Bash emulator (like Git Bash), try running winpty.
 cli-backup-id-with-multiple-games = Cannot specify backup ID when restoring multiple games.
 cli-invalid-backup-id = Invalid backup ID.
-badge-failed = THẤT BẠI
+badge-failed = THáº¤T Báº I
 badge-duplicates = DUPLICATES
 badge-duplicated = DUPLICATED
-badge-ignored = ĐÃ BỎ QUA
+badge-ignored = ÄÃƒ Bá»Ž QUA
 badge-redirected-from = FROM: { $path }
 badge-redirecting-to = TO: { $path }
 some-entries-failed = Some entries failed to process; look for { badge-failed } in the output for details. Double check whether you can access those files or whether their paths are very long.
 cli-game-line-item-redirected = Redirected from: { $path }
 cli-game-line-item-redirecting = Redirecting to: { $path }
-button-backup = Sao lưu
-button-preview = Xem trước
-button-restore = Khôi phục
+button-backup = Sao lÆ°u
+button-preview = Xem trÆ°á»›c
+button-restore = KhÃ´i phá»¥c
 button-nav-backup = BACKUP MODE
 button-nav-restore = RESTORE MODE
 button-nav-custom-games = CUSTOM GAMES
 button-nav-other = OTHER
-button-add-game = Thêm trò chơi
-button-continue = Tiếp tục
-button-cancel = Hủy
-button-cancelling = Hủy bỏ...
-button-okay = Đồng ý
-button-select-all = Chọn tất cả
-button-deselect-all = Bỏ chọn tất cả
-button-enable-all = Bật toàn bộ
-button-disable-all = Tắt toàn bộ
-button-customize = Tùy chỉnh
-button-exit = Thoát
-button-comment = Ghi chú
-button-lock = Khoá
-button-unlock = Mở khoá
+button-add-game = ThÃªm trÃ² chÆ¡i
+button-continue = Tiáº¿p tá»¥c
+button-cancel = HuÌ‰y
+button-cancelling = Há»§y bá»...
+button-okay = Äá»“ng Ã½
+button-select-all = Chá»n táº¥t cáº£
+button-deselect-all = Bá» chá»n táº¥t cáº£
+button-enable-all = Báº­t toÃ n bá»™
+button-disable-all = Táº¯t toÃ n bá»™
+button-customize = TÃ¹y chá»‰nh
+button-exit = ThoÃ¡t
+button-comment = Ghi chÃº
+button-lock = KhoÃ¡
+button-unlock = Má»Ÿ khoÃ¡
 # This opens a download page.
 button-get-app = Get { $app }
 button-validate = Validate
 button-override-manifest = Override manifest
 button-extend-manifest = Extend manifest
-button-sort = Phân loại
-button-download = Tải về
-button-upload = Tải lên
-button-ignore = Bỏ qua
+button-sort = PhÃ¢n loáº¡i
+button-download = Táº£i vá»
+button-upload = Táº£i lÃªn
+button-ignore = Bá» qua
 no-roots-are-configured = Add some roots to back up even more data.
 config-is-invalid = Error: The config file is invalid.
 manifest-is-invalid = Error: The manifest file is invalid.
@@ -78,7 +78,7 @@ processed-games-subset =
     }
 processed-size-subset = { $processed-size } of { $total-size }
 field-backup-target = Back up to:
-field-restore-source = Phục hồi từ:
+field-restore-source = Phá»¥c há»“i tá»«:
 field-custom-files = Paths:
 field-custom-registry = Registry:
 field-sort = Sort:
@@ -88,67 +88,67 @@ field-redirect-target =
     .placeholder = Target (new location)
 field-roots = Roots:
 field-backup-excluded-items = Backup exclusions:
-field-redirects = Chuyển đến:
+field-redirects = Chuyá»ƒn Ä‘áº¿n:
 # This appears next to the number of full backups that you'd like to keep.
 # A full backup includes all save files for a game.
 field-retention-full = Full:
 # This appears next to the number of differential backups that you'd like to keep.
 # A differential backup includes only the files that have changed since the last full backup.
 field-retention-differential = Differential:
-field-backup-format = Định dạng:
-field-backup-compression = Nén:
+field-backup-format = Äá»‹nh dáº¡ng:
+field-backup-compression = NÃ©n:
 # The compression level determines how much compresison we perform.
-field-backup-compression-level = Mức độ:
+field-backup-compression-level = Má»©c Ä‘á»™:
 label-manifest = Manifest
 # This shows the time when we checked for an update to the manifest.
-label-checked = Đã kiểm tra
+label-checked = ÄÃ£ kiá»ƒm tra
 # This shows the time when we found an update to the manifest.
-label-updated = Đã cập nhật
-label-new = Mới
-label-removed = Đã gỡ bỏ
-label-comment = Ghi chú
-label-unchanged = Chưa thay đổi
-label-backup = Sao lưu
-label-scan = Quét
-label-filter = Bộ lọc
+label-updated = ÄÃ£ cáº­p nháº­t
+label-new = Má»›i
+label-removed = ÄÃ£ gá»¡ bá»
+label-comment = Ghi chÃº
+label-unchanged = ChÆ°a thay Ä‘á»•i
+label-backup = Sao lÆ°u
+label-scan = QuÃ©t
+label-filter = Bá»™ lá»c
 label-unique = Unique
-label-complete = Hoàn thành
+label-complete = HoÃ n thÃ nh
 label-partial = Partial
-label-enabled = Kích hoạt
-label-disabled = Vô hiệu hóa
+label-enabled = KÃ­ch hoáº¡t
+label-disabled = VÃ´ hiá»‡u hÃ³a
 # https://en.wikipedia.org/wiki/Thread_(computing)
-label-threads = Chủ đề
-label-cloud = Đám mây
+label-threads = Chá»§ Ä‘á»
+label-cloud = ÄÃ¡m mÃ¢y
 # A "remote" is what Rclone calls cloud systems like Google Drive.
-label-remote = Điều khiên
-label-remote-name = Tên máy chủ
-label-folder = Thư mục
+label-remote = Äiá»u khiÃªn
+label-remote-name = TÃªn mÃ¡y chá»§
+label-folder = ThÆ° má»¥c
 # An executable file
-label-executable = File Thực thi
+label-executable = File Thá»±c thi
 # Options given to a command line program
 label-arguments = Arguments
 label-url = URL
 # https://en.wikipedia.org/wiki/Host_(network)
 label-host = Host
 # https://en.wikipedia.org/wiki/Port_(computer_networking)
-label-port = Cổng
-label-username = Tên tài khoản
-label-password = Mật khẩu
+label-port = Cá»•ng
+label-username = TÃªn taÌ€i khoaÌ‰n
+label-password = Máº­t kháº©u
 # This is a specific website or service that provides some cloud functionality.
 # For example, Nextcloud and Owncloud are providers of WebDAV services.
-label-provider = Bên cung cấp
-label-custom = Tuỳ chỉnh
-label-none = Trống
+label-provider = BÃªn cung cáº¥p
+label-custom = Tuá»³ chá»‰nh
+label-none = Trá»‘ng
 label-change-count = Changes: { $total }
-label-unscanned = Không quét
+label-unscanned = KhÃ´ng quÃ©t
 # This refers to a local file on the computer
-label-file = Tệp
-label-game = Trò chơi
+label-file = Tá»‡p
+label-game = TrÃ² chÆ¡i
 # Aliases are alternative titles for the same game.
-label-alias = Biệt hiệu
-label-original-name = Tên gốc
+label-alias = Biá»‡t hiá»‡u
+label-original-name = TÃªn gá»‘c
 # Which manifest a game's data came from
-label-source = Nguồn
+label-source = Nguá»“n
 # This refers to the main Ludusavi manifest: https://github.com/mtkennerly/ludusavi-manifest
 label-primary-manifest = Primary manifest
 # This refers to how we integrate a custom game with the manifest data.
@@ -187,9 +187,9 @@ compression-none = None
 compression-deflate = Deflate
 compression-bzip2 = Bzip2
 compression-zstd = Zstd
-theme = Chủ đề
-theme-light = Sáng
-theme-dark = Tối
+theme = Chá»§ Ä‘á»
+theme-light = SÃ¡ng
+theme-dark = Tá»‘i
 redirect-bidirectional = Bidirectional
 reverse-redirects-when-restoring = Reverse sequence of redirects when restoring
 show-disabled-games = Show disabled games

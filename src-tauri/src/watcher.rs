@@ -47,9 +47,9 @@ impl WatcherState {
 static WATCHER_STATE: std::sync::LazyLock<Mutex<WatcherState>> =
     std::sync::LazyLock::new(|| Mutex::new(WatcherState::new()));
 
-/// Loads the file watcher enabled setting from ludocard.json in the app data directory.
+/// Loads the file watcher enabled setting from luducard.json in the app data directory.
 pub fn load_file_watcher_setting(app_data_dir: &Path) -> bool {
-    let config_path = app_data_dir.join("ludocard.json");
+    let config_path = app_data_dir.join("luducard.json");
     if let Ok(content) = std::fs::read_to_string(&config_path)
         && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
     {
@@ -58,9 +58,9 @@ pub fn load_file_watcher_setting(app_data_dir: &Path) -> bool {
     false
 }
 
-/// Saves the file watcher enabled setting to ludocard.json in the app data directory.
+/// Saves the file watcher enabled setting to luducard.json in the app data directory.
 pub fn save_file_watcher_setting(app_data_dir: &Path, enabled: bool) {
-    let config_path = app_data_dir.join("ludocard.json");
+    let config_path = app_data_dir.join("luducard.json");
 
     // Read existing config or create new
     let mut json: serde_json::Value = if let Ok(content) = std::fs::read_to_string(&config_path) {
@@ -80,7 +80,7 @@ pub fn show_notification(title: &str, body: &str) {
     let result = notify_rust::Notification::new()
         .summary(title)
         .body(body)
-        .appname("Ludocard")
+        .appname("Luducard")
         .timeout(notify_rust::Timeout::Milliseconds(5000))
         .show();
 
@@ -307,7 +307,7 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
                     Ok(()) => {
                         log::info!("[FileWatcher] '{}' - backup completed successfully.", game_title);
                         show_notification(
-                            "Ludocard - Backup automático",
+                            "Luducard - Backup automático",
                             &format!("Save de \"{}\" salvo com sucesso! ✅", game_title),
                         );
 
@@ -323,7 +323,7 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
                     Err(e) => {
                         log::error!("[FileWatcher] '{}' - backup failed: {}", game_title, e);
                         show_notification(
-                            "Ludocard - Falha no backup",
+                            "Luducard - Falha no backup",
                             &format!("Erro ao salvar \"{}\": {}", game_title, e),
                         );
 
