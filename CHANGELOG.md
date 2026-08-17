@@ -15,6 +15,7 @@ This project is a new application based on the core of Ludosavi. The change hist
 
 ### Fixed
 - **Installing a Community Save Failed for Games Whose Save Is a Single File**: The importer assumed a game's save location is always a folder, so for the many games that point at one file — Dolphin's `gamelist.cache`, among others — it tried to create a directory over an existing file and failed with "os error 183". Exporting was broken the same way, in four separate copies of the same logic.
+- **Backend Error Messages Were Always in Portuguese**: Every error raised by the backend — 105 distinct messages — appeared in Portuguese regardless of the selected language, so an English or Chinese interface would report a failure in a language the user might not read. The 15 messages that carry advice a user can act on are now properly translated into all five languages; the remaining diagnostics were rewritten in English, which reads as a technical detail rather than as broken localization.
 - **Manual Backups Labelled "Automatic"**: The label was derived from whether a backup was pinned rather than from how it was created, because nothing recorded the origin. Every unpinned backup claimed to be automatic, including ones made by clicking "Back up now".
 
 ## [0.2.2] - 2026-08-17

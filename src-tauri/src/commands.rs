@@ -1795,7 +1795,7 @@ pub async fn open_game_folder(game_title: String, folder_type: String, save_path
         let path_to_open = match folder_type.as_str() {
             "save" => {
                 if save_path.is_empty() {
-                    return Err("Nenhum caminho de save disponível para abrir.".to_string());
+                    return Err(ludusavi::lang::TRANSLATOR.err_no_save_path_to_open());
                 }
                 let path = PathBuf::from(save_path);
                 if path.is_file() || (path.extension().is_some() && path.parent().is_some()) {
@@ -1807,7 +1807,7 @@ pub async fn open_game_folder(game_title: String, folder_type: String, save_path
             "backup" => {
                 let backup_base = api.config.backup.path.raw();
                 if backup_base.is_empty() {
-                    return Err("Diretório de backup não configurado.".to_string());
+                    return Err(ludusavi::lang::TRANSLATOR.err_backup_dir_not_set());
                 }
                 // Ludosavi stores game backups directly in {backup_base}/{sanitized_game_title}
 
@@ -1857,10 +1857,7 @@ pub async fn open_game_folder(game_title: String, folder_type: String, save_path
                 match resolved_path {
                     Some(p) => p,
                     None => {
-                        return Err(format!(
-                            "Não foi possível localizar a pasta de instalação para: {}.",
-                            game_title
-                        ));
+                        return Err(ludusavi::lang::TRANSLATOR.err_install_dir_not_found(&game_title));
                     }
                 }
             }
@@ -1939,7 +1936,7 @@ pub async fn select_folder() -> Result<Option<String>, String> {
     let handle = std::thread::spawn(|| rfd::FileDialog::new().pick_folder());
     let result = handle
         .join()
-        .map_err(|_| "Falha ao abrir o seletor de pastas".to_string())?;
+        .map_err(|_| "Could not open the folder picker".to_string())?;
     Ok(result.map(|f| f.to_string_lossy().to_string()))
 }
 
@@ -1955,15 +1952,18 @@ pub async fn toggle_portable_mode(app: tauri::AppHandle, enable: bool) -> Result
             // 1. Verify write permission in the executable folder.
             let test_file = exe_dir.join(".luducard_write_test");
             if std::fs::write(&test_file, "").is_err() {
-                return Err("Não foi possível escrever na pasta do executável. Verifique as permissões de gravação ou execute como Administrador.".to_string());
+                return Err(ludusavi::lang::TRANSLATOR.err_exe_folder_not_writable());
             }
             let _ = std::fs::remove_file(test_file);
 
             // 2. Create the flag file
-            std::fs::write(&flag_path, "").map_err(|e| format!("Falha ao criar o arquivo flag de portabilidade: {}", e))?;
+            std::fs::write(&flag_path, "")
+                .map_err(|e| format!("Could not create the portable mode flag file: {}", e))?;
 
             // 3. Migrate settings: copy config files from standard appDataDir to portable folder (exe_dir)
-            let standard_app_dir = app.path().app_data_dir()
+            let standard_app_dir = app
+                .path()
+                .app_data_dir()
                 .map_err(|e| format!("Failed to locate app data dir: {}", e))?;
 
             let files_to_migrate = vec!["config.yaml", "manifest.yaml", "cache.yaml", "luducard.json"];
@@ -1977,16 +1977,19 @@ pub async fn toggle_portable_mode(app: tauri::AppHandle, enable: bool) -> Result
         } else {
             // Disable portable mode
             if flag_path.exists() {
-                std::fs::remove_file(&flag_path).map_err(|e| format!("Falha ao remover o arquivo flag de portabilidade: {}", e))?;
+                std::fs::remove_file(&flag_path)
+                    .map_err(|e| format!("Could not remove the portable mode flag file: {}", e))?;
             }
 
             // Move config files back from exe dir to standard appDataDir
-            let standard_app_dir = app.path().app_data_dir()
+            let standard_app_dir = app
+                .path()
+                .app_data_dir()
                 .map_err(|e| format!("Failed to locate app data dir: {}", e))?;
 
             // Ensure appDataDir exists
             std::fs::create_dir_all(&standard_app_dir)
-                .map_err(|e| format!("Falha ao criar diretório padrão AppData: {}", e))?;
+                .map_err(|e| format!("Could not create the default AppData folder: {}", e))?;
 
             let files_to_migrate = vec!["config.yaml", "manifest.yaml", "cache.yaml", "luducard.json"];
             for file_name in files_to_migrate {
@@ -2040,7 +2043,7 @@ pub async fn select_save_file(start_dir: Option<String>) -> Result<Option<String
     });
     let result = handle
         .join()
-        .map_err(|_| "Falha ao abrir o seletor de arquivos".to_string())?;
+        .map_err(|_| "Could not open the file picker".to_string())?;
     Ok(result.map(|f| f.to_string_lossy().to_string()))
 }
 
@@ -2078,7 +2081,7 @@ fn export_luducard_save_internal(
     }
 
     if files_to_archive.is_empty() {
-        return Err("Nenhum arquivo encontrado para exportar.".to_string());
+        return Err(ludusavi::lang::TRANSLATOR.err_nothing_to_export());
     }
 
     // Calculate total uncompressed size
@@ -2109,10 +2112,10 @@ fn export_luducard_save_internal(
 
     // Create the tar + zstd archive
     let dest_file =
-        std::fs::File::create(dest_path).map_err(|e| format!("Falha ao criar o arquivo de destino: {}", e))?;
+        std::fs::File::create(dest_path).map_err(|e| format!("Could not create the destination file: {}", e))?;
 
     let zstd_encoder = zstd::Encoder::new(dest_file, 19) // Level 19 = high compression
-        .map_err(|e| format!("Falha ao iniciar compressão zstd: {}", e))?;
+        .map_err(|e| format!("Could not start zstd compression: {}", e))?;
 
     let mut tar_builder = tar::Builder::new(zstd_encoder);
 
@@ -2123,7 +2126,7 @@ fn export_luducard_save_internal(
 
         tar_builder
             .append_path_with_name(file_path, &archive_name)
-            .map_err(|e| format!("Falha ao adicionar arquivo ao pacote: {}", e))?;
+            .map_err(|e| format!("Could not add a file to the archive: {}", e))?;
     }
 
     // Build metadata (compressed_size will be updated after finishing)
@@ -2141,7 +2144,7 @@ fn export_luducard_save_internal(
 
     // Serialize metadata and add to tar
     let metadata_json =
-        serde_json::to_string_pretty(&metadata).map_err(|e| format!("Falha ao serializar metadados: {}", e))?;
+        serde_json::to_string_pretty(&metadata).map_err(|e| format!("Could not serialize the metadata: {}", e))?;
 
     let metadata_bytes = metadata_json.as_bytes();
     let mut header = tar::Header::new_gnu();
@@ -2151,16 +2154,16 @@ fn export_luducard_save_internal(
 
     tar_builder
         .append_data(&mut header, "metadata.json", metadata_bytes)
-        .map_err(|e| format!("Falha ao adicionar metadados ao pacote: {}", e))?;
+        .map_err(|e| format!("Could not add metadata to the archive: {}", e))?;
 
     // Finish the tar archive, then finish the zstd encoder
     let zstd_encoder = tar_builder
         .into_inner()
-        .map_err(|e| format!("Falha ao finalizar o arquivo tar: {}", e))?;
+        .map_err(|e| format!("Could not finalize the tar archive: {}", e))?;
 
     zstd_encoder
         .finish()
-        .map_err(|e| format!("Falha ao finalizar a compressão: {}", e))?;
+        .map_err(|e| format!("Could not finish compression: {}", e))?;
 
     // Read the actual compressed file size
     let compressed_size = std::fs::metadata(dest_path).map(|m| m.len()).unwrap_or(0);
@@ -2205,31 +2208,31 @@ pub async fn export_luducard_save(
 #[tauri::command]
 pub async fn read_luducard_metadata(archive_path: String) -> Result<LuducardMetadata, String> {
     tokio::task::spawn_blocking(move || {
-        let file = std::fs::File::open(&archive_path).map_err(|e| format!("Falha ao abrir o arquivo: {}", e))?;
+        let file = std::fs::File::open(&archive_path).map_err(|e| format!("Could not open the file: {}", e))?;
 
         let decoder = zstd::Decoder::new(file)
-            .map_err(|e| format!("Falha ao decodificar o arquivo (não é um .luducard válido?): {}", e))?;
+            .map_err(|e| ludusavi::lang::TRANSLATOR.err_invalid_luducard_file(&e.to_string()))?;
 
         let mut archive = tar::Archive::new(decoder);
 
         for entry in archive
             .entries()
-            .map_err(|e| format!("Falha ao ler entradas do arquivo: {}", e))?
+            .map_err(|e| format!("Could not read the archive entries: {}", e))?
         {
-            let mut entry = entry.map_err(|e| format!("Falha ao ler entrada: {}", e))?;
+            let mut entry = entry.map_err(|e| format!("Could not read an archive entry: {}", e))?;
 
             let path = entry
                 .path()
-                .map_err(|e| format!("Falha ao ler caminho da entrada: {}", e))?;
+                .map_err(|e| format!("Could not read an entry's path: {}", e))?;
 
             if path.to_string_lossy() == "metadata.json" {
                 let mut content = String::new();
                 entry
                     .read_to_string(&mut content)
-                    .map_err(|e| format!("Falha ao ler metadata.json: {}", e))?;
+                    .map_err(|e| format!("Could not read metadata.json: {}", e))?;
 
                 let mut metadata: LuducardMetadata =
-                    serde_json::from_str(&content).map_err(|e| format!("Falha ao interpretar metadata.json: {}", e))?;
+                    serde_json::from_str(&content).map_err(|e| format!("Could not parse metadata.json: {}", e))?;
 
                 // Update compressed size from the actual file
                 if let Ok(file_meta) = std::fs::metadata(&archive_path) {
@@ -2251,23 +2254,27 @@ pub async fn read_luducard_metadata(archive_path: String) -> Result<LuducardMeta
 /// All paths are validated to prevent path traversal attacks.
 fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Result<LuducardMetadata, String> {
     // Step 1: Read metadata first
-    let file = std::fs::File::open(archive_path).map_err(|e| format!("Falha ao abrir o arquivo: {}", e))?;
+    let file = std::fs::File::open(archive_path).map_err(|e| format!("Could not open the file: {}", e))?;
 
-    let decoder = zstd::Decoder::new(file).map_err(|e| format!("Arquivo .luducard inválido: {}", e))?;
+    let decoder =
+        zstd::Decoder::new(file).map_err(|e| ludusavi::lang::TRANSLATOR.err_invalid_luducard_file(&e.to_string()))?;
 
     let mut archive = tar::Archive::new(decoder);
     let mut metadata: Option<LuducardMetadata> = None;
 
     // First pass: find and read metadata
-    for entry in archive.entries().map_err(|e| format!("Falha ao ler entradas: {}", e))? {
-        let mut entry = entry.map_err(|e| format!("Falha ao ler entrada: {}", e))?;
-        let path = entry.path().map_err(|e| format!("Falha ao ler caminho: {}", e))?;
+    for entry in archive
+        .entries()
+        .map_err(|e| format!("Could not read the entries: {}", e))?
+    {
+        let mut entry = entry.map_err(|e| format!("Could not read an archive entry: {}", e))?;
+        let path = entry.path().map_err(|e| format!("Could not read the path: {}", e))?;
 
         if path.to_string_lossy() == "metadata.json" {
             let mut content = String::new();
             entry
                 .read_to_string(&mut content)
-                .map_err(|e| format!("Falha ao ler metadata.json: {}", e))?;
+                .map_err(|e| format!("Could not read metadata.json: {}", e))?;
 
             metadata = Some(serde_json::from_str(&content).map_err(|e| format!("metadata.json corrompido: {}", e))?);
             break;
@@ -2299,9 +2306,9 @@ fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
     }
 
     // Step 3: Re-open and extract save files with path traversal protection
-    let file = std::fs::File::open(archive_path).map_err(|e| format!("Falha ao reabrir o arquivo: {}", e))?;
+    let file = std::fs::File::open(archive_path).map_err(|e| format!("Could not reopen the file: {}", e))?;
 
-    let decoder = zstd::Decoder::new(file).map_err(|e| format!("Falha ao decodificar: {}", e))?;
+    let decoder = zstd::Decoder::new(file).map_err(|e| format!("Could not decompress: {}", e))?;
 
     let mut archive = tar::Archive::new(decoder);
 
@@ -2316,15 +2323,18 @@ fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
         target_dir
     };
 
-    std::fs::create_dir_all(extract_root).map_err(|e| format!("Falha ao criar diretório de destino: {}", e))?;
+    std::fs::create_dir_all(extract_root).map_err(|e| format!("Could not create the destination folder: {}", e))?;
 
     let canonical_target = extract_root
         .canonicalize()
-        .map_err(|e| format!("Falha ao resolver caminho de destino: {}", e))?;
+        .map_err(|e| format!("Could not resolve the destination path: {}", e))?;
 
-    for entry in archive.entries().map_err(|e| format!("Falha ao ler entries: {}", e))? {
-        let mut entry = entry.map_err(|e| format!("Falha ao ler entrada: {}", e))?;
-        let path = entry.path().map_err(|e| format!("Falha ao ler caminho: {}", e))?;
+    for entry in archive
+        .entries()
+        .map_err(|e| format!("Could not read the entries: {}", e))?
+    {
+        let mut entry = entry.map_err(|e| format!("Could not read an archive entry: {}", e))?;
+        let path = entry.path().map_err(|e| format!("Could not read the path: {}", e))?;
 
         let path_str = path.to_string_lossy();
 
@@ -2356,7 +2366,7 @@ fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
 
         // Double-check: resolved path must still be under the target directory
         if let Some(parent) = dest_path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| format!("Falha ao criar subdiretório: {}", e))?;
+            std::fs::create_dir_all(parent).map_err(|e| format!("Could not create a subfolder: {}", e))?;
         }
 
         // Verify the destination is inside the target
@@ -2374,9 +2384,9 @@ fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
 
         // Extract the file
         let mut output_file =
-            std::fs::File::create(&dest_path).map_err(|e| format!("Falha ao criar arquivo extraído: {}", e))?;
+            std::fs::File::create(&dest_path).map_err(|e| format!("Could not create the extracted file: {}", e))?;
 
-        std::io::copy(&mut entry, &mut output_file).map_err(|e| format!("Falha ao extrair arquivo: {}", e))?;
+        std::io::copy(&mut entry, &mut output_file).map_err(|e| format!("Could not extract the file: {}", e))?;
     }
 
     Ok(metadata)
@@ -2412,7 +2422,7 @@ pub async fn download_and_import_luducard(
         let response = client
             .get(&download_url)
             .send()
-            .map_err(|e| format!("Falha ao iniciar o download do save: {}", e))?;
+            .map_err(|e| format!("Could not start the save download: {}", e))?;
 
         if !response.status().is_success() {
             return Err(format!(
@@ -2423,14 +2433,14 @@ pub async fn download_and_import_luducard(
 
         let bytes = response
             .bytes()
-            .map_err(|e| format!("Falha ao ler dados de download: {}", e))?;
+            .map_err(|e| format!("Could not read the downloaded data: {}", e))?;
 
         // Create a temporary file path
         let temp_dir = std::env::temp_dir();
         let temp_file_path = temp_dir.join(format!("luducard_download_{}.luducard", uuid::Uuid::new_v4()));
 
         std::fs::write(&temp_file_path, &bytes)
-            .map_err(|e| format!("Falha ao gravar arquivo de download temporário: {}", e))?;
+            .map_err(|e| format!("Could not write the temporary download file: {}", e))?;
 
         // Run the import logic
         let target = Path::new(&target_save_dir);
@@ -2458,7 +2468,7 @@ pub async fn save_luducard_dialog(default_name: String) -> Result<Option<String>
     });
     let result = handle
         .join()
-        .map_err(|_| "Falha ao abrir o diálogo de salvar".to_string())?;
+        .map_err(|_| "Could not open the save dialog".to_string())?;
     Ok(result.map(|f| f.to_string_lossy().to_string()))
 }
 
@@ -2474,7 +2484,7 @@ pub async fn open_luducard_dialog() -> Result<Option<String>, String> {
     });
     let result = handle
         .join()
-        .map_err(|_| "Falha ao abrir o seletor de arquivos".to_string())?;
+        .map_err(|_| "Could not open the file picker".to_string())?;
     Ok(result.map(|f| f.to_string_lossy().to_string()))
 }
 
@@ -2483,7 +2493,7 @@ pub async fn open_luducard_dialog() -> Result<Option<String>, String> {
 #[tauri::command]
 pub async fn upload_file_to_url(file_path: String, upload_url: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
-        let file_bytes = std::fs::read(&file_path).map_err(|e| format!("Falha ao ler o arquivo para upload: {}", e))?;
+        let file_bytes = std::fs::read(&file_path).map_err(|e| format!("Could not read the file to upload: {}", e))?;
 
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(300)) // 5 minutes timeout
@@ -2494,7 +2504,7 @@ pub async fn upload_file_to_url(file_path: String, upload_url: String) -> Result
             .put(&upload_url)
             .body(file_bytes)
             .send()
-            .map_err(|e| format!("Falha ao enviar arquivo para o storage: {}", e))?;
+            .map_err(|e| format!("Could not upload the file to storage: {}", e))?;
 
         if !response.status().is_success() {
             return Err(format!(
@@ -2553,7 +2563,7 @@ pub async fn export_temp_luducard_save(
 pub async fn delete_temp_file(file_path: String) -> Result<(), String> {
     let path = Path::new(&file_path);
     if path.exists() {
-        std::fs::remove_file(path).map_err(|e| format!("Falha ao remover arquivo temporário: {}", e))?;
+        std::fs::remove_file(path).map_err(|e| format!("Could not remove the temporary file: {}", e))?;
     }
     Ok(())
 }
@@ -2590,20 +2600,20 @@ pub async fn export_temp_luducard_backup(
 
         let mapping_file = StrictPath::from(mapping_path.as_path());
         let mapping = ludusavi::scan::layout::IndividualMapping::load(&mapping_file)
-            .map_err(|e| format!("Falha ao carregar mapping.yaml: {}", e))?;
+            .map_err(|e| format!("Could not load mapping.yaml: {}", e))?;
 
         // Find the specific backup version in the mapping
         let backup_version = mapping
             .backups
             .iter()
             .find(|b| b.name == backup_id)
-            .ok_or_else(|| format!("Backup '{}' não encontrado no mapping.yaml", backup_id))?;
+            .ok_or_else(|| format!("Backup '{}' was not found in mapping.yaml", backup_id))?;
 
         // Create a temporary directory to assemble the files
         let temp_dir = std::env::temp_dir();
         let export_temp_dir = temp_dir.join(format!("luducard_export_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&export_temp_dir)
-            .map_err(|e| format!("Falha ao criar diretório temporário de exportação: {}", e))?;
+            .map_err(|e| format!("Could not create the temporary export folder: {}", e))?;
 
         // Resolve normalized live save path
         let live_save_dir = Path::new(&save_path);
@@ -2672,7 +2682,7 @@ pub async fn export_temp_luducard_backup(
             }
 
             std::fs::copy(&src_file_path, &dest_file_path)
-                .map_err(|e| format!("Falha ao copiar arquivo de backup para pasta temporária: {}", e))?;
+                .map_err(|e| format!("Could not copy a backup file to the temporary folder: {}", e))?;
         }
 
         // Pack the temporary folder
@@ -2692,7 +2702,7 @@ pub async fn export_temp_luducard_backup(
         // Always clean up the temporary files directory
         let _ = std::fs::remove_dir_all(&export_temp_dir);
 
-        let metadata = metadata_res.map_err(|e| format!("Falha ao empacotar save do backup: {}", e))?;
+        let metadata = metadata_res.map_err(|e| format!("Could not pack the save from the backup: {}", e))?;
 
         let mut result = HashMap::new();
         result.insert("filePath".to_string(), serde_json::json!(temp_archive_path_str));
@@ -2743,20 +2753,20 @@ pub async fn export_luducard_backup(
 
         let mapping_file = StrictPath::from(mapping_path.as_path());
         let mapping = ludusavi::scan::layout::IndividualMapping::load(&mapping_file)
-            .map_err(|e| format!("Falha ao carregar mapping.yaml: {}", e))?;
+            .map_err(|e| format!("Could not load mapping.yaml: {}", e))?;
 
         // Find the specific backup version in the mapping
         let backup_version = mapping
             .backups
             .iter()
             .find(|b| b.name == backup_id)
-            .ok_or_else(|| format!("Backup '{}' não encontrado no mapping.yaml", backup_id))?;
+            .ok_or_else(|| format!("Backup '{}' was not found in mapping.yaml", backup_id))?;
 
         // Create a temporary directory to assemble the files
         let temp_dir = std::env::temp_dir();
         let export_temp_dir = temp_dir.join(format!("luducard_export_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&export_temp_dir)
-            .map_err(|e| format!("Falha ao criar diretório temporário de exportação: {}", e))?;
+            .map_err(|e| format!("Could not create the temporary export folder: {}", e))?;
 
         // Resolve normalized live save path
         let live_save_dir = Path::new(&save_path);
@@ -2822,7 +2832,7 @@ pub async fn export_luducard_backup(
             }
 
             std::fs::copy(&src_file_path, &dest_file_path)
-                .map_err(|e| format!("Falha ao copiar arquivo de backup para pasta temporária: {}", e))?;
+                .map_err(|e| format!("Could not copy a backup file to the temporary folder: {}", e))?;
         }
 
         // Pack the temporary folder directly to dest_path
@@ -2839,7 +2849,7 @@ pub async fn export_luducard_backup(
         // Always clean up the temporary files directory
         let _ = std::fs::remove_dir_all(&export_temp_dir);
 
-        metadata_res.map_err(|e| format!("Falha ao empacotar save do backup: {}", e))
+        metadata_res.map_err(|e| format!("Could not pack the save from the backup: {}", e))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -2873,7 +2883,7 @@ pub async fn save_backup_note(
 
         let _ = std::fs::create_dir_all(&app_data_dir);
         std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default())
-            .map_err(|e| format!("Falha ao salvar nota do backup: {}", e))?;
+            .map_err(|e| format!("Could not save the backup note: {}", e))?;
         Ok(())
     })
     .await
@@ -2899,7 +2909,7 @@ pub async fn save_campaign_note(app: tauri::AppHandle, game_id: String, note: St
 
         let _ = std::fs::create_dir_all(&app_data_dir);
         std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default())
-            .map_err(|e| format!("Falha ao salvar notas da campanha: {}", e))?;
+            .map_err(|e| format!("Could not save the logbook notes: {}", e))?;
         Ok(())
     })
     .await
@@ -3047,7 +3057,7 @@ pub async fn create_preset_safety_backup(
         if safety_dir.exists() {
             let _ = std::fs::remove_dir_all(&safety_dir);
         }
-        std::fs::create_dir_all(&safety_dir).map_err(|e| format!("Falha ao criar diretório de Seguro-Crash: {}", e))?;
+        std::fs::create_dir_all(&safety_dir).map_err(|e| format!("Could not create the crash-safety folder: {}", e))?;
 
         let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
         let scan_output = api
@@ -3108,16 +3118,16 @@ pub async fn create_preset_safety_backup(
                 let backup_file_name = format!("file_{}", index);
                 let dest_path = safety_dir.join(&backup_file_name);
                 std::fs::copy(file_path, &dest_path)
-                    .map_err(|e| format!("Falha ao copiar arquivo de configuração para Seguro-Crash: {}", e))?;
+                    .map_err(|e| format!("Could not copy a config file into the crash-safety snapshot: {}", e))?;
                 manifest_mapping.insert(backup_file_name, file_path_str.clone());
             }
         }
 
         let manifest_path = safety_dir.join("manifest.json");
         let manifest_content = serde_json::to_string_pretty(&manifest_mapping)
-            .map_err(|e| format!("Falha ao serializar manifesto do Seguro-Crash: {}", e))?;
+            .map_err(|e| format!("Could not serialize the crash-safety manifest: {}", e))?;
         std::fs::write(&manifest_path, manifest_content)
-            .map_err(|e| format!("Falha ao gravar manifesto do Seguro-Crash: {}", e))?;
+            .map_err(|e| format!("Could not write the crash-safety manifest: {}", e))?;
 
         Ok(())
     })
@@ -3133,11 +3143,11 @@ pub async fn restore_preset_safety_backup(app: tauri::AppHandle, game_id: String
         let manifest_path = safety_dir.join("manifest.json");
 
         if !manifest_path.exists() {
-            return Err("Nenhum backup do Seguro-Crash encontrado para este jogo.".to_string());
+            return Err(ludusavi::lang::TRANSLATOR.err_no_crash_safety_backup());
         }
 
         let manifest_content = std::fs::read_to_string(&manifest_path)
-            .map_err(|e| format!("Falha ao ler manifesto do Seguro-Crash: {}", e))?;
+            .map_err(|e| format!("Could not read the crash-safety manifest: {}", e))?;
         let manifest_mapping: HashMap<String, String> = serde_json::from_str(&manifest_content)
             .map_err(|e| format!("Manifesto do Seguro-Crash corrompido: {}", e))?;
 
@@ -3149,8 +3159,7 @@ pub async fn restore_preset_safety_backup(app: tauri::AppHandle, game_id: String
                 if let Some(parent) = dest_path.parent() {
                     let _ = std::fs::create_dir_all(parent);
                 }
-                std::fs::copy(&src_path, dest_path)
-                    .map_err(|e| format!("Falha ao restaurar arquivo de configuração: {}", e))?;
+                std::fs::copy(&src_path, dest_path).map_err(|e| format!("Could not restore the config file: {}", e))?;
             }
         }
 
@@ -3177,7 +3186,8 @@ pub async fn export_temp_luducard_preset(
         // Create a temporary directory to assemble the files
         let temp_dir = std::env::temp_dir();
         let export_temp_dir = temp_dir.join(format!("luducard_preset_{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&export_temp_dir).map_err(|e| format!("Falha ao criar diretório temporário: {}", e))?;
+        std::fs::create_dir_all(&export_temp_dir)
+            .map_err(|e| format!("Could not create the temporary folder: {}", e))?;
 
         let live_save_path = Path::new(&save_path);
         let live_save_dir = if live_save_path.is_file() || live_save_path.extension().is_some() {
@@ -3227,7 +3237,7 @@ pub async fn export_temp_luducard_preset(
             }
 
             std::fs::copy(file_path, &dest_file_path)
-                .map_err(|e| format!("Falha ao copiar arquivo para pasta temporária: {}", e))?;
+                .map_err(|e| format!("Could not copy a file to the temporary folder: {}", e))?;
         }
 
         // Pack the temporary folder
@@ -3247,7 +3257,7 @@ pub async fn export_temp_luducard_preset(
         // Always clean up the temporary files directory
         let _ = std::fs::remove_dir_all(&export_temp_dir);
 
-        let metadata = metadata_res.map_err(|e| format!("Falha ao empacotar preset: {}", e))?;
+        let metadata = metadata_res.map_err(|e| format!("Could not pack the preset: {}", e))?;
 
         let mut result = HashMap::new();
         result.insert("filePath".to_string(), serde_json::json!(temp_archive_path_str));
@@ -3293,7 +3303,7 @@ pub async fn save_local_preset(
         let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
         let preset_id = uuid::Uuid::new_v4().to_string();
         let preset_dir = app_data_dir.join("local_presets").join(&game_id).join(&preset_id);
-        std::fs::create_dir_all(&preset_dir).map_err(|e| format!("Falha ao criar diretório do preset local: {}", e))?;
+        std::fs::create_dir_all(&preset_dir).map_err(|e| format!("Could not create the local preset folder: {}", e))?;
 
         // Auto-detect hardware
         let mut sys = sysinfo::System::new_all();
@@ -3333,7 +3343,7 @@ pub async fn save_local_preset(
                 let backup_file_name = format!("file_{}", index);
                 let dest_path = preset_dir.join(&backup_file_name);
                 std::fs::copy(file_path, &dest_path)
-                    .map_err(|e| format!("Falha ao copiar arquivo para preset local: {}", e))?;
+                    .map_err(|e| format!("Could not copy a file into the local preset: {}", e))?;
                 manifest_mapping.insert(backup_file_name, file_path_str.clone());
             }
         }
@@ -3353,14 +3363,14 @@ pub async fn save_local_preset(
 
         let meta_path = preset_dir.join("manifest.json");
         let meta_content = serde_json::to_string_pretty(&preset)
-            .map_err(|e| format!("Falha ao serializar manifesto do preset: {}", e))?;
-        std::fs::write(&meta_path, meta_content).map_err(|e| format!("Falha ao gravar manifesto do preset: {}", e))?;
+            .map_err(|e| format!("Could not serialize the preset manifest: {}", e))?;
+        std::fs::write(&meta_path, meta_content).map_err(|e| format!("Could not write the preset manifest: {}", e))?;
 
         let mapping_path = preset_dir.join("mapping.json");
         let mapping_content = serde_json::to_string_pretty(&manifest_mapping)
-            .map_err(|e| format!("Falha ao serializar mapeamento de arquivos: {}", e))?;
+            .map_err(|e| format!("Could not serialize the file mapping: {}", e))?;
         std::fs::write(&mapping_path, mapping_content)
-            .map_err(|e| format!("Falha ao gravar mapeamento de arquivos: {}", e))?;
+            .map_err(|e| format!("Could not write the file mapping: {}", e))?;
 
         Ok(())
     })
@@ -3407,7 +3417,7 @@ pub async fn delete_local_preset(app: tauri::AppHandle, game_id: String, preset_
         let preset_dir = app_data_dir.join("local_presets").join(&game_id).join(&preset_id);
         if preset_dir.exists() {
             std::fs::remove_dir_all(&preset_dir)
-                .map_err(|e| format!("Falha ao remover diretório de preset local: {}", e))?;
+                .map_err(|e| format!("Could not remove the local preset folder: {}", e))?;
         }
         Ok(())
     })
@@ -3437,7 +3447,7 @@ pub async fn apply_local_preset(
             }
 
             let mapping_content = std::fs::read_to_string(&mapping_path)
-                .map_err(|e| format!("Falha ao ler mapeamento do preset: {}", e))?;
+                .map_err(|e| format!("Could not read the preset's file mapping: {}", e))?;
             let manifest_mapping: HashMap<String, String> = serde_json::from_str(&mapping_content)
                 .map_err(|e| format!("Mapeamento do preset corrompido: {}", e))?;
             Ok((manifest_mapping, preset_dir))
@@ -3455,8 +3465,7 @@ pub async fn apply_local_preset(
                 if let Some(parent) = dest_path.parent() {
                     let _ = std::fs::create_dir_all(parent);
                 }
-                std::fs::copy(&src_path, dest_path)
-                    .map_err(|e| format!("Falha ao aplicar arquivo de configuração: {}", e))?;
+                std::fs::copy(&src_path, dest_path).map_err(|e| format!("Could not apply the config file: {}", e))?;
             }
         }
         Ok(())
@@ -3479,22 +3488,23 @@ pub async fn export_local_preset_archive(
         let mapping_path = preset_dir.join("mapping.json");
 
         if !meta_path.exists() || !mapping_path.exists() {
-            return Err("Preset local incompleto ou inválido.".to_string());
+            return Err(ludusavi::lang::TRANSLATOR.err_preset_incomplete());
         }
 
         let meta_content =
-            std::fs::read_to_string(&meta_path).map_err(|e| format!("Falha ao ler metadados do preset: {}", e))?;
-        let preset: LocalPreset =
-            serde_json::from_str(&meta_content).map_err(|e| format!("Metadados do preset corrompidos: {}", e))?;
+            std::fs::read_to_string(&meta_path).map_err(|e| format!("Could not read the preset metadata: {}", e))?;
+        let preset: LocalPreset = serde_json::from_str(&meta_content)
+            .map_err(|e| ludusavi::lang::TRANSLATOR.err_preset_metadata_corrupt(&e.to_string()))?;
 
-        let mapping_content =
-            std::fs::read_to_string(&mapping_path).map_err(|e| format!("Falha ao ler mapeamento do preset: {}", e))?;
+        let mapping_content = std::fs::read_to_string(&mapping_path)
+            .map_err(|e| format!("Could not read the preset's file mapping: {}", e))?;
         let manifest_mapping: HashMap<String, String> =
             serde_json::from_str(&mapping_content).map_err(|e| format!("Mapeamento do preset corrompido: {}", e))?;
 
         let temp_dir = std::env::temp_dir();
         let export_temp_dir = temp_dir.join(format!("luducard_preset_{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&export_temp_dir).map_err(|e| format!("Falha ao criar diretório temporário: {}", e))?;
+        std::fs::create_dir_all(&export_temp_dir)
+            .map_err(|e| format!("Could not create the temporary folder: {}", e))?;
 
         let live_save_path = Path::new(&save_path);
         let live_save_dir = if live_save_path.is_file() || live_save_path.extension().is_some() {
@@ -3544,7 +3554,7 @@ pub async fn export_local_preset_archive(
             }
 
             std::fs::copy(&src_path, &dest_file_path)
-                .map_err(|e| format!("Falha ao copiar arquivo para pasta temporária: {}", e))?;
+                .map_err(|e| format!("Could not copy a file to the temporary folder: {}", e))?;
         }
 
         let temp_archive_path = temp_dir.join(format!("luducard_upload_{}.luducard", uuid::Uuid::new_v4()));
@@ -3562,7 +3572,7 @@ pub async fn export_local_preset_archive(
 
         let _ = std::fs::remove_dir_all(&export_temp_dir);
 
-        let metadata = metadata_res.map_err(|e| format!("Falha ao empacotar preset local: {}", e))?;
+        let metadata = metadata_res.map_err(|e| format!("Could not pack the local preset: {}", e))?;
 
         let mut result = HashMap::new();
         result.insert("filePath".to_string(), serde_json::json!(temp_archive_path_str));
@@ -3606,15 +3616,18 @@ pub fn save_emulators_setting(app_data_dir: &Path, emulators: &[String]) {
 #[tauri::command]
 pub async fn add_emulator(app: tauri::AppHandle, path: String) -> Result<usize, String> {
     tokio::task::spawn_blocking(move || {
-        let app_data_dir = app.path().app_data_dir().map_err(|_| "Failed to get AppData dir".to_string())?;
+        let app_data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|_| "Failed to get AppData dir".to_string())?;
 
         let path_buf = PathBuf::from(&path);
         if !path_buf.exists() {
-            return Err("Caminho do emulador não existe.".to_string());
+            return Err(ludusavi::lang::TRANSLATOR.err_emulator_path_missing());
         }
 
         let emu_name = crate::emulator::identify_emulator(&path_buf)
-            .ok_or_else(|| "Nenhum emulador compatível detectado nesta pasta (verifique se o executável do emulador está presente).".to_string())?;
+            .ok_or_else(|| ludusavi::lang::TRANSLATOR.err_no_emulator_detected())?;
 
         let mut emulators = load_emulators_setting(&app_data_dir);
         if emulators.contains(&path) {
@@ -3801,14 +3814,14 @@ pub async fn configure_cloud_remote(app: tauri::AppHandle, provider: String, ema
         };
 
         let remote = ludusavi::cloud::Remote::try_from(remote_choice)
-            .map_err(|_| "Falha ao criar instância remota".to_string())?;
+            .map_err(|_| "Could not create the remote instance".to_string())?;
 
         let rclone = ludusavi::cloud::Rclone::new(api.config.apps.rclone.clone(), remote.clone());
 
         // This will block and trigger OAuth browser authorization
         rclone
             .configure_remote()
-            .map_err(|e| format!("Falha ao configurar remoto no Rclone: {:?}", e))?;
+            .map_err(|e| format!("Could not configure the Rclone remote: {:?}", e))?;
 
         // Try to fetch the authenticated user's email from the provider API
         let fetched_email = fetch_cloud_email(&api.config.apps.rclone.path, &remote, &api.config.apps.rclone.arguments);
@@ -3958,12 +3971,12 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
         }
 
         let Some(remote) = api.config.cloud.remote.clone() else {
-            return Err("Nenhum provedor de nuvem conectado. Vincule uma conta primeiro.".to_string());
+            return Err(ludusavi::lang::TRANSLATOR.err_no_cloud_provider());
         };
 
         let cloud_path = &api.config.cloud.path;
         if cloud_path.is_empty() {
-            return Err("Caminho de nuvem vazio.".to_string());
+            return Err(ludusavi::lang::TRANSLATOR.err_cloud_path_empty());
         }
 
         let app_data_dir = app
@@ -3974,7 +3987,7 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
 
         // 1. Create local test file
         std::fs::write(&local_test_file, "luducard-cloud-sync-test-content")
-            .map_err(|e| format!("Falha ao criar arquivo de teste local: {}", e))?;
+            .map_err(|e| format!("Could not create the local test file: {}", e))?;
 
         let remote_test_path = format!("{}:{}/luducard_test.tmp", remote.id(), cloud_path.replace('\\', "/"));
 
@@ -3994,10 +4007,10 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
                 command.creation_flags(0x08000000);
             }
 
-            let output = command.output().map_err(|e| format!("Erro ao iniciar Rclone: {}", e))?;
+            let output = command.output().map_err(|e| format!("Could not start Rclone: {}", e))?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(format!("Erro no Rclone: {}", stderr));
+                return Err(format!("Rclone reported an error: {}", stderr));
             }
             Ok(())
         };
@@ -4006,7 +4019,7 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
         let upload_res = run_rclone(&["copyto", &local_test_file.to_string_lossy(), &remote_test_path]);
         if let Err(e) = upload_res {
             let _ = std::fs::remove_file(&local_test_file);
-            return Err(format!("Falha no upload do arquivo de teste: {}", e));
+            return Err(format!("Test file upload failed: {}", e));
         }
 
         let _ = std::fs::remove_file(&local_test_file);
@@ -4016,18 +4029,18 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
         let download_res = run_rclone(&["copyto", &remote_test_path, &local_downloaded_file.to_string_lossy()]);
         if let Err(e) = download_res {
             let _ = run_rclone(&["deletefile", &remote_test_path]);
-            return Err(format!("Falha no download do arquivo de teste: {}", e));
+            return Err(format!("Test file download failed: {}", e));
         }
 
         let content = std::fs::read_to_string(&local_downloaded_file)
-            .map_err(|e| format!("Falha ao ler arquivo baixado: {}", e))?;
+            .map_err(|e| format!("Could not read the downloaded file: {}", e))?;
 
         let _ = std::fs::remove_file(&local_downloaded_file);
 
         // 4. Delete remote
         let delete_res = run_rclone(&["deletefile", &remote_test_path]);
         if let Err(e) = delete_res {
-            return Err(format!("Falha ao remover arquivo de teste remoto: {}", e));
+            return Err(format!("Could not remove the remote test file: {}", e));
         }
 
         if content != "luducard-cloud-sync-test-content" {
@@ -4116,10 +4129,10 @@ pub async fn check_cloud_conflict(app: tauri::AppHandle, game_title: String) -> 
                 command.creation_flags(0x08000000);
             }
 
-            let output = command.output().map_err(|e| format!("Erro ao iniciar Rclone: {}", e))?;
+            let output = command.output().map_err(|e| format!("Could not start Rclone: {}", e))?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(format!("Erro no Rclone: {}", stderr));
+                return Err(format!("Rclone reported an error: {}", stderr));
             }
             Ok(())
         };
@@ -4208,12 +4221,12 @@ async fn save_profile_state_internal(
             let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
             let profile_dir = app_data_dir.join("save_profiles").join(&game_id).join(&profile_id);
             std::fs::create_dir_all(&profile_dir)
-                .map_err(|e| format!("Falha ao criar diretório do perfil de save: {}", e))?;
+                .map_err(|e| format!("Could not create the save profile folder: {}", e))?;
 
             let mapping_path = profile_dir.join("mapping.json");
             let mapping = if mapping_path.exists() {
                 let content = std::fs::read_to_string(&mapping_path)
-                    .map_err(|e| format!("Falha ao ler mapeamento do perfil: {}", e))?;
+                    .map_err(|e| format!("Could not read the profile's file mapping: {}", e))?;
                 serde_json::from_str(&content).map_err(|e| format!("Mapeamento do perfil corrompido: {}", e))?
             } else {
                 HashMap::new()
@@ -4258,7 +4271,7 @@ async fn save_profile_state_internal(
                         let backup_file_name = format!("file_{}", index);
                         let dest_path = profile_dir.join(&backup_file_name);
                         std::fs::copy(file_path, &dest_path)
-                            .map_err(|e| format!("Falha ao copiar arquivo de save para o perfil: {}", e))?;
+                            .map_err(|e| format!("Could not copy a save file into the profile: {}", e))?;
                         new_mapping.insert(backup_file_name, file_path_str.clone());
                     }
                 }
@@ -4277,9 +4290,9 @@ async fn save_profile_state_internal(
             // Write mapping.json
             let mapping_path = profile_dir.join("mapping.json");
             let mapping_content = serde_json::to_string_pretty(&new_mapping)
-                .map_err(|e| format!("Falha ao serializar mapeamento de arquivos do perfil: {}", e))?;
+                .map_err(|e| format!("Could not serialize the profile's file mapping: {}", e))?;
             std::fs::write(mapping_path, mapping_content)
-                .map_err(|e| format!("Falha ao gravar mapeamento de arquivos do perfil: {}", e))?;
+                .map_err(|e| format!("Could not write the profile's file mapping: {}", e))?;
 
             Ok(new_mapping)
         }
@@ -4358,13 +4371,13 @@ pub async fn create_save_profile(
                     .join(&game_id)
                     .join(&default_profile_id);
                 std::fs::create_dir_all(&profile_dir)
-                    .map_err(|e| format!("Falha ao criar diretório do perfil padrão: {}", e))?;
+                    .map_err(|e| format!("Could not create the default profile folder: {}", e))?;
 
                 let meta_path = profile_dir.join("manifest.json");
                 let meta_content = serde_json::to_string_pretty(&default_profile)
-                    .map_err(|e| format!("Falha ao serializar manifesto do perfil padrão: {}", e))?;
+                    .map_err(|e| format!("Could not serialize the default profile's manifest: {}", e))?;
                 std::fs::write(meta_path, meta_content)
-                    .map_err(|e| format!("Falha ao gravar manifesto do perfil padrão: {}", e))?;
+                    .map_err(|e| format!("Could not write the default profile's manifest: {}", e))?;
 
                 Ok(())
             }
@@ -4430,13 +4443,13 @@ pub async fn create_save_profile(
         move || -> Result<(), String> {
             let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
             let profile_dir = app_data_dir.join("save_profiles").join(&game_id).join(&profile_id);
-            std::fs::create_dir_all(&profile_dir).map_err(|e| format!("Falha ao criar diretório do perfil: {}", e))?;
+            std::fs::create_dir_all(&profile_dir).map_err(|e| format!("Could not create the profile folder: {}", e))?;
 
             let meta_path = profile_dir.join("manifest.json");
             let meta_content = serde_json::to_string_pretty(&profile)
-                .map_err(|e| format!("Falha ao serializar manifesto do perfil: {}", e))?;
+                .map_err(|e| format!("Could not serialize the profile manifest: {}", e))?;
             std::fs::write(meta_path, meta_content)
-                .map_err(|e| format!("Falha ao gravar manifesto do perfil: {}", e))?;
+                .map_err(|e| format!("Could not write the profile manifest: {}", e))?;
 
             Ok(())
         }
@@ -4465,9 +4478,9 @@ pub async fn create_save_profile(
                         {
                             other_profile.active = false;
                             let updated_content = serde_json::to_string_pretty(&other_profile)
-                                .map_err(|e| format!("Falha ao serializar manifesto do perfil antigo: {}", e))?;
+                                .map_err(|e| format!("Could not serialize the previous profile's manifest: {}", e))?;
                             std::fs::write(&manifest_path, updated_content)
-                                .map_err(|e| format!("Falha ao gravar manifesto do perfil antigo: {}", e))?;
+                                .map_err(|e| format!("Could not write the previous profile's manifest: {}", e))?;
                         }
                     }
                 }
@@ -4506,7 +4519,7 @@ pub async fn create_save_profile(
                         let path = Path::new(file_path_str);
                         if path.exists() && path.is_file() {
                             std::fs::remove_file(path)
-                                .map_err(|e| format!("Falha ao limpar arquivo de save anterior: {}", e))?;
+                                .map_err(|e| format!("Could not clear the previous save file: {}", e))?;
                         }
                     }
                 }
@@ -4528,7 +4541,7 @@ pub async fn create_save_profile(
                 let empty_mapping: HashMap<String, String> = HashMap::new();
                 let mapping_content = serde_json::to_string_pretty(&empty_mapping).unwrap();
                 std::fs::write(mapping_path, mapping_content)
-                    .map_err(|e| format!("Falha ao gravar mapeamento vazio do perfil: {}", e))?;
+                    .map_err(|e| format!("Could not write the profile's empty mapping: {}", e))?;
                 Ok(())
             }
         })
@@ -4597,15 +4610,17 @@ pub async fn switch_save_profile(
                 .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
             if let Some(game_data) = scan_output.games.get(&game_title)
-                && let ApiGame::Operative { files, .. } = game_data {
-                    for file_path_str in files.keys() {
-                        let path = Path::new(file_path_str);
-                        if path.exists() && path.is_file() {
-                            std::fs::remove_file(path)
-                                .map_err(|e| format!("Não foi possível remover o arquivo de save anterior {}: {}. Verifique se o jogo está fechado.", file_path_str, e))?;
-                        }
+                && let ApiGame::Operative { files, .. } = game_data
+            {
+                for file_path_str in files.keys() {
+                    let path = Path::new(file_path_str);
+                    if path.exists() && path.is_file() {
+                        std::fs::remove_file(path).map_err(|e| {
+                            ludusavi::lang::TRANSLATOR.err_save_file_locked(file_path_str, &e.to_string())
+                        })?;
                     }
                 }
+            }
             Ok(())
         }
     })
@@ -4627,7 +4642,7 @@ pub async fn switch_save_profile(
             }
 
             let mapping_content = std::fs::read_to_string(&mapping_path)
-                .map_err(|e| format!("Falha ao ler mapeamento do perfil: {}", e))?;
+                .map_err(|e| format!("Could not read the profile's file mapping: {}", e))?;
             let mapping: HashMap<String, String> = serde_json::from_str(&mapping_content)
                 .map_err(|e| format!("Mapeamento do perfil corrompido: {}", e))?;
             Ok((mapping, profile_dir))
@@ -4648,7 +4663,7 @@ pub async fn switch_save_profile(
                     let _ = std::fs::create_dir_all(parent);
                 }
                 std::fs::copy(&src_path, dest_path)
-                    .map_err(|e| format!("Falha ao restaurar arquivo de save do perfil: {}", e))?;
+                    .map_err(|e| format!("Could not restore the profile's save file: {}", e))?;
             }
         }
         Ok(())
@@ -4677,9 +4692,9 @@ pub async fn switch_save_profile(
                             profile.active = profile.id == profile_id;
                             if was_active != profile.active {
                                 let updated_content = serde_json::to_string_pretty(&profile)
-                                    .map_err(|e| format!("Falha ao serializar manifesto do perfil: {}", e))?;
+                                    .map_err(|e| format!("Could not serialize the profile manifest: {}", e))?;
                                 std::fs::write(&manifest_path, updated_content)
-                                    .map_err(|e| format!("Falha ao gravar manifesto do perfil: {}", e))?;
+                                    .map_err(|e| format!("Could not write the profile manifest: {}", e))?;
                             }
                         }
                     }
@@ -4707,14 +4722,12 @@ pub async fn delete_save_profile(app: tauri::AppHandle, game_id: String, profile
             && let Ok(profile) = serde_json::from_str::<SaveProfile>(&content)
             && profile.active
         {
-            return Err(
-                "Não é possível excluir o perfil de save ativo. Alterne para outro perfil primeiro.".to_string(),
-            );
+            return Err(ludusavi::lang::TRANSLATOR.err_active_profile_delete());
         }
 
         if profile_dir.exists() {
             std::fs::remove_dir_all(&profile_dir)
-                .map_err(|e| format!("Falha ao remover diretório do perfil de save: {}", e))?;
+                .map_err(|e| format!("Could not remove the save profile folder: {}", e))?;
         }
         Ok(())
     })
@@ -4743,7 +4756,7 @@ pub async fn clear_app_data(app: tauri::AppHandle) -> Result<(), String> {
             Ok(p) => p,
             Err(e) => {
                 log::error!("Failed to get app_dir path: {:?}", e);
-                return Err(format!("Falha ao obter o diretório do aplicativo: {}", e));
+                return Err(format!("Could not locate the application folder: {}", e));
             }
         };
         backup_paths.push(app_dir.join("luducard-backups"));

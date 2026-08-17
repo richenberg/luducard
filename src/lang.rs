@@ -1365,6 +1365,77 @@ impl Translator {
         translate_args("label-change-count", &args)
     }
 
+    // Errors surfaced to the user in the interface.
+
+    pub fn err_backup_dir_not_set(&self) -> String {
+        translate("luducard-err-backup-dir-not-set")
+    }
+
+    pub fn err_cloud_path_empty(&self) -> String {
+        translate("luducard-err-cloud-path-empty")
+    }
+
+    pub fn err_no_cloud_provider(&self) -> String {
+        translate("luducard-err-no-cloud-provider")
+    }
+
+    pub fn err_emulator_path_missing(&self) -> String {
+        translate("luducard-err-emulator-path-missing")
+    }
+
+    pub fn err_no_emulator_detected(&self) -> String {
+        translate("luducard-err-no-emulator-detected")
+    }
+
+    pub fn err_nothing_to_export(&self) -> String {
+        translate("luducard-err-nothing-to-export")
+    }
+
+    pub fn err_no_save_path_to_open(&self) -> String {
+        translate("luducard-err-no-save-path-to-open")
+    }
+
+    pub fn err_no_crash_safety_backup(&self) -> String {
+        translate("luducard-err-no-crash-safety-backup")
+    }
+
+    pub fn err_active_profile_delete(&self) -> String {
+        translate("luducard-err-active-profile-delete")
+    }
+
+    pub fn err_exe_folder_not_writable(&self) -> String {
+        translate("luducard-err-exe-folder-not-writable")
+    }
+
+    pub fn err_invalid_luducard_file(&self, message: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set("message", message);
+        translate_args("luducard-err-invalid-luducard-file", &args)
+    }
+
+    pub fn err_preset_metadata_corrupt(&self, message: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set("message", message);
+        translate_args("luducard-err-preset-metadata-corrupt", &args)
+    }
+
+    pub fn err_preset_incomplete(&self) -> String {
+        translate("luducard-err-preset-incomplete")
+    }
+
+    pub fn err_install_dir_not_found(&self, game: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set("game", game);
+        translate_args("luducard-err-install-dir-not-found", &args)
+    }
+
+    pub fn err_save_file_locked(&self, path: &str, message: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set("path", path);
+        args.set("message", message);
+        translate_args("luducard-err-save-file-locked", &args)
+    }
+
     // Native OS notifications and tray menu, sent from the Tauri layer.
 
     pub fn notify_quick_save_title(&self) -> String {
