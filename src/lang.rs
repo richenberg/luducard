@@ -1717,7 +1717,7 @@ impl Translator {
 
 #[cfg(test)]
 mod tests {
-    use crate::lang::{Language, TRANSLATOR};
+    use crate::lang::{FluentResource, TRANSLATOR};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -1734,7 +1734,122 @@ mod tests {
     /// Cheap to check, and it caught a real duplicate that shipped past `cargo check`.
     #[test]
     fn no_duplicate_message_ids_in_any_language() {
-        let files: &[(&str, &str)] = &[
+        let files = language_files();
+
+        for (name, content) in files {
+            let mut seen = std::collections::HashSet::new();
+            let mut duplicates = Vec::new();
+
+            for line in content.lines() {
+                // Message ids start at column zero; indented lines are continuations or
+                // attributes, and `#` is a comment.
+                if line.starts_with(char::is_whitespace) || line.starts_with('#') {
+                    continue;
+                }
+                if let Some((id, _)) = line.split_once('=') {
+                    let id = id.trim();
+                    if !id.is_empty() && !seen.insert(id.to_string()) {
+                        duplicates.push(id.to_string());
+                    }
+                }
+            }
+
+            assert!(duplicates.is_empty(), "duplicate ids in {name}.ftl: {duplicates:?}");
+        }
+    }
+
+    /// Every shipped file must be valid Fluent.
+    ///
+    /// A malformed file does not fail the build: `set_language` calls `try_new(...).expect()`,
+    /// so the app compiles and then panics the moment a user picks that language. Parsing the
+    /// resource directly checks the syntax — plural selectors included — without touching the
+    /// shared bundle, which the whole process relies on.
+    #[test]
+    fn every_language_file_parses() {
+        for (name, content) in language_files() {
+            assert!(
+                FluentResource::try_new(content.to_owned()).is_ok(),
+                "{name}.ftl is not valid Fluent"
+            );
+        }
+    }
+
+    /// Notifications are rendered from a background thread with no UI to reveal a mistake,
+    /// so check that their keys resolve and substitute their arguments.
+    ///
+    /// English only, and deliberately so: `set_language` mutates a process-wide bundle, and
+    /// Rust runs tests in parallel threads, so switching language here changed the output
+    /// other tests were asserting against. The rest of the languages are covered by
+    /// `notification_keys_match_english`, which reads the files instead.
+    #[test]
+    fn notifications_render() {
+        let rendered = [
+            TRANSLATOR.notify_quick_save_done("Hollow Knight"),
+            TRANSLATOR.notify_quick_save_failed("Hollow Knight", "disk full"),
+            TRANSLATOR.notify_quick_save_unmatched("Photoshop.exe"),
+            TRANSLATOR.notify_auto_backup_done("Hollow Knight"),
+            TRANSLATOR.notify_auto_backup_failed("Hollow Knight", "disk full"),
+            TRANSLATOR.notify_scan_done(1),
+            TRANSLATOR.notify_scan_done(42),
+            TRANSLATOR.notify_tray_body(),
+            TRANSLATOR.tray_show(),
+            TRANSLATOR.tray_quit(),
+        ];
+
+        for text in rendered {
+            assert!(!text.is_empty(), "empty string");
+            assert!(!text.contains('{'), "unresolved placeholder: {text}");
+            assert!(!text.starts_with("fluent-"), "lookup failed: {text}");
+        }
+
+        assert!(
+            TRANSLATOR
+                .notify_quick_save_done("Hollow Knight")
+                .contains("Hollow Knight")
+        );
+        assert!(TRANSLATOR.notify_scan_done(42).contains("42"));
+    }
+
+    /// Every notification key must exist in each maintained language, carrying the same
+    /// arguments as English.
+    ///
+    /// A missing key silently falls back to English, and a key that drops an argument — say a
+    /// translation of "Backup of { $game } saved" that forgets `$game` — renders a sentence
+    /// with the game name missing. Neither shows up at compile time.
+    #[test]
+    fn notification_keys_match_english() {
+        let english = parse_entries(include_str!("../lang/en-US.ftl"));
+
+        let notification_keys: Vec<&String> = english
+            .keys()
+            .filter(|k| k.starts_with("luducard-notify-") || k.starts_with("luducard-tray-"))
+            .collect();
+
+        assert!(!notification_keys.is_empty(), "no notification keys found in en-US");
+
+        for (name, content) in [
+            ("pt-BR", include_str!("../lang/pt-BR.ftl")),
+            ("es-ES", include_str!("../lang/es-ES.ftl")),
+            ("ru-RU", include_str!("../lang/ru-RU.ftl")),
+            ("zh-CN", include_str!("../lang/zh-CN.ftl")),
+        ] {
+            let entries = parse_entries(content);
+
+            for key in &notification_keys {
+                let translated = entries
+                    .get(*key)
+                    .unwrap_or_else(|| panic!("{name}.ftl is missing {key}"));
+
+                let expected = variables_in(&english[*key]);
+                let actual = variables_in(translated);
+
+                assert_eq!(expected, actual, "{name}.ftl has the wrong variables for {key}");
+            }
+        }
+    }
+
+    fn language_files() -> Vec<(&'static str, &'static str)> {
+        vec![
             ("ar-SA", include_str!("../lang/ar-SA.ftl")),
             ("cs-CZ", include_str!("../lang/cs-CZ.ftl")),
             ("de-DE", include_str!("../lang/de-DE.ftl")),
@@ -1759,71 +1874,61 @@ mod tests {
             ("vi-VN", include_str!("../lang/vi-VN.ftl")),
             ("zh-CN", include_str!("../lang/zh-CN.ftl")),
             ("zh-TW", include_str!("../lang/zh-TW.ftl")),
-        ];
-
-        for (name, content) in files {
-            let mut seen = std::collections::HashSet::new();
-            let mut duplicates = Vec::new();
-
-            for line in content.lines() {
-                // Message ids start at column zero; indented lines are continuations or
-                // attributes, and `#` is a comment.
-                if line.starts_with(char::is_whitespace) || line.starts_with('#') {
-                    continue;
-                }
-                if let Some((id, _)) = line.split_once('=') {
-                    let id = id.trim();
-                    if !id.is_empty() && !seen.insert(id.to_string()) {
-                        duplicates.push(id.to_string());
-                    }
-                }
-            }
-
-            assert!(duplicates.is_empty(), "duplicate ids in {name}.ftl: {duplicates:?}");
-        }
+        ]
     }
 
-    /// The notification strings are the only ones rendered from a background thread with
-    /// no UI to reveal a mistake, so check every language we ship them in actually parses
-    /// and substitutes its arguments instead of falling back or leaking a placeholder.
-    #[test]
-    fn notifications_render_in_every_translated_language() {
-        for language in [
-            Language::English,
-            Language::PortugueseBrazilian,
-            Language::Spanish,
-            Language::Russian,
-            Language::ChineseSimplified,
-        ] {
-            TRANSLATOR.set_language(language);
+    /// Message id to its raw value, continuation lines included.
+    fn parse_entries(content: &str) -> std::collections::BTreeMap<String, String> {
+        let mut entries = std::collections::BTreeMap::new();
+        let mut current: Option<String> = None;
 
-            let rendered = [
-                TRANSLATOR.notify_quick_save_done("Hollow Knight"),
-                TRANSLATOR.notify_quick_save_failed("Hollow Knight", "disk full"),
-                TRANSLATOR.notify_quick_save_unmatched("Photoshop.exe"),
-                TRANSLATOR.notify_auto_backup_done("Hollow Knight"),
-                TRANSLATOR.notify_auto_backup_failed("Hollow Knight", "disk full"),
-                TRANSLATOR.notify_scan_done(1),
-                TRANSLATOR.notify_scan_done(42),
-                TRANSLATOR.notify_tray_body(),
-                TRANSLATOR.tray_show(),
-                TRANSLATOR.tray_quit(),
-            ];
-
-            for text in rendered {
-                assert!(!text.is_empty(), "empty string for {language:?}");
-                assert!(!text.contains('{'), "unresolved placeholder in {language:?}: {text}");
-                assert!(!text.starts_with("fluent-"), "lookup failed for {language:?}: {text}");
+        for line in content.lines() {
+            if line.starts_with('#') {
+                continue;
             }
 
-            assert!(
-                TRANSLATOR
-                    .notify_quick_save_done("Hollow Knight")
-                    .contains("Hollow Knight")
-            );
-            assert!(TRANSLATOR.notify_scan_done(42).contains("42"));
+            if line.starts_with(char::is_whitespace) {
+                if let Some(key) = &current
+                    && let Some(value) = entries.get_mut(key)
+                {
+                    let value: &mut String = value;
+                    value.push(' ');
+                    value.push_str(line.trim());
+                }
+                continue;
+            }
+
+            match line.split_once('=') {
+                Some((key, value)) if !key.trim().is_empty() => {
+                    let key = key.trim().to_string();
+                    entries.insert(key.clone(), value.trim().to_string());
+                    current = Some(key);
+                }
+                _ => current = None,
+            }
         }
 
-        TRANSLATOR.set_language(Language::English);
+        entries
+    }
+
+    /// The `$variable` names referenced by a Fluent value.
+    fn variables_in(value: &str) -> std::collections::BTreeSet<String> {
+        let mut found = std::collections::BTreeSet::new();
+        let bytes: Vec<char> = value.chars().collect();
+
+        for (i, c) in bytes.iter().enumerate() {
+            if *c != '$' {
+                continue;
+            }
+            let name: String = bytes[i + 1..]
+                .iter()
+                .take_while(|c| c.is_alphanumeric() || **c == '-' || **c == '_')
+                .collect();
+            if !name.is_empty() {
+                found.insert(name);
+            }
+        }
+
+        found
     }
 }
