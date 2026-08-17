@@ -1028,6 +1028,7 @@ luducard-toast-backup-success = Backup completed successfully.
 luducard-schedule-all-games = Back up all games
 luducard-back-to-top = Back to top
 luducard-platform-other = Other
+luducard-toast-backup-no-changes = No changes since the last backup, so no new version was added.
 luducard-err-backup-dir-not-set = No backup folder is configured. Pick one in Settings.
 luducard-err-cloud-path-empty = The cloud folder is empty. Set a remote folder name in Settings.
 luducard-err-no-cloud-provider = No cloud provider is connected. Link an account first.

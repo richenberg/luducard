@@ -167,6 +167,33 @@ pub fn load_scan_cache(app_dir: &Path) -> HashMap<String, CachedScanInfo> {
 
 static COVER_CACHE: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Result of a backup, so the interface can say what actually happened.
+///
+/// Ludusavi compares the saves against the previous backup and keeps the existing version
+/// when nothing changed, rather than storing a duplicate. That is deliberate and saves
+/// disk, but the interface used to report "backup completed" either way — so backing up
+/// twice looked like a version had gone missing.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupOutcome {
+    /// False when the saves were identical to the last backup, so no version was added.
+    pub created_version: bool,
+    /// Ludusavi's own output, unchanged from what this command returned before.
+    pub report: String,
+}
+
+/// Whether a backup run actually produced a new version for this game.
+fn backup_created_version(output: &ludusavi::report::ApiOutput, game_title: &str) -> bool {
+    use ludusavi::scan::ScanChange;
+
+    match output.games.get(game_title) {
+        Some(ApiGame::Operative { change, .. }) => !matches!(change, ScanChange::Same | ScanChange::Unknown),
+        // No entry for the game means Ludusavi skipped it entirely; treat that as no
+        // new version rather than claiming success.
+        _ => false,
+    }
+}
+
 /// How a backup came to exist. Nothing in Ludusavi's own metadata records this — the
 /// mapping file stores *when* a backup happened, never what triggered it — so before this
 /// the version list derived the label from `locked`, and every unlocked backup claimed to
@@ -1400,7 +1427,7 @@ pub async fn get_game_details(app: tauri::AppHandle, game_title: String) -> Resu
 }
 
 #[tauri::command]
-pub async fn backup_game(app: tauri::AppHandle, game_title: String) -> Result<String, String> {
+pub async fn backup_game(app: tauri::AppHandle, game_title: String) -> Result<BackupOutcome, String> {
     tokio::task::spawn_blocking(move || {
         let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
@@ -1415,11 +1442,18 @@ pub async fn backup_game(app: tauri::AppHandle, game_title: String) -> Result<St
             })
             .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
-        if let Ok(dir) = app.path().app_data_dir() {
+        let created_version = backup_created_version(&result, &game_title);
+
+        // Only label a version we actually created: otherwise a no-op backup would
+        // relabel the existing version, which may legitimately be automatic.
+        if created_version && let Ok(dir) = app.path().app_data_dir() {
             record_latest_backup_kind(&api, &dir, &game_title, BACKUP_KIND_MANUAL);
         }
 
-        Ok(serde_json::to_string(&result).unwrap_or_default())
+        Ok(BackupOutcome {
+            created_version,
+            report: serde_json::to_string(&result).unwrap_or_default(),
+        })
     })
     .await
     .map_err(|e| e.to_string())?

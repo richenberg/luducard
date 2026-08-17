@@ -969,6 +969,7 @@ luducard-toast-backup-success = Резервное копирование усп
 luducard-schedule-all-games = Резервировать все игры
 luducard-back-to-top = Наверх
 luducard-platform-other = Другое
+luducard-toast-backup-no-changes = С момента последней копии ничего не изменилось, поэтому новая версия не создана.
 luducard-err-backup-dir-not-set = Папка для резервных копий не настроена. Выберите её в настройках.
 luducard-err-cloud-path-empty = Облачная папка не указана. Задайте имя удалённой папки в настройках.
 luducard-err-no-cloud-provider = Облачный провайдер не подключён. Сначала привяжите аккаунт.

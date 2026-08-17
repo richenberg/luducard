@@ -968,6 +968,7 @@ luducard-toast-backup-success = Copia de seguridad completada correctamente.
 luducard-schedule-all-games = Respaldar todos los juegos
 luducard-back-to-top = Volver arriba
 luducard-platform-other = Otro
+luducard-toast-backup-no-changes = No hay cambios desde la última copia, así que no se añadió ninguna versión nueva.
 luducard-err-backup-dir-not-set = No hay carpeta de copias configurada. Elige una en Ajustes.
 luducard-err-cloud-path-empty = La carpeta en la nube está vacía. Define un nombre de carpeta remota en Ajustes.
 luducard-err-no-cloud-provider = No hay ningún proveedor de nube conectado. Vincula una cuenta primero.

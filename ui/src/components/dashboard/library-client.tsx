@@ -384,8 +384,14 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
           setConflictModalOpen(true);
           return;
         }
-        await invoke("backup_game", { gameTitle: title });
-        toast.success(`${t("luducard-backup-completed-for", "Backup de")} "${title}" ${t("luducard-completed", "concluído!")}`, { id });
+        const outcome = await invoke<{ createdVersion: boolean }>("backup_game", { gameTitle: title });
+        if (outcome.createdVersion) {
+          toast.success(`${t("luducard-backup-completed-for", "Backup de")} "${title}" ${t("luducard-completed", "concluído!")}`, { id });
+        } else {
+          // Ludusavi keeps the existing version when the saves are identical. Saying
+          // "backup complete" here made a second backup look like a lost version.
+          toast.info(t("luducard-toast-backup-no-changes", "No changes since the last backup, so no new version was added."), { id });
+        }
         loadGames(true);
       } catch (err) {
         toast.error(`${t("luducard-backup-failed-for", "Falha no backup de")} "${title}": ${err}`, { id });

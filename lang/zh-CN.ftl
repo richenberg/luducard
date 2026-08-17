@@ -954,6 +954,7 @@ luducard-toast-backup-success = 备份成功完成。
 luducard-schedule-all-games = 备份所有游戏
 luducard-back-to-top = 返回顶部
 luducard-platform-other = 其他
+luducard-toast-backup-no-changes = 自上次备份以来没有变化，因此未新增版本。
 luducard-err-backup-dir-not-set = 尚未设置备份文件夹。请在设置中选择一个。
 luducard-err-cloud-path-empty = 云端文件夹为空。请在设置中填写远程文件夹名称。
 luducard-err-no-cloud-provider = 未连接任何云服务。请先绑定一个账号。

@@ -272,8 +272,15 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           setConflictModalOpen(true);
           return;
         }
-        await invoke("backup_game", { gameTitle: game.title });
-        toast.success(`Backup de "${game.title}" criado com sucesso!`, { id });
+        const outcome = await invoke<{ createdVersion: boolean }>("backup_game", { gameTitle: game.title });
+        if (outcome.createdVersion) {
+          toast.success(
+            `${t("luducard-backup-completed-for", "Backup of")} "${game.title}" ${t("luducard-completed", "completed!")}`,
+            { id }
+          );
+        } else {
+          toast.info(t("luducard-toast-backup-no-changes", "No changes since the last backup, so no new version was added."), { id });
+        }
         if (onRefresh) onRefresh();
       } catch (err) {
         toast.error(`${t("luducard-toast-backup-failed", "Backup failed")}: ${err}`, { id });
