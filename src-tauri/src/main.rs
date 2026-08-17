@@ -85,6 +85,10 @@ fn main() {
             // Claim our notification identity before anything can send a toast.
             watcher::register_toast_app_id();
 
+            if let Ok(dir) = app.path().app_data_dir() {
+                watcher::migrate_retention_default(&dir);
+            }
+
             // Check command line arguments for minimized start
             let args: Vec<String> = std::env::args().collect();
             let start_minimized = args.contains(&"--minimized".to_string()) || args.contains(&"-m".to_string());

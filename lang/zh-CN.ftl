@@ -954,3 +954,11 @@ luducard-toast-backup-success = 备份成功完成。
 luducard-schedule-all-games = 备份所有游戏
 luducard-back-to-top = 返回顶部
 luducard-platform-other = 其他
+luducard-backup-kind-quick = 快速保存
+luducard-add-version-note = 添加备注…
+luducard-versioning = 存档版本管理
+luducard-versioning-desc = 保留历史存档，而不是覆盖最后一个。已固定的存档始终保留，不受限制影响。
+luducard-retention-full = 保留的完整副本数
+luducard-retention-full-desc = 每个副本包含该游戏的全部存档文件。副本越多越安全，占用磁盘也越多。
+luducard-retention-differential = 每个副本的增量备份数
+luducard-retention-differential-desc = 仅保存自上次完整副本以来的变化，因此小得多。可恢复点总数 = 完整副本 ×（1 + 此数字）。

@@ -3,7 +3,7 @@ members = [".", "src-tauri"]
 
 [package]
 name = "luducard"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Richenberg <metal-richard@hotmail.com>"]
 edition = "2024"
 description = "Luducard - A lightweight game save manager for PC (Ludosavi Fork)"

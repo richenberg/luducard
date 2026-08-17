@@ -343,7 +343,7 @@ fn find_game_for_exe(exe_path: &Path, app: &tauri::AppHandle) -> Option<String> 
 }
 
 /// Backup game silently using Ludusavi API
-fn backup_game_silent(game_title: &str) -> Result<(), String> {
+fn backup_game_silent(game_title: &str, app_data_dir: Option<&Path>) -> Result<(), String> {
     use ludusavi::prelude::{Finality, SyncDirection};
 
     let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
@@ -357,6 +357,10 @@ fn backup_game_silent(game_title: &str) -> Result<(), String> {
         skip_downgrade: false,
     })
     .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
+
+    if let Some(dir) = app_data_dir {
+        crate::commands::record_latest_backup_kind(&api, dir, game_title, crate::commands::BACKUP_KIND_QUICK);
+    }
 
     Ok(())
 }
@@ -383,7 +387,7 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
         if let Some(game_title) = find_game_for_exe(&exe_path, app) {
             log::info!("[Hotkey] Matched foreground process to game: {}", game_title);
 
-            match backup_game_silent(&game_title) {
+            match backup_game_silent(&game_title, app.path().app_data_dir().ok().as_deref()) {
                 Ok(()) => {
                     log::info!("[Hotkey] Quick-save successful for game: {}", game_title);
                     crate::watcher::show_notification(

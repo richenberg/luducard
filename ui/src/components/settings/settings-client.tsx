@@ -17,6 +17,9 @@ import {
   Key,
   Zap,
   AlertTriangle,
+  History,
+  Copy,
+  GitBranch,
 } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -47,6 +50,19 @@ const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNA
  * because this is a global hotkey and Ctrl+Shift+S is "Save As" in many applications.
  */
 const DEFAULT_QUICK_SAVE_SHORTCUT = "Ctrl+Alt+S";
+
+/**
+ * Must match DEFAULT_RETENTION_* in src-tauri/src/watcher.rs.
+ *
+ * Ludusavi ships with 1 full / 0 differential, meaning each backup replaces the previous
+ * one — so the version list could never hold more than one entry and pinning a save had
+ * nothing to pin. 3 full copies with 5 change-only backups each gives 18 restore points.
+ */
+const DEFAULT_RETENTION_FULL = 3;
+const DEFAULT_RETENTION_DIFFERENTIAL = 5;
+
+/** Versioning is "off" when only a single full copy is kept and nothing is layered on it. */
+const isVersioningOff = (full: number, differential: number) => full <= 1 && differential === 0;
 
 function SettingRow({
   icon: Icon,
@@ -108,6 +124,8 @@ export function SettingsClient() {
   const [confirmReset, setConfirmReset] = useState(false)
   const [quickSaveEnabled, setQuickSaveEnabled] = useState(true)
   const [quickSaveShortcut, setQuickSaveShortcut] = useState(DEFAULT_QUICK_SAVE_SHORTCUT)
+  const [retentionFull, setRetentionFull] = useState(DEFAULT_RETENTION_FULL)
+  const [retentionDifferential, setRetentionDifferential] = useState(DEFAULT_RETENTION_DIFFERENTIAL)
   const [hasCloudRemote, setHasCloudRemote] = useState(false)
   const [showNotesInLibrary, setShowNotesInLibrary] = useState(() => {
     return localStorage.getItem("luducard_show_notes_in_library") !== "false";
@@ -137,6 +155,8 @@ export function SettingsClient() {
         hasSetLanguage: boolean;
         quickSaveEnabled: boolean;
         quickSaveShortcut: string;
+        retentionFull: number;
+        retentionDifferential: number;
         hasCloudRemote: boolean;
       }>("get_settings");
       setBackupPath(s.backupPath);
@@ -152,6 +172,8 @@ export function SettingsClient() {
       setSupabaseAnonKey(s.supabaseAnonKey || "");
       setQuickSaveEnabled(s.quickSaveEnabled);
       setQuickSaveShortcut(s.quickSaveShortcut || DEFAULT_QUICK_SAVE_SHORTCUT);
+      setRetentionFull(s.retentionFull || DEFAULT_RETENTION_FULL);
+      setRetentionDifferential(s.retentionDifferential ?? DEFAULT_RETENTION_DIFFERENTIAL);
       setHasCloudRemote(s.hasCloudRemote);
     } catch (err) {
       console.error("Failed to load settings from Tauri:", err);
@@ -168,12 +190,17 @@ export function SettingsClient() {
     startWithWindows?: boolean;
     quickSaveEnabled?: boolean;
     quickSaveShortcut?: string;
+    retentionFull?: number;
+    retentionDifferential?: number;
   }) => {
     const nextFileWatcher = override && override.fileWatcher !== undefined ? override.fileWatcher : fileWatcher;
     const nextSystemTray = override && override.systemTray !== undefined ? override.systemTray : systemTray;
     const nextStartWithWindows = override && override.startWithWindows !== undefined ? override.startWithWindows : startWithWindows;
     const nextQuickSaveEnabled = override && override.quickSaveEnabled !== undefined ? override.quickSaveEnabled : quickSaveEnabled;
     const nextQuickSaveShortcut = override && override.quickSaveShortcut !== undefined ? override.quickSaveShortcut : quickSaveShortcut;
+    const nextRetentionFull = override && override.retentionFull !== undefined ? override.retentionFull : retentionFull;
+    const nextRetentionDifferential =
+      override && override.retentionDifferential !== undefined ? override.retentionDifferential : retentionDifferential;
 
     if (override) {
       if (override.fileWatcher !== undefined) setFileWatcher(override.fileWatcher);
@@ -181,6 +208,8 @@ export function SettingsClient() {
       if (override.startWithWindows !== undefined) setStartWithWindows(override.startWithWindows);
       if (override.quickSaveEnabled !== undefined) setQuickSaveEnabled(override.quickSaveEnabled);
       if (override.quickSaveShortcut !== undefined) setQuickSaveShortcut(override.quickSaveShortcut);
+      if (override.retentionFull !== undefined) setRetentionFull(override.retentionFull);
+      if (override.retentionDifferential !== undefined) setRetentionDifferential(override.retentionDifferential);
     }
 
     if (isTauri) {
@@ -204,6 +233,8 @@ export function SettingsClient() {
             hasSetLanguage: true,
             quickSaveEnabled: nextQuickSaveEnabled,
             quickSaveShortcut: nextQuickSaveShortcut,
+            retentionFull: nextRetentionFull,
+            retentionDifferential: nextRetentionDifferential,
             hasCloudRemote,
           }
         });
@@ -227,6 +258,8 @@ export function SettingsClient() {
           hasSetLanguage: boolean;
           quickSaveEnabled: boolean;
           quickSaveShortcut: string;
+        retentionFull: number;
+        retentionDifferential: number;
           hasCloudRemote: boolean;
         }>("get_settings");
         setBackupPath(s.backupPath);
@@ -242,6 +275,10 @@ export function SettingsClient() {
         setSupabaseAnonKey(s.supabaseAnonKey || "");
         setQuickSaveEnabled(s.quickSaveEnabled);
         setQuickSaveShortcut(s.quickSaveShortcut || DEFAULT_QUICK_SAVE_SHORTCUT);
+        setRetentionFull(s.retentionFull || DEFAULT_RETENTION_FULL);
+        setRetentionDifferential(s.retentionDifferential ?? DEFAULT_RETENTION_DIFFERENTIAL);
+      setRetentionFull(s.retentionFull || DEFAULT_RETENTION_FULL);
+      setRetentionDifferential(s.retentionDifferential ?? DEFAULT_RETENTION_DIFFERENTIAL);
         setHasCloudRemote(s.hasCloudRemote);
       } catch (err) {
         if (id) {
@@ -455,6 +492,80 @@ export function SettingsClient() {
                 </div>
               }
             />
+            <Separator />
+            <SettingRow
+              icon={History}
+              title={t("luducard-versioning", "Save Versioning")}
+              description={t(
+                "luducard-versioning-desc",
+                "Keep a history of previous saves instead of overwriting the last one. Pinned saves are always kept, no matter the limits."
+              )}
+              control={
+                <Switch
+                  checked={!isVersioningOff(retentionFull, retentionDifferential)}
+                  onCheckedChange={(c) => {
+                    // Off is 1 full with nothing layered on it; on restores the shipped default.
+                    const full = c ? DEFAULT_RETENTION_FULL : 1
+                    const differential = c ? DEFAULT_RETENTION_DIFFERENTIAL : 0
+                    setRetentionFull(full)
+                    setRetentionDifferential(differential)
+                    handleSaveSettings({ retentionFull: full, retentionDifferential: differential })
+                  }}
+                />
+              }
+            />
+            {!isVersioningOff(retentionFull, retentionDifferential) && (
+              <>
+                <Separator />
+                <SettingRow
+                  icon={Copy}
+                  title={t("luducard-retention-full", "Complete copies to keep")}
+                  description={t(
+                    "luducard-retention-full-desc",
+                    "Each one holds every save file for the game. More copies means more protection and more disk used."
+                  )}
+                  control={
+                    <Input
+                      type="number"
+                      min={1}
+                      max={255}
+                      value={retentionFull}
+                      onChange={(e) => setRetentionFull(Number(e.target.value))}
+                      onBlur={() => {
+                        const full = Math.min(255, Math.max(1, retentionFull || 1))
+                        setRetentionFull(full)
+                        handleSaveSettings({ retentionFull: full })
+                      }}
+                      className="w-20 text-center"
+                    />
+                  }
+                />
+                <Separator />
+                <SettingRow
+                  icon={GitBranch}
+                  title={t("luducard-retention-differential", "Change-only backups per copy")}
+                  description={t(
+                    "luducard-retention-differential-desc",
+                    "These store just what changed since the last complete copy, so they are much smaller. Restore points total complete copies × (1 + this number)."
+                  )}
+                  control={
+                    <Input
+                      type="number"
+                      min={0}
+                      max={255}
+                      value={retentionDifferential}
+                      onChange={(e) => setRetentionDifferential(Number(e.target.value))}
+                      onBlur={() => {
+                        const differential = Math.min(255, Math.max(0, retentionDifferential || 0))
+                        setRetentionDifferential(differential)
+                        handleSaveSettings({ retentionDifferential: differential })
+                      }}
+                      className="w-20 text-center"
+                    />
+                  }
+                />
+              </>
+            )}
             <Separator />
             <SettingRow
               icon={Monitor}

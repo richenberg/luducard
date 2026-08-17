@@ -76,6 +76,59 @@ pub fn save_file_watcher_setting(app_data_dir: &Path, enabled: bool) {
     let _ = std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
 }
 
+/// Retention Luducard ships with: 3 complete copies, each carrying up to 5 change-only
+/// backups, for 18 restore points.
+pub const DEFAULT_RETENTION_FULL: u8 = 3;
+pub const DEFAULT_RETENTION_DIFFERENTIAL: u8 = 5;
+
+/// Raises the inherited Ludusavi retention of 1 full / 0 differential, once.
+///
+/// That default keeps a single backup per game, so every new one overwrote the previous:
+/// the version list could never hold more than one entry, and pinning a save — which
+/// exempts it from retention — had nothing to pin. Ludusavi is CLI-first and that default
+/// is defensible there; an app whose whole point is save history needs more.
+///
+/// Guarded by a flag in luducard.json so it runs exactly once. Anyone who deliberately
+/// sets 1/0 afterwards (the "versioning off" switch in settings) keeps it.
+pub fn migrate_retention_default(app_data_dir: &Path) {
+    // `save` comes from this trait, not from Config itself.
+    use ludusavi::resource::SaveableResourceFile;
+
+    let config_path = app_data_dir.join("luducard.json");
+
+    let mut json: serde_json::Value = std::fs::read_to_string(&config_path)
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+
+    if json.get("retention_migrated").and_then(|v| v.as_bool()) == Some(true) {
+        return;
+    }
+
+    match ludusavi::resource::config::Config::load() {
+        Ok(mut config) => {
+            if config.backup.retention.full <= 1 && config.backup.retention.differential == 0 {
+                config.backup.retention.full = DEFAULT_RETENTION_FULL;
+                config.backup.retention.differential = DEFAULT_RETENTION_DIFFERENTIAL;
+                config.save();
+                log::info!(
+                    "[Retention] Migrated from 1/0 to {}/{}",
+                    DEFAULT_RETENTION_FULL,
+                    DEFAULT_RETENTION_DIFFERENTIAL
+                );
+            }
+        }
+        Err(e) => {
+            log::warn!("[Retention] Could not load config to migrate retention: {e:?}");
+            return;
+        }
+    }
+
+    json["retention_migrated"] = serde_json::json!(true);
+    let _ = std::fs::create_dir_all(app_data_dir);
+    let _ = std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
+}
+
 /// The AppUserModelID Windows uses to attribute our toasts. Must match the key
 /// registered by `register_toast_app_id`.
 #[cfg(target_os = "windows")]
@@ -178,7 +231,7 @@ fn is_game_likely_running(game_title: &str) -> bool {
 }
 
 /// Performs a silent backup for a single game using the Ludusavi API.
-fn backup_game_silent(game_title: &str) -> Result<(), String> {
+fn backup_game_silent(game_title: &str, app_data_dir: Option<&Path>) -> Result<(), String> {
     use ludusavi::{
         api::Ludusavi,
         prelude::{Finality, SyncDirection},
@@ -195,6 +248,10 @@ fn backup_game_silent(game_title: &str) -> Result<(), String> {
         skip_downgrade: false,
     })
     .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
+
+    if let Some(dir) = app_data_dir {
+        crate::commands::record_latest_backup_kind(&api, dir, game_title, crate::commands::BACKUP_KIND_AUTO);
+    }
 
     Ok(())
 }
@@ -328,6 +385,11 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
     // Start the background checker thread
     let app_handle = app.clone();
     std::thread::spawn(move || {
+        use tauri::Manager;
+
+        // Resolved once: backups from here are always labelled automatic.
+        let watcher_app_data_dir = app_handle.path().app_data_dir().ok();
+
         log::info!("[FileWatcher] Background checker thread started.");
         loop {
             std::thread::sleep(Duration::from_secs(10));
@@ -366,7 +428,7 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
                     game_title
                 );
 
-                match backup_game_silent(game_title) {
+                match backup_game_silent(game_title, watcher_app_data_dir.as_deref()) {
                     Ok(()) => {
                         log::info!("[FileWatcher] '{}' - backup completed successfully.", game_title);
                         show_notification(

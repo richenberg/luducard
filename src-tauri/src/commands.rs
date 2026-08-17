@@ -78,6 +78,13 @@ pub struct FrontendSettings {
     pub quick_save_enabled: bool,
     #[serde(default)]
     pub quick_save_shortcut: String,
+    /// How many complete copies of a game's saves to keep. 1 means each backup replaces
+    /// the previous one, which is what "versioning off" maps to.
+    #[serde(default)]
+    pub retention_full: u8,
+    /// How many change-only backups to keep per full copy.
+    #[serde(default)]
+    pub retention_differential: u8,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -159,6 +166,59 @@ pub fn load_scan_cache(app_dir: &Path) -> HashMap<String, CachedScanInfo> {
 }
 
 static COVER_CACHE: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+
+/// How a backup came to exist. Nothing in Ludusavi's own metadata records this — the
+/// mapping file stores *when* a backup happened, never what triggered it — so before this
+/// the version list derived the label from `locked`, and every unlocked backup claimed to
+/// be automatic even when the user had clicked "Back up now" themselves.
+pub const BACKUP_KIND_MANUAL: &str = "manual";
+pub const BACKUP_KIND_AUTO: &str = "auto";
+pub const BACKUP_KIND_QUICK: &str = "quick";
+
+/// Name of a game's most recent backup, which is the one a just-finished backup produced.
+pub fn latest_backup_name(api: &Ludusavi, game_title: &str) -> Option<String> {
+    let output = api
+        .list_backups(parameters::ListBackups {
+            games: vec![game_title.to_string()],
+        })
+        .ok()?;
+
+    match output.games.get(game_title)? {
+        ApiGame::Stored { backups, .. } => backups.iter().max_by_key(|b| b.when).map(|b| b.name.clone()),
+        _ => None,
+    }
+}
+
+/// Stores the origin of a game's newest backup, alongside the per-backup notes.
+///
+/// Ludusavi does not always produce a new version: when nothing changed since the last
+/// backup it keeps the existing one instead of duplicating it. In that case this simply
+/// overwrites the label of the version that is still the newest, which is correct — that
+/// version is what the user's action confirmed.
+pub fn record_latest_backup_kind(api: &Ludusavi, app_data_dir: &Path, game_title: &str, kind: &str) {
+    let Some(backup_name) = latest_backup_name(api, game_title) else {
+        return;
+    };
+
+    let slug = slugify(game_title);
+    let config_path = app_data_dir.join("luducard.json");
+
+    let mut json: serde_json::Value = std::fs::read_to_string(&config_path)
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+
+    if !json["backup_kinds"].is_object() {
+        json["backup_kinds"] = serde_json::json!({});
+    }
+    if !json["backup_kinds"][&slug].is_object() {
+        json["backup_kinds"][&slug] = serde_json::json!({});
+    }
+    json["backup_kinds"][&slug][&backup_name] = serde_json::json!(kind);
+
+    let _ = std::fs::create_dir_all(app_data_dir);
+    let _ = std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
+}
 
 fn slugify(name: &str) -> String {
     name.to_lowercase()
@@ -868,7 +928,17 @@ fn build_frontend_game(
                 id: b.name.clone(),
                 date: date_str,
                 time: time_str,
-                kind: if b.locked { "Manual (Bloqueado)" } else { "Automático" }.to_string(),
+                // Recorded origin when we have it; older backups predate the recording and
+                // fall back to the previous guess.
+                kind: luducard_json
+                    .and_then(|json| {
+                        json.get("backup_kinds")?
+                            .get(&slug)?
+                            .get(&b.name)?
+                            .as_str()
+                            .map(|s| s.to_string())
+                    })
+                    .unwrap_or_else(|| if b.locked { "manual" } else { "auto" }.to_string()),
                 size_mb: (b.size_bytes as f64) / (1024.0 * 1024.0),
                 cloud: api.config.cloud.synchronize,
                 locked: b.locked,
@@ -1330,13 +1400,13 @@ pub async fn get_game_details(app: tauri::AppHandle, game_title: String) -> Resu
 }
 
 #[tauri::command]
-pub async fn backup_game(game_title: String) -> Result<String, String> {
+pub async fn backup_game(app: tauri::AppHandle, game_title: String) -> Result<String, String> {
     tokio::task::spawn_blocking(move || {
         let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
         let result = api
             .back_up(parameters::BackUp {
-                games: vec![game_title],
+                games: vec![game_title.clone()],
                 finality: Finality::Final,
                 resolve_cloud_conflict: Some(SyncDirection::Upload),
                 wine_prefix: None,
@@ -1344,6 +1414,10 @@ pub async fn backup_game(game_title: String) -> Result<String, String> {
                 skip_downgrade: false,
             })
             .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
+
+        if let Ok(dir) = app.path().app_data_dir() {
+            record_latest_backup_kind(&api, &dir, &game_title, BACKUP_KIND_MANUAL);
+        }
 
         Ok(serde_json::to_string(&result).unwrap_or_default())
     })
@@ -1559,6 +1633,8 @@ pub async fn get_settings(app: tauri::AppHandle) -> Result<FrontendSettings, Str
                 .trim_matches('"')
                 .to_string(),
             has_set_language: api.config.has_set_language,
+            retention_full: api.config.backup.retention.full,
+            retention_differential: api.config.backup.retention.differential,
             has_cloud_remote: api.config.cloud.remote.is_some(),
             cloud_email: app.path().app_data_dir().ok().and_then(|dir| {
                 let config_path = dir.join("luducard.json");
@@ -1589,6 +1665,11 @@ pub async fn save_settings(app: tauri::AppHandle, settings: FrontendSettings) ->
         api.config.cloud.path = settings.cloud_path;
         api.config.cloud.synchronize = settings.cloud_sync;
         api.config.apps.rclone.arguments = settings.rclone_arguments;
+
+        // Ludusavi rejects a full retention of 0 (its valid range starts at 1), and 1 with
+        // no differentials is exactly "no versioning" — each backup replaces the last.
+        api.config.backup.retention.full = settings.retention_full.max(1);
+        api.config.backup.retention.differential = settings.retention_differential;
 
         if let Ok(lang) = serde_json::from_str::<ludusavi::lang::Language>(&format!("\"{}\"", settings.language)) {
             api.config.language = lang;
@@ -2224,10 +2305,20 @@ fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
 
     let mut archive = tar::Archive::new(decoder);
 
-    // Ensure target directory exists
-    std::fs::create_dir_all(target_dir).map_err(|e| format!("Falha ao criar diretório de destino: {}", e))?;
+    // A game's save location is not always a folder. Plenty of manifest entries point at
+    // a single file — Dolphin's `Cache/gamelist.cache`, for one — and creating a directory
+    // over an existing file is what produced "os error 183: cannot create a file when that
+    // file already exists". When the target is a file, its folder is what we extract into,
+    // which matches how the archive was packed.
+    let extract_root = if target_dir.is_file() {
+        target_dir.parent().unwrap_or(target_dir)
+    } else {
+        target_dir
+    };
 
-    let canonical_target = target_dir
+    std::fs::create_dir_all(extract_root).map_err(|e| format!("Falha ao criar diretório de destino: {}", e))?;
+
+    let canonical_target = extract_root
         .canonicalize()
         .map_err(|e| format!("Falha ao resolver caminho de destino: {}", e))?;
 
@@ -2557,7 +2648,17 @@ pub async fn export_temp_luducard_backup(
                 if rel.starts_with('/') {
                     rel = &rel[1..];
                 }
-                rel.to_string()
+                if rel.is_empty() {
+                    // The save location is the file itself rather than a folder holding it,
+                    // so stripping the prefix leaves nothing behind. Pack it under its own
+                    // name; otherwise the copy below targets the temp folder and fails.
+                    original_abs_path
+                        .file_name()
+                        .map(|f| f.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "save_file".to_string())
+                } else {
+                    rel.to_string()
+                }
             } else {
                 original_abs_path
                     .file_name()
@@ -2697,7 +2798,17 @@ pub async fn export_luducard_backup(
                 if rel.starts_with('/') {
                     rel = &rel[1..];
                 }
-                rel.to_string()
+                if rel.is_empty() {
+                    // The save location is the file itself rather than a folder holding it,
+                    // so stripping the prefix leaves nothing behind. Pack it under its own
+                    // name; otherwise the copy below targets the temp folder and fails.
+                    original_abs_path
+                        .file_name()
+                        .map(|f| f.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "save_file".to_string())
+                } else {
+                    rel.to_string()
+                }
             } else {
                 original_abs_path
                     .file_name()
@@ -3092,7 +3203,17 @@ pub async fn export_temp_luducard_preset(
                 if rel.starts_with('/') {
                     rel = &rel[1..];
                 }
-                rel.to_string()
+                if rel.is_empty() {
+                    // The save location is the file itself rather than a folder holding it,
+                    // so stripping the prefix leaves nothing behind. Pack it under its own
+                    // name; otherwise the copy below targets the temp folder and fails.
+                    file_path
+                        .file_name()
+                        .map(|f| f.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "config_file".to_string())
+                } else {
+                    rel.to_string()
+                }
             } else {
                 file_path
                     .file_name()
@@ -3399,7 +3520,17 @@ pub async fn export_local_preset_archive(
                 if rel.starts_with('/') {
                     rel = &rel[1..];
                 }
-                rel.to_string()
+                if rel.is_empty() {
+                    // The save location is the file itself rather than a folder holding it,
+                    // so stripping the prefix leaves nothing behind. Pack it under its own
+                    // name; otherwise the copy below targets the temp folder and fails.
+                    Path::new(original_path_str)
+                        .file_name()
+                        .map(|f| f.to_string_lossy().to_string())
+                        .unwrap_or_else(|| "config_file".to_string())
+                } else {
+                    rel.to_string()
+                }
             } else {
                 let path = Path::new(original_path_str);
                 path.file_name()

@@ -4,6 +4,19 @@ All notable changes to the **Luducard** project will be documented in this file.
 
 This project is a new application based on the core of Ludosavi. The change history of Luducard starts with this release.
 
+## [0.2.3] - 2026-08-17
+### Added
+- **Save Versioning Settings**: Version history is now configurable in Settings — a switch to turn it off entirely, plus how many complete copies to keep and how many change-only backups to layer on each. Pinned saves are exempt from these limits and kept indefinitely.
+- **Backup Origin Is Recorded**: Each version now stores how it was made — manual, automatic, or quick-save — each with its own label and colour in the timeline.
+
+### Changed
+- **Version History Is On By Default**: Luducard inherited Ludusavi's retention of one complete copy and no differentials, meaning every new backup replaced the previous one: the version list could never hold more than one entry, and pinning a save had nothing to pin. New default is 3 complete copies with 5 change-only backups each, for 18 restore points. Existing installations still on the old setting are migrated once, automatically; anyone who turns versioning off afterwards keeps that choice.
+- **Note Field Always Visible on Saves**: Each version in the timeline now shows its note slot even when empty, so it is discoverable — a pinned save you cannot identify is not much use. Clicking the version still opens the editor.
+
+### Fixed
+- **Installing a Community Save Failed for Games Whose Save Is a Single File**: The importer assumed a game's save location is always a folder, so for the many games that point at one file — Dolphin's `gamelist.cache`, among others — it tried to create a directory over an existing file and failed with "os error 183". Exporting was broken the same way, in four separate copies of the same logic.
+- **Manual Backups Labelled "Automatic"**: The label was derived from whether a backup was pinned rather than from how it was created, because nothing recorded the origin. Every unpinned backup claimed to be automatic, including ones made by clicking "Back up now".
+
 ## [0.2.2] - 2026-08-17
 ### Added
 - **Full Interface Localization**: Roughly 260 further interface strings were moved into the translation files, covering the Save Share Hub, the Preset Hub, the game details screen, settings, the first-run setup wizard, the save conflict dialog, and the scan progress phases. Preset and checkpoint tag descriptions are translated as well. Available in English, Portuguese, Spanish, Russian, and Simplified Chinese, with partial German. Every translation key referenced by the interface now exists — none fall back to hardcoded text.

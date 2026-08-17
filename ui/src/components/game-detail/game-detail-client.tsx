@@ -16,6 +16,7 @@ import {
   FolderSync,
   Package,
   Pin,
+  StickyNote,
   Share2,
   FileArchive,
   X,
@@ -52,6 +53,9 @@ import {
 import { fetchHubRows, describeHubError, type HubFetchError } from "@/lib/hub-fetch"
 
 const kindColors: Record<BackupKind | string, string> = {
+  auto: "text-primary",
+  manual: "text-sky-300",
+  quick: "text-amber-300",
   "Automático": "text-primary",
   Manual: "text-sky-300",
   "Antes de fechar": "text-amber-300",
@@ -1434,12 +1438,20 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                               <span>{formatSize(b.sizeMB)}</span>
                             </div>
                             
-                            {/* Note preview */}
-                            {b.note && (
-                              <p className="mt-0.5 line-clamp-1 text-[10px] italic text-muted-foreground/80 bg-primary/5 rounded px-2 py-0.5 border border-primary/10 w-fit">
-                                "{b.note}"
-                              </p>
-                            )}
+                            {/* Always shown, empty included: an invisible field is a field
+                                nobody knows exists, and a version you pinned is useless if
+                                you cannot tell what it was. Clicking the row opens the editor. */}
+                            <p
+                              className={cn(
+                                "mt-0.5 line-clamp-1 flex w-fit items-center gap-1.5 rounded border px-2 py-0.5 text-[10px]",
+                                b.note
+                                  ? "border-primary/10 bg-primary/5 italic text-muted-foreground/80"
+                                  : "border-dashed border-border/60 text-muted-foreground/50"
+                              )}
+                            >
+                              <StickyNote className="size-2.5 shrink-0" />
+                              {b.note ? `"${b.note}"` : t("luducard-add-version-note", "Add a note...")}
+                            </p>
                           </div>
                         </div>
                         <div 

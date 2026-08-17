@@ -46,11 +46,17 @@ export const getAuthorLabel = (t: Translate, name?: string | null): string =>
     : name
 
 /**
- * Backup `kind` arrives from the backend as a Portuguese string (see commands.rs) and is
- * also the lookup key for the timeline colours, so the wire value is left alone and only
- * the displayed label is translated. Unknown kinds fall through unchanged.
+ * Backup `kind` is a stable wire value from the backend, also used as the lookup key for
+ * the timeline colours, so it is never translated on the wire — only the label is.
+ *
+ * "manual"/"auto"/"quick" are what the backend records now (see record_latest_backup_kind
+ * in commands.rs). The Portuguese entries are legacy values still sitting in existing
+ * luducard.json files and in backups made before the origin was recorded at all.
  */
 const BACKUP_KIND_KEYS: Record<string, [string, string]> = {
+  manual: ["luducard-backup-kind-manual", "Manual"],
+  auto: ["luducard-backup-kind-automatic", "Automatic"],
+  quick: ["luducard-backup-kind-quick", "Quick-save"],
   "Automático": ["luducard-backup-kind-automatic", "Automatic"],
   Manual: ["luducard-backup-kind-manual", "Manual"],
   "Manual (Bloqueado)": ["luducard-backup-kind-manual-locked", "Manual (Locked)"],
