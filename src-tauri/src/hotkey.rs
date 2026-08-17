@@ -1,6 +1,6 @@
 //! Global Hotkey Module for Quick-Save Manual Feature.
 //!
-//! Registers a global shortcut (default Ctrl+Shift+S) on Windows.
+//! Registers a global shortcut (default Ctrl+Alt+S) on Windows.
 //! When pressed, it detects the active foreground window, finds the corresponding game,
 //! and runs a silent backup.
 #![cfg_attr(not(target_os = "windows"), allow(dead_code, unused_variables))]
@@ -26,21 +26,44 @@ static HOTKEY_SENDER: LazyLock<Mutex<Option<Sender<HotkeyControl>>>> = LazyLock:
 
 static HOTKEY_THREAD_ID: LazyLock<Mutex<Option<u32>>> = LazyLock::new(|| Mutex::new(None));
 
+/// Default quick-save shortcut.
+///
+/// Ctrl+Alt rather than Ctrl+Shift: this is a *global* hotkey, so it must not collide
+/// with whatever has focus. Ctrl+Shift+S is "Save As" in a large number of applications.
+pub const DEFAULT_SHORTCUT: &str = "Ctrl+Alt+S";
+
+/// The shortcut shipped as the default before [`DEFAULT_SHORTCUT`]. Configs still holding
+/// this value are migrated once on load — see [`load_quick_save_settings`].
+const LEGACY_DEFAULT_SHORTCUT: &str = "Ctrl+Shift+S";
+
 /// Loads quick-save settings from luducard.json.
+///
+/// Configs left on the old default are rewritten to [`DEFAULT_SHORTCUT`] and persisted, so
+/// the migration happens exactly once — a user who deliberately picks Ctrl+Shift+S afterwards
+/// keeps it.
 pub fn load_quick_save_settings(app_data_dir: &Path) -> (bool, String) {
     let config_path = app_data_dir.join("luducard.json");
     if let Ok(content) = std::fs::read_to_string(&config_path)
         && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content)
     {
         let enabled = json.get("quick_save_enabled").and_then(|v| v.as_bool()).unwrap_or(true);
-        let shortcut = json
-            .get("quick_save_shortcut")
-            .and_then(|v| v.as_str())
-            .unwrap_or("Ctrl+Shift+S")
-            .to_string();
-        return (enabled, shortcut);
+        let stored = json.get("quick_save_shortcut").and_then(|v| v.as_str());
+
+        return match stored {
+            Some(LEGACY_DEFAULT_SHORTCUT) => {
+                log::info!(
+                    "[Hotkey] Migrating quick-save shortcut from {} to {}",
+                    LEGACY_DEFAULT_SHORTCUT,
+                    DEFAULT_SHORTCUT
+                );
+                save_quick_save_settings(app_data_dir, enabled, DEFAULT_SHORTCUT);
+                (enabled, DEFAULT_SHORTCUT.to_string())
+            }
+            Some(shortcut) => (enabled, shortcut.to_string()),
+            None => (enabled, DEFAULT_SHORTCUT.to_string()),
+        };
     }
-    (true, "Ctrl+Shift+S".to_string())
+    (true, DEFAULT_SHORTCUT.to_string())
 }
 
 /// Saves quick-save settings to luducard.json.
@@ -57,7 +80,7 @@ pub fn save_quick_save_settings(app_data_dir: &Path, enabled: bool, shortcut: &s
     let _ = std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
 }
 
-/// Parses a shortcut string like "Ctrl+Shift+S" into (modifiers, vk).
+/// Parses a shortcut string like "Ctrl+Alt+S" into (modifiers, vk).
 pub fn parse_shortcut(shortcut: &str) -> Option<(u32, u32)> {
     let parts = shortcut.split('+');
     let mut modifiers = 0;
@@ -341,13 +364,15 @@ fn backup_game_silent(game_title: &str) -> Result<(), String> {
 pub fn trigger_quick_save(app: &tauri::AppHandle) {
     #[cfg(target_os = "windows")]
     {
+        use ludusavi::lang::TRANSLATOR;
+
         let exe_path = match get_foreground_process_path() {
             Some(path) => path,
             None => {
                 log::warn!("[Hotkey] Could not determine foreground process path.");
                 crate::watcher::show_notification(
-                    "Luducard - Quick-Save",
-                    "Não foi possível detectar o jogo em primeiro plano.",
+                    &TRANSLATOR.notify_quick_save_title(),
+                    &TRANSLATOR.notify_quick_save_no_game(),
                 );
                 return;
             }
@@ -362,16 +387,16 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
                 Ok(()) => {
                     log::info!("[Hotkey] Quick-save successful for game: {}", game_title);
                     crate::watcher::show_notification(
-                        "Luducard - Quick-Save Manual",
-                        &format!("Backup do jogo \"{}\" salvo com sucesso! ✅", game_title),
+                        &TRANSLATOR.notify_quick_save_done_title(),
+                        &TRANSLATOR.notify_quick_save_done(&game_title),
                     );
                     play_notification_sound();
                 }
                 Err(e) => {
                     log::error!("[Hotkey] Quick-save failed for game: {}. Error: {}", game_title, e);
                     crate::watcher::show_notification(
-                        "Luducard - Falha no Quick-Save",
-                        &format!("Erro ao fazer backup de \"{}\": {}", game_title, e),
+                        &TRANSLATOR.notify_quick_save_failed_title(),
+                        &TRANSLATOR.notify_quick_save_failed(&game_title, &e),
                     );
                 }
             }
@@ -379,18 +404,17 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
             let file_name = exe_path
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_else(|| "Desconhecido".to_string());
+                // No file name to show: fall back to the full path rather than a
+                // translated "Unknown", which would tell the user nothing.
+                .unwrap_or_else(|| exe_path.to_string_lossy().into_owned());
 
             log::warn!(
                 "[Hotkey] Executable '{:?}' did not match any registered game.",
                 exe_path
             );
             crate::watcher::show_notification(
-                "Luducard - Quick-Save",
-                &format!(
-                    "O executável em primeiro plano ({}) não corresponde a nenhum jogo cadastrado.",
-                    file_name
-                ),
+                &TRANSLATOR.notify_quick_save_title(),
+                &TRANSLATOR.notify_quick_save_unmatched(&file_name),
             );
         }
     }

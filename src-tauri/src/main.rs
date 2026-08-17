@@ -8,6 +8,46 @@ pub mod emulator;
 pub mod hotkey;
 pub mod watcher;
 
+/// Id of the tray icon, so it can be looked up again after creation.
+const TRAY_ID: &str = "main";
+
+/// Builds the tray menu in the current language.
+fn build_tray_menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let show_i = tauri::menu::MenuItemBuilder::with_id("show", ludusavi::lang::TRANSLATOR.tray_show()).build(app)?;
+    let quit_i = tauri::menu::MenuItemBuilder::with_id("quit", ludusavi::lang::TRANSLATOR.tray_quit()).build(app)?;
+
+    tauri::menu::MenuBuilder::new(app).items(&[&show_i, &quit_i]).build()
+}
+
+/// Rebuilds the tray menu so its labels follow the language the user just picked.
+///
+/// The menu is created once at startup, so without this the tray would keep the old
+/// language until the app restarted. Menu objects must be touched on the main thread,
+/// hence the hop — callers are Tauri commands running on a worker.
+pub fn refresh_tray_menu(app: &tauri::AppHandle) {
+    let app = app.clone();
+
+    let result = app.clone().run_on_main_thread(move || {
+        let Some(tray) = app.tray_by_id(TRAY_ID) else {
+            log::warn!("[Tray] No tray icon to refresh.");
+            return;
+        };
+
+        match build_tray_menu(&app) {
+            Ok(menu) => {
+                if let Err(e) = tray.set_menu(Some(menu)) {
+                    log::warn!("[Tray] Could not apply the rebuilt menu: {e}");
+                }
+            }
+            Err(e) => log::warn!("[Tray] Could not rebuild the menu: {e}"),
+        }
+    });
+
+    if let Err(e) = result {
+        log::warn!("[Tray] Could not reach the main thread to refresh the menu: {e}");
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -18,7 +58,33 @@ fn main() {
             }
         }))
         .plugin(tauri_plugin_shell::init())
+        // Remember the window's size, position and maximized state between launches.
+        //
+        // VISIBLE is deliberately left out of the flags: this app hides its window to the
+        // tray instead of closing, so the last saved visibility is usually "hidden" — and
+        // restoring that would launch the app into an invisible window. Whether the window
+        // shows on start is decided below, by the `--minimized` argument.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::SIZE
+                        | tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED,
+                )
+                .build(),
+        )
         .setup(|app| {
+            // Apply the saved language before building anything user-visible. The tray menu
+            // and the background notifications are produced on the Rust side, and nothing
+            // else calls `set_language` until the user opens the settings screen — so
+            // without this the toasts would stay English on every launch.
+            if let Ok(config) = ludusavi::resource::config::Config::load() {
+                ludusavi::lang::TRANSLATOR.set_language(config.language);
+            }
+
+            // Claim our notification identity before anything can send a toast.
+            watcher::register_toast_app_id();
+
             // Check command line arguments for minimized start
             let args: Vec<String> = std::env::args().collect();
             let start_minimized = args.contains(&"--minimized".to_string()) || args.contains(&"-m".to_string());
@@ -28,17 +94,11 @@ fn main() {
                 let _ = window.set_focus();
             }
 
-            // 1. Create Tray Menu Items
-            let quit_i = tauri::menu::MenuItemBuilder::with_id("quit", "Sair do Luducard").build(app)?;
-            let show_i = tauri::menu::MenuItemBuilder::with_id("show", "Exibir Janela").build(app)?;
-
-            // 2. Build the Menu
-            let menu = tauri::menu::MenuBuilder::new(app).items(&[&show_i, &quit_i]).build()?;
-
-            // 3. Build the Tray Icon
-            let _tray = tauri::tray::TrayIconBuilder::new()
+            // 1. Build the Tray Icon. It carries an id so the menu can be rebuilt later
+            // when the user changes language — see `refresh_tray_menu`.
+            let _tray = tauri::tray::TrayIconBuilder::with_id(TRAY_ID)
                 .icon(app.default_window_icon().unwrap().clone())
-                .menu(&menu)
+                .menu(&build_tray_menu(app.handle())?)
                 .show_menu_on_left_click(false) // Right-click will show the menu
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "quit" => {
@@ -118,8 +178,8 @@ fn main() {
                                 std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
 
                             watcher::show_notification(
-                                "Luducard em segundo plano",
-                                "O aplicativo foi minimizado para a bandeja do sistema.",
+                                &ludusavi::lang::TRANSLATOR.notify_tray_title(),
+                                &ludusavi::lang::TRANSLATOR.notify_tray_body(),
                             );
                         }
                     }

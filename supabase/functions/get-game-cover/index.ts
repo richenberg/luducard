@@ -53,8 +53,11 @@ serve(async (req) => {
 
     console.log(`Cache MISS for "${cleanTitle}". Querying SteamGridDB...`);
 
-    // Search game ID
-    const searchUrl = `https://www.steamgriddb.com/api/v2/search/autocomplete?term=${encodeURIComponent(cleanTitle)}`
+    // Search game ID.
+    // The term goes in the path, not in a `?term=` query string: the query form is not a
+    // route SteamGridDB serves, so it answered 404 for every title and no cover resolved
+    // by name ever worked.
+    const searchUrl = `https://www.steamgriddb.com/api/v2/search/autocomplete/${encodeURIComponent(cleanTitle)}`
     const searchResp = await fetch(searchUrl, {
       headers: {
         'Authorization': `Bearer ${steamgridApiKey}`

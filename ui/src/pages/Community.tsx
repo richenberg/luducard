@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Globe,
   Database,
+  CloudOff,
   X,
   FileCheck,
 } from "lucide-react"
@@ -21,10 +22,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { useLibrary } from "@/lib/library-context"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
+import { ANONYMOUS_AUTHOR_ID, getAuthorLabel } from "@/lib/preset-tags"
+import { fetchHubRows, describeHubError, type HubFetchError } from "@/lib/hub-fetch"
+import { useHubCovers, coverKey } from "@/lib/hub-covers"
 
 const isTauri =
   typeof window !== "undefined" &&
@@ -36,23 +40,23 @@ interface TagInfo {
 }
 
 const getPredefinedTags = (t: any): TagInfo[] => [
-  { name: "100%", description: t("luducard-tag-desc-100", "Jogo 100% concluído com todas as conquistas, itens e colecionáveis liberados.") },
-  { name: "DLC1", description: t("luducard-tag-desc-dlc1", "Progresso focado ou pronto para iniciar a primeira DLC do jogo.") },
-  { name: "DLC2", description: t("luducard-tag-desc-dlc2", "Progresso focado ou pronto para iniciar a segunda DLC do jogo.") },
-  { name: "New Game+", description: t("luducard-tag-desc-ngplus", "Jogo pronto para iniciar ou já iniciado no modo Novo Jogo+.") },
-  { name: "Vanilla", description: t("luducard-tag-desc-vanilla", "Progresso do jogo base totalmente limpo, sem modificadores, mods ou trapaças.") },
-  { name: "Modded", description: t("luducard-tag-desc-modded", "Progresso obtido utilizando modificações (mods) que podem alterar a gameplay.") },
-  { name: "Boss Prep", description: t("luducard-tag-desc-bossprep", "Save posicionado estrategicamente logo antes de um chefe importante do jogo.") },
-  { name: "Starter", description: t("luducard-tag-desc-starter", "Save no início do jogo, com recursos acumulados ou com tutorial pulado.") },
-  { name: "Clean Start", description: t("luducard-tag-desc-cleanstart", "Savegame logo após a criação de personagem ou introdução, pronto para jogar direto do início real.") },
-  { name: "Mid-Game", description: t("luducard-tag-desc-midgame", "Save posicionado no meio da campanha principal (ótimo para quem perdeu o progresso).") },
-  { name: "Post-Game", description: t("luducard-tag-desc-postgame", "Campanha concluída, ideal para exploração de bosses secretos, conquistas pendentes ou atividades secundárias.") },
-  { name: "OP Build", description: t("luducard-tag-desc-opbuild", "Savegame focado em um personagem com equipamentos, nível e builds extremamente fortes (Overpowered).") },
-  { name: "Unlimited Cash", description: t("luducard-tag-desc-unlimitedcash", "Save focado em ter dinheiro, moedas ou recursos de upgrades máximos ou infinitos.") },
-  { name: "All Collectibles", description: t("luducard-tag-desc-allcollectibles", "Save com foco em conquistas secundárias e colecionáveis cansativos totalmente liberados.") },
-  { name: "Hardcore", description: t("luducard-tag-desc-hardcore", "Saves em dificuldades extremas ou com morte permanente ativada (sobrevivência extrema).") },
-  { name: "Speedrun Ready", description: t("luducard-tag-desc-speedrunready", "Save ideal para treinar trechos de speedruns ou posicionado nas rotas mais rápidas.") },
-  { name: "Legit", description: t("luducard-tag-desc-legit", "Progresso obtido de forma limpa, sem cheats, códigos de trapaça ou aproveitamento de bugs (glitches).") }
+  { name: "100%", description: t("luducard-tag-desc-100", "Game 100% completed with all achievements, items and collectibles unlocked.") },
+  { name: "DLC1", description: t("luducard-tag-desc-dlc1", "Progress focused on or ready to start the first DLC.") },
+  { name: "DLC2", description: t("luducard-tag-desc-dlc2", "Progress focused on or ready to start the second DLC.") },
+  { name: "New Game+", description: t("luducard-tag-desc-ngplus", "Game ready to start or already started in New Game+ mode.") },
+  { name: "Vanilla", description: t("luducard-tag-desc-vanilla", "Base game progress completely clean, without modifiers, mods or cheats.") },
+  { name: "Modded", description: t("luducard-tag-desc-modded", "Progress obtained using modifications (mods) that can alter gameplay.") },
+  { name: "Boss Prep", description: t("luducard-tag-desc-bossprep", "Save strategically positioned right before a major game boss.") },
+  { name: "Starter", description: t("luducard-tag-desc-starter", "Save at the beginning of the game, with accumulated resources or skipped tutorial.") },
+  { name: "Clean Start", description: t("luducard-tag-desc-cleanstart", "Savegame right after character creation or introduction, ready to play straight from the real start.") },
+  { name: "Mid-Game", description: t("luducard-tag-desc-midgame", "Save positioned in the middle of the main campaign (great for those who lost progress).") },
+  { name: "Post-Game", description: t("luducard-tag-desc-postgame", "Campaign completed, ideal for exploring secret bosses, pending achievements or side activities.") },
+  { name: "OP Build", description: t("luducard-tag-desc-opbuild", "Savegame focused on a character with extremely strong equipment, level and builds (Overpowered).") },
+  { name: "Unlimited Cash", description: t("luducard-tag-desc-unlimitedcash", "Save focused on having max or infinite cash, coins or upgrade resources.") },
+  { name: "All Collectibles", description: t("luducard-tag-desc-allcollectibles", "Save focusing on secondary achievements and tedious collectibles fully unlocked.") },
+  { name: "Hardcore", description: t("luducard-tag-desc-hardcore", "Saves in extreme difficulties or with permanent death enabled (extreme survival).") },
+  { name: "Speedrun Ready", description: t("luducard-tag-desc-speedrunready", "Save ideal for training speedrun segments or positioned on the fastest routes.") },
+  { name: "Legit", description: t("luducard-tag-desc-legit", "Progress obtained cleanly, without cheats, cheat codes or exploiting bugs (glitches).") }
 ]
 
 interface CommunityCheckpoint {
@@ -83,11 +87,11 @@ function formatRelativeDate(isoDate: string, t: any): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return t("luducard-date-today", "Hoje")
-  if (diffDays === 1) return t("luducard-date-yesterday", "Ontem")
-  if (diffDays < 7) return `${diffDays} ${t("luducard-date-days-ago", "dias atrás")}`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} ${t("luducard-date-weeks-ago", "semanas atrás")}`
-  return date.toLocaleDateString(t("luducard-date-locale", "pt-BR"), { day: "2-digit", month: "short", year: "numeric" })
+  if (diffDays === 0) return t("luducard-date-today", "Today")
+  if (diffDays === 1) return t("luducard-date-yesterday", "Yesterday")
+  if (diffDays < 7) return `${diffDays} ${t("luducard-date-days-ago", "days ago")}`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} ${t("luducard-date-weeks-ago", "weeks ago")}`
+  return date.toLocaleDateString(t("luducard-date-locale", "en-US"), { day: "2-digit", month: "short", year: "numeric" })
 }
 
 export default function Community() {
@@ -95,9 +99,13 @@ export default function Community() {
   const { games } = useLibrary()
   const PREDEFINED_TAGS = getPredefinedTags(t)
 
+  const authorLabel = (name?: string | null) => getAuthorLabel(t, name)
+
   // Search, sort, checkpoints
   const [checkpoints, setCheckpoints] = useState<CommunityCheckpoint[]>([])
   const [loading, setLoading] = useState(true)
+  /** Non-null when the last load failed, so an outage never renders as an empty hub. */
+  const [loadError, setLoadError] = useState<HubFetchError | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortMode, setSortMode] = useState<SortMode>("popular")
   const [importing, setImporting] = useState<string | null>(null)
@@ -123,9 +131,27 @@ export default function Community() {
   // Modal Detail State
   const [selectedDetailCheckpoint, setSelectedDetailCheckpoint] = useState<CommunityCheckpoint | null>(null)
 
+  /**
+   * Games offerable in the share dialog. Must stay below the state declarations it reads —
+   * `filter` runs its callback synchronously, so hoisting this above `gameSearchQuery`
+   * throws on the temporal dead zone.
+   *
+   * Keyed off backups, not `installed`: what gets uploaded is a backup (see
+   * `export_temp_luducard_backup` below, which only needs backupPath/backupId/savePath),
+   * and sharing a save is exactly what you do for a game you have since uninstalled.
+   * `installed` additionally requires the install dir to sit under a configured root and
+   * hold an executable, which excluded games that have perfectly shareable backups.
+   */
+  const shareableGames = games.filter(
+    g =>
+      g.backups.length > 0 &&
+      (!gameSearchQuery || g.title.toLowerCase().includes(gameSearchQuery.toLowerCase()))
+  )
+
   // Load Settings and Data
   const loadConfigAndData = async () => {
     setLoading(true)
+    setLoadError(null)
     if (!isTauri) {
       // Offline/Browser mock mode fallback
       setSupabaseUrl("mock")
@@ -169,15 +195,10 @@ export default function Community() {
         localStorage.setItem("luducard_supabase_configured", "true")
 
         // Fetch public saves from Supabase
-        const response = await fetch(`${url}/rest/v1/public_saves?select=*`, {
-          headers: {
-            "apikey": key,
-            "Authorization": `Bearer ${key}`
-          }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          const mapped = data.map((item: any) => ({
+        const result = await fetchHubRows(`${url}/rest/v1/public_saves?select=*`, key)
+
+        if (result.ok) {
+          const mapped = result.rows.map((item: any) => ({
             id: item.id,
             gameName: item.game_name,
             title: item.title,
@@ -185,13 +206,18 @@ export default function Community() {
             r2Path: item.r2_path,
             fileSize: Number(item.file_size || 0),
             description: item.description || "",
-            authorName: item.author_name || "Anônimo",
+            authorName: item.author_name || "",
             userUuid: item.user_uuid,
             downloadsCount: Number(item.downloads_count || 0),
             createdAt: item.created_at,
             tags: item.tags || []
           }))
           setCheckpoints(mapped)
+        } else {
+          console.error("Failed to load public_saves:", result.error)
+          setCheckpoints([])
+          setLoadError(result.error)
+          toast.error(describeHubError(t, result.error).title)
         }
       } else {
         setIsConfigured(false)
@@ -199,7 +225,7 @@ export default function Community() {
       }
     } catch (err) {
       console.error("Error reading configuration:", err)
-      toast.error("Erro de conexão com o backend do app.")
+      toast.error(t("luducard-toast-backend-connection-error", "Connection error with the app backend."))
     } finally {
       setLoading(false)
     }
@@ -241,11 +267,25 @@ export default function Community() {
     return 0
   })
 
+  /**
+   * Titles the local library cannot cover. Most of the hub is games the viewer does not
+   * own, so these are resolved remotely by title — see `useHubCovers`.
+   */
+  const uncoveredTitles = checkpoints
+    .map((cp) => cp.gameName)
+    .filter(
+      (gameName) =>
+        !games.some((g) => g.title.toLowerCase() === gameName.toLowerCase() && g.cover)
+    )
+
+  const remoteCovers = useHubCovers(uncoveredTitles, supabaseUrl, supabaseAnonKey)
+
   const getGameCover = (gameName: string): string => {
     const match = games.find(
       (g) => g.title.toLowerCase() === gameName.toLowerCase()
     )
-    return match?.cover || "/placeholder.svg"
+    // Prefer the local copy: already on disk, and works offline.
+    return match?.cover || remoteCovers[coverKey(gameName)] || "/placeholder.svg"
   }
 
   // Install Checkpoint Save
@@ -269,7 +309,7 @@ export default function Community() {
       })
 
       if (!edgeRes.ok) {
-        throw new Error(`Falha ao obter URL de download: ${edgeRes.statusText}`)
+        throw new Error(`${t("luducard-error-get-download-url-failed-2", "Failed to get download URL")}: ${edgeRes.statusText}`)
       }
 
       const { downloadUrl } = await edgeRes.json()
@@ -281,14 +321,14 @@ export default function Community() {
 
       if (!matchedGame?.savePath) {
         toast.error(
-          `Jogo "${checkpoint.gameName}" não encontrado na sua biblioteca local ou sem pasta de saves configurada.`,
+          `${t("luducard-game-label", "Game")} "${checkpoint.gameName}" ${t("luducard-error-game-not-found", "not found in your local library, or it has no save folder configured.")}`,
           { id: toastId }
         )
         setImporting(null)
         return
       }
 
-      toast.loading(`Baixando e instalando checkpoint... O Seguro-Crash criará um backup automático.`, { id: toastId })
+      toast.loading(t("luducard-toast-downloading-checkpoint", "Downloading and installing checkpoint... Safe-Crash will create an automatic backup."), { id: toastId })
 
       // Step 3: Run Rust download + import command
       await invoke("download_and_import_luducard", {
@@ -308,13 +348,13 @@ export default function Community() {
       })
 
       toast.success(
-        `Checkpoint "${checkpoint.title}" instalado com sucesso! Backup do save anterior guardado no histórico.`,
+        `${t("luducard-checkpoint-label", "Checkpoint")} "${checkpoint.title}" ${t("luducard-toast-checkpoint-installed", "installed successfully! The previous save was backed up to history.")}`,
         { id: toastId }
       )
       loadConfigAndData()
     } catch (err) {
       console.error(err)
-      toast.error(`Falha ao baixar/instalar checkpoint: ${err}`)
+      toast.error(`${t("luducard-toast-install-checkpoint-failed", "Failed to download/install checkpoint")}: ${err}`)
     } finally {
       setImporting(null)
     }
@@ -324,7 +364,7 @@ export default function Community() {
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedGameId || !selectedBackupId || !checkpointTitle) {
-      toast.error("Por favor, preencha todos os campos obrigatórios.")
+      toast.error(t("luducard-toast-fill-required-fields-cm", "Please fill in all required fields."))
       return
     }
 
@@ -351,7 +391,7 @@ export default function Community() {
       const fileSize = tempSaveInfo.fileSize
       const fileName = tempSaveInfo.fileName
 
-      toast.loading("Solicitando permissão de upload seguro na nuvem...", { id: toastId })
+      toast.loading(t("luducard-toast-requesting-cloud-upload-permission", "Requesting secure cloud upload permission..."), { id: toastId })
 
       const edgeRes = await fetch(`${supabaseUrl}/functions/v1/get-upload-url`, {
         method: "POST",
@@ -370,7 +410,7 @@ export default function Community() {
 
       if (!edgeRes.ok) {
         const errData = await edgeRes.json().catch(() => ({}))
-        throw new Error(errData.error || `Erro de cota/limite de armazenamento na nuvem.`);
+        throw new Error(errData.error || t("luducard-error-cloud-storage-quota-limit", "Cloud storage quota/limit error."));
       }
 
       const { uploadUrl, r2Path } = await edgeRes.json()
@@ -382,7 +422,7 @@ export default function Community() {
         uploadUrl: uploadUrl,
       })
 
-      toast.loading("Publicando metadados no repositório público...", { id: toastId })
+      toast.loading(t("luducard-toast-publishing-to-public-repo", "Publishing metadata to the public repository..."), { id: toastId })
 
       const dbRes = await fetch(`${supabaseUrl}/rest/v1/public_saves`, {
         method: "POST",
@@ -399,7 +439,7 @@ export default function Community() {
           r2_path: r2Path,
           file_size: fileSize,
           description: checkpointDesc,
-          author_name: authorName || "Anônimo",
+          author_name: authorName || ANONYMOUS_AUTHOR_ID,
           user_uuid: clientUuid,
           tags: selectedUploadTags,
         })
@@ -408,9 +448,9 @@ export default function Community() {
       if (!dbRes.ok) {
         const errText = await dbRes.text()
         if (errText.includes("enforce_user_save_quota_trigger")) {
-          throw new Error("Você já atingiu o limite de 5 checkpoints ativos na nuvem.")
+          throw new Error(t("luducard-error-checkpoint-cloud-limit", "You have already reached the limit of 5 active checkpoints in the cloud."))
         }
-        throw new Error(`Falha ao registrar checkpoint no banco: ${errText}`)
+        throw new Error(`${t("luducard-error-register-checkpoint-failed", "Failed to register checkpoint in the database")}: ${errText}`)
       }
 
       toast.success("Checkpoint compartilhado na comunidade com sucesso!", { id: toastId })
@@ -427,7 +467,7 @@ export default function Community() {
       loadConfigAndData()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || `Erro ao publicar: ${err}`)
+      toast.error(err.message || `${t("luducard-toast-publish-failed", "Error publishing")}: ${err}`)
     } finally {
       if (tempZipPath && isTauri) {
         const { invoke } = await import("@tauri-apps/api/core")
@@ -440,12 +480,12 @@ export default function Community() {
   return (
     <AppShell
       title={t("luducard-community-title", "Save Share HUB")}
-      description={t("luducard-community-desc", "Compartilhe e baixe checkpoints de saves da comunidade")}
+      description={t("luducard-community-desc", "Share and download community save checkpoints")}
       actions={
         isConfigured && (
           <Button size="sm" onClick={() => setIsShareModalOpen(true)}>
             <Upload data-icon="inline-start" />
-            {t("luducard-btn-share-checkpoint", "Compartilhar Checkpoint")}
+            {t("luducard-btn-share-checkpoint", "Share Checkpoint")}
           </Button>
         )
       }
@@ -456,9 +496,9 @@ export default function Community() {
             <Database className="size-6 animate-pulse" />
           </div>
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-bold">{t("luducard-repo-disconnected", "Repositório Comunitário Desconectado")}</h2>
+            <h2 className="text-lg font-bold">{t("luducard-repo-disconnected", "Community Repository Disconnected")}</h2>
             <p className="text-sm text-muted-foreground">
-              {t("luducard-repo-disconnected-desc", "Não foi possível conectar ao repositório comunitário. Verifique sua conexão com a internet.")}
+              {t("luducard-repo-disconnected-desc", "To load community checkpoints and share yours, you need to configure your Supabase URL and public Anon Key in Settings.")}
             </p>
           </div>
         </div>
@@ -484,7 +524,7 @@ export default function Community() {
                   {new Set(checkpoints.map(c => c.userUuid)).size}
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  {t("luducard-contributors", "Contribuidores")}
+                  {t("luducard-contributors", "Contributors")}
                 </span>
               </div>
             </div>
@@ -496,11 +536,22 @@ export default function Community() {
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="community-search"
-                placeholder={t("luducard-search-placeholder", "Buscar por jogo ou checkpoint...")}
-                className="pl-9"
+                placeholder={t("luducard-search-placeholder", "Search by game or checkpoint...")}
+                className={cn("pl-9", searchQuery && "pr-9")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label={t("luducard-clear-search", "Clear search")}
+                  title={t("luducard-clear-search", "Clear search")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -517,7 +568,7 @@ export default function Community() {
                 onClick={() => setSortMode("recent")}
               >
                 <Clock className="size-3.5" data-icon="inline-start" />
-                {t("luducard-sort-recent-hub", "Recentes")}
+                {t("luducard-sort-recent-hub", "Recent")}
               </Button>
               <Button
                 variant={sortMode === "size" ? "secondary" : "ghost"}
@@ -525,7 +576,7 @@ export default function Community() {
                 onClick={() => setSortMode("size")}
               >
                 <Package className="size-3.5" data-icon="inline-start" />
-                {t("luducard-sort-size-hub", "Tamanho")}
+                {t("luducard-sort-size-hub", "Size")}
               </Button>
             </div>
           </div>
@@ -534,8 +585,24 @@ export default function Community() {
           {loading ? (
             <div className="flex h-[300px] flex-col items-center justify-center gap-2">
               <RefreshCw className="size-7 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">{t("luducard-syncing-repo", "Sincronizando com o repositório público...")}</span>
+              <span className="text-sm text-muted-foreground">{t("luducard-syncing-repo", "Syncing with the public repository...")}</span>
             </div>
+          ) : loadError ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon" className="bg-red-500/10 text-red-400">
+                  <CloudOff />
+                </EmptyMedia>
+                <EmptyTitle>{describeHubError(t, loadError).title}</EmptyTitle>
+                <EmptyDescription>{describeHubError(t, loadError).description}</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button variant="secondary" size="sm" onClick={loadConfigAndData}>
+                  <RefreshCw className="size-3.5" data-icon="inline-start" />
+                  {t("luducard-btn-try-again", "Try again")}
+                </Button>
+              </EmptyContent>
+            </Empty>
           ) : sortedCheckpoints.length === 0 ? (
             <Empty>
               <EmptyHeader>
@@ -543,10 +610,10 @@ export default function Community() {
                   <Globe />
                 </EmptyMedia>
                 <EmptyTitle>
-                  {searchQuery ? t("luducard-no-checkpoints-found", "Nenhum checkpoint encontrado") : t("luducard-no-checkpoints-available", "Nenhum checkpoint disponível")}
+                  {searchQuery ? t("luducard-no-checkpoints-found", "No checkpoints found") : t("luducard-no-checkpoints-available", "No checkpoints available")}
                 </EmptyTitle>
                 <EmptyDescription>
-                  {searchQuery ? t("luducard-search-terms-desc", "Tente buscar com outros termos.") : t("luducard-be-first-desc", "Seja o primeiro a compartilhar um save da comunidade!")}
+                  {searchQuery ? t("luducard-search-terms-desc", "Try searching with other terms.") : t("luducard-be-first-desc", "Be the first to share a community save!")}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -602,7 +669,7 @@ export default function Community() {
                         </div>
 
                         <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground mt-0.5">
-                          {cp.description || t("luducard-no-desc-provided", "Nenhuma descrição detalhada fornecida.")}
+                          {cp.description || t("luducard-no-desc-provided", "No detailed description provided.")}
                         </p>
 
                         {/* Meta row */}
@@ -613,10 +680,10 @@ export default function Community() {
                           </Badge>
                           <Badge variant="outline" className="text-[10px]">
                             <Download className="mr-1 size-2.5" />
-                            {cp.downloadsCount.toLocaleString(t("luducard-date-locale", "pt-BR"))}
+                            {cp.downloadsCount.toLocaleString(t("luducard-date-locale", "en-US"))}
                           </Badge>
                           <span className="text-[10px] text-muted-foreground">
-                            {t("luducard-author-by", "por")} <strong className="text-foreground">{cp.authorName}</strong> â€¢ {formatRelativeDate(cp.createdAt, t)}
+                            {t("luducard-author-by", "by")} <strong className="text-foreground">{authorLabel(cp.authorName)}</strong> • {formatRelativeDate(cp.createdAt, t)}
                           </span>
                         </div>
                       </div>
@@ -626,7 +693,7 @@ export default function Community() {
                     <div className="flex items-center justify-between border-t border-border bg-muted/30 px-4 py-2">
                       <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                         <FileCheck className="size-3 text-emerald-400" />
-                        <span>{t("luducard-zstd-verified", "Contém metadados zstd verificados")}</span>
+                        <span>{t("luducard-zstd-verified", "Contains verified zstd metadata")}</span>
                       </span>
                       <Button
                         size="sm"
@@ -637,12 +704,12 @@ export default function Community() {
                         {importing === cp.id ? (
                           <>
                             <RefreshCw className="size-3 animate-spin" data-icon="inline-start" />
-                            {t("luducard-btn-installing", "Instalando...")}
+                            {t("luducard-btn-installing", "Installing...")}
                           </>
                         ) : (
                           <>
                             <Download className="size-3" data-icon="inline-start" />
-                            {t("luducard-btn-install", "Instalar")}
+                            {t("luducard-btn-install", "Install")}
                           </>
                         )}
                       </Button>
@@ -659,10 +726,10 @@ export default function Community() {
               <Shield className="mt-0.5 size-4 shrink-0 text-amber-400" />
               <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">
-                  {t("luducard-security-sandbox-title", "Segurança Automática do Seguro-Crash e Sandbox")}
+                  {t("luducard-security-sandbox-title", "Automatic Safe-Crash and Sandbox Security")}
                 </span>
                 <span>
-                  {t("luducard-security-sandbox-desc", "Ao instalar um checkpoint da comunidade, o Luducard automaticamente cria um backup de segurança do seu save atual antes de sobrescrever. Se algo der errado, é só restaurar o backup anterior no histórico.")}
+                  {t("luducard-security-sandbox-desc", "When installing a community checkpoint, Luducard automatically creates a safety backup of your current save before overwriting. If anything goes wrong, just restore the previous backup from history.")}
                 </span>
               </div>
             </div>
@@ -676,8 +743,8 @@ export default function Community() {
           <Card className="w-full max-w-lg shadow-2xl border border-border animate-in fade-in zoom-in-95 duration-200 !overflow-visible">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-border">
               <div>
-                <CardTitle className="text-base">{t("luducard-share-checkpoint-modal", "Compartilhar Checkpoint")}</CardTitle>
-                <CardDescription className="text-xs">{t("luducard-publish-progress-desc", "Publique o seu arquivo de progresso para a comunidade.")}</CardDescription>
+                <CardTitle className="text-base">{t("luducard-share-checkpoint-modal", "Share Checkpoint")}</CardTitle>
+                <CardDescription className="text-xs">{t("luducard-publish-progress-desc", "Publish your progress file to the community.")}</CardDescription>
               </div>
               <Button
                 variant="ghost"
@@ -692,13 +759,13 @@ export default function Community() {
               <form onSubmit={handlePublish} className="flex flex-col gap-4">
                 {/* Searchable Game Selector */}
                 <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-xs font-semibold text-muted-foreground">{t("luducard-save-game-label", "Jogo do Save *")}</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("luducard-save-game-label", "Save Game *")}</label>
 
                   {!selectedGameId ? (
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
-                        placeholder={t("luducard-search-installed-game", "Digite para pesquisar um jogo instalado...")}
+                        placeholder={t("luducard-search-game-with-backups", "Type to search a game with backups...")}
                         value={gameSearchQuery}
                         onChange={(e) => {
                           setGameSearchQuery(e.target.value)
@@ -710,13 +777,10 @@ export default function Community() {
 
                       {isGameDropdownOpen && (
                         <div className="absolute z-50 w-full mt-1 max-h-48 overflow-y-auto rounded-md border border-border bg-popover text-popover-foreground shadow-md animate-in fade-in-50 slide-in-from-top-1 duration-100">
-                          {games
-                            .filter(g => g.installed && (!gameSearchQuery || g.title.toLowerCase().includes(gameSearchQuery.toLowerCase())))
-                            .length === 0 ? (
-                            <div className="py-2 px-3 text-xs text-muted-foreground">{t("luducard-no-games-found", "Nenhum jogo encontrado")}</div>
+                          {shareableGames.length === 0 ? (
+                            <div className="py-2 px-3 text-xs text-muted-foreground">{t("luducard-no-games-with-backups", "No games with backups found")}</div>
                           ) : (
-                            games
-                              .filter(g => g.installed && (!gameSearchQuery || g.title.toLowerCase().includes(gameSearchQuery.toLowerCase())))
+                            shareableGames
                               .map(g => (
                                 <button
                                   key={g.id}
@@ -759,10 +823,10 @@ export default function Community() {
                 {/* Backup version Selector */}
                 {selectedGameId && (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">{t("luducard-backup-version-label", "Versão do Backup *")}</label>
+                    <label className="text-xs font-semibold text-muted-foreground">{t("luducard-backup-version-label", "Backup Version *")}</label>
                     {games.find(g => g.id === selectedGameId)?.backups.length === 0 ? (
                       <div className="text-xs text-red-400 bg-red-500/5 border border-red-500/10 p-2.5 rounded-lg">
-                        {t("luducard-no-local-backups-desc", "Nenhum backup local feito para este jogo ainda. Crie um backup no card do jogo primeiro.")}
+                        {t("luducard-no-local-backups-desc", "No local backups made for this game yet. Create a backup in the game card first.")}
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto border border-border/80 rounded-md bg-muted/10 p-2.5">
@@ -788,7 +852,7 @@ export default function Community() {
                                     onChange={() => setSelectedBackupId(b.id)}
                                     className="size-3.5 text-primary border-border bg-muted focus:ring-primary focus:ring-1"
                                   />
-                                  <span className="font-semibold text-foreground">{b.date} {t("luducard-of", "às")} {b.time}</span>
+                                  <span className="font-semibold text-foreground">{b.date} {t("luducard-of", "of")} {b.time}</span>
                                   <span className="text-[10px] text-muted-foreground">({b.kind})</span>
                                 </div>
                                 <span className="font-mono text-[10px] text-muted-foreground">{formatCompactSize(b.sizeMB * 1024 * 1024)}</span>
@@ -802,11 +866,11 @@ export default function Community() {
 
                 <div className="grid gap-3.5 sm:grid-cols-2">
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="checkpoint-title" className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-title-label", "Título do Checkpoint *")}</label>
+                    <label htmlFor="checkpoint-title" className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-title-label", "Checkpoint Title *")}</label>
                     <input
                       id="checkpoint-title"
                       type="text"
-                      placeholder={t("luducard-checkpoint-title-placeholder", "Ex: Antes da Malênia ou Level 100 100% Completo")}
+                      placeholder={t("luducard-checkpoint-title-placeholder", "E.g. Before Malenia or Level 100 100% Complete")}
                       value={checkpointTitle}
                       onChange={(e) => setCheckpointTitle(e.target.value)}
                       required
@@ -814,11 +878,11 @@ export default function Community() {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="checkpoint-author" className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-author-label", "Nome do Autor")}</label>
+                    <label htmlFor="checkpoint-author" className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-author-label", "Author Name")}</label>
                     <input
                       id="checkpoint-author"
                       type="text"
-                      placeholder={t("luducard-checkpoint-author-placeholder", "Ex: Anônimo")}
+                      placeholder={t("luducard-checkpoint-author-placeholder", "E.g. Anonymous")}
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
@@ -827,11 +891,11 @@ export default function Community() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="checkpoint-desc" className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-desc-label", "Descrição / Notas Adicionais")}</label>
+                  <label htmlFor="checkpoint-desc" className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-desc-label", "Description / Additional Notes")}</label>
                   <textarea
                     id="checkpoint-desc"
                     rows={3}
-                    placeholder={t("luducard-checkpoint-desc-placeholder", "Descreva detalhes como build, nível, itens importantes ou o momento do progresso.")}
+                    placeholder={t("luducard-checkpoint-desc-placeholder", "Describe details like build, level, important items or progress point.")}
                     value={checkpointDesc}
                     onChange={(e) => setCheckpointDesc(e.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
@@ -840,7 +904,7 @@ export default function Community() {
 
                 {/* Predefined Tags Selector */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-tags-label", "Tags do Checkpoint")}</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("luducard-checkpoint-tags-label", "Checkpoint Tags")}</label>
                   <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto border border-border/80 p-2.5 rounded-md bg-muted/10">
                     {PREDEFINED_TAGS.map(tag => {
                       const active = selectedUploadTags.includes(tag.name)
@@ -877,14 +941,14 @@ export default function Community() {
                     variant="ghost"
                     onClick={() => setIsShareModalOpen(false)}
                   >
-                    {t("luducard-btn-cancel", "Cancelar")}
+                    {t("luducard-btn-cancel", "Cancel")}
                   </Button>
                   <Button
                     type="submit"
                     disabled={uploading || !selectedGameId || !selectedBackupId}
                     className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold"
                   >
-                    {uploading ? t("luducard-btn-publishing", "Publicando...") : t("luducard-btn-publish", "Publicar Checkpoint")}
+                    {uploading ? t("luducard-btn-publishing", "Publishing...") : t("luducard-btn-publish", "Publish Checkpoint")}
                   </Button>
                 </div>
               </form>
@@ -903,7 +967,7 @@ export default function Community() {
                   <Gamepad2 className="size-4.5 text-primary" />
                   {selectedDetailCheckpoint.gameName}
                 </CardTitle>
-                <CardDescription className="text-xs">{t("luducard-detail-modal-desc", "Visualizando metadados completos do checkpoint.")}</CardDescription>
+                <CardDescription className="text-xs">{t("luducard-detail-modal-desc", "Viewing complete checkpoint metadata.")}</CardDescription>
               </div>
               <Button
                 variant="ghost"
@@ -916,13 +980,13 @@ export default function Community() {
             </CardHeader>
             <CardContent className="pt-4 flex flex-col gap-4.5">
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground font-semibold">{t("luducard-detail-title-label", "Título do Checkpoint:")}</span>
+                <span className="text-xs text-muted-foreground font-semibold">{t("luducard-detail-title-label", "Checkpoint Title:")}</span>
                 <span className="text-sm font-bold text-foreground leading-snug">{selectedDetailCheckpoint.title}</span>
               </div>
 
               {selectedDetailCheckpoint.description && (
                 <div className="flex flex-col gap-1 bg-muted/20 border border-border p-3 rounded-lg">
-                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-desc-label", "Descrição do Progresso:")}</span>
+                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-desc-label", "Progress Description:")}</span>
                   <div className="max-h-[160px] overflow-y-auto pr-1.5 scrollbar-thin">
                     <p className="text-xs leading-relaxed text-muted-foreground mt-0.5 whitespace-pre-wrap">{selectedDetailCheckpoint.description}</p>
                   </div>
@@ -931,7 +995,7 @@ export default function Community() {
 
               {selectedDetailCheckpoint.tags && selectedDetailCheckpoint.tags.length > 0 && (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-tags-label", "Marcadores:")}</span>
+                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-tags-label", "Tags:")}</span>
                   <div className="flex flex-wrap gap-1">
                     {selectedDetailCheckpoint.tags.map(t => {
                       const info = PREDEFINED_TAGS.find(pt => pt.name === t)
@@ -952,21 +1016,21 @@ export default function Community() {
 
               <div className="grid grid-cols-2 gap-3.5 bg-muted/20 border border-border p-3.5 rounded-xl text-xs">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-muted-foreground">{t("luducard-detail-size-label", "Tamanho Comprimido:")}</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-size-label", "Compressed Size:")}</span>
                   <span className="font-semibold text-foreground">{formatCompactSize(selectedDetailCheckpoint.fileSize)}</span>
                 </div>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-muted-foreground">{t("luducard-detail-downloads-label", "Total Downloads:")}</span>
-                  <span className="font-semibold text-foreground">{selectedDetailCheckpoint.downloadsCount.toLocaleString(t("luducard-date-locale", "pt-BR"))}</span>
+                  <span className="font-semibold text-foreground">{selectedDetailCheckpoint.downloadsCount.toLocaleString(t("luducard-date-locale", "en-US"))}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground">{t("luducard-detail-author-label", "Enviado por:")}</span>
-                  <span className="font-semibold text-foreground">{selectedDetailCheckpoint.authorName}</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-author-label", "Uploaded by:")}</span>
+                  <span className="font-semibold text-foreground">{authorLabel(selectedDetailCheckpoint.authorName)}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground">{t("luducard-detail-date-label", "Enviado em:")}</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-date-label", "Uploaded on:")}</span>
                   <span className="font-semibold text-foreground">
-                    {new Date(selectedDetailCheckpoint.createdAt).toLocaleDateString(t("luducard-date-locale", "pt-BR"), { day: "2-digit", month: "short", year: "numeric" })}
+                    {new Date(selectedDetailCheckpoint.createdAt).toLocaleDateString(t("luducard-date-locale", "en-US"), { day: "2-digit", month: "short", year: "numeric" })}
                   </span>
                 </div>
               </div>
@@ -976,7 +1040,7 @@ export default function Community() {
                   variant="ghost"
                   onClick={() => setSelectedDetailCheckpoint(null)}
                 >
-                  {t("luducard-btn-close", "Fechar")}
+                  {t("luducard-btn-close", "Close")}
                 </Button>
                 <Button
                   disabled={importing === selectedDetailCheckpoint.id}
@@ -989,12 +1053,12 @@ export default function Community() {
                   {importing === selectedDetailCheckpoint.id ? (
                     <>
                       <RefreshCw className="size-3.5 animate-spin" />
-                      {t("luducard-btn-installing", "Instalando...")}
+                      {t("luducard-btn-installing", "Installing...")}
                     </>
                   ) : (
                     <>
                       <Download className="size-3.5" />
-                      {t("luducard-btn-download-install", "Baixar & Instalar")}
+                      {t("luducard-btn-download-install", "Download & Install")}
                     </>
                   )}
                 </Button>

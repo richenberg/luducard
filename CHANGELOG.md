@@ -4,6 +4,43 @@ All notable changes to the **Luducard** project will be documented in this file.
 
 This project is a new application based on the core of Ludosavi. The change history of Luducard starts with this release.
 
+## [0.2.2] - 2026-08-17
+### Added
+- **Full Interface Localization**: Roughly 260 further interface strings were moved into the translation files, covering the Save Share Hub, the Preset Hub, the game details screen, settings, the first-run setup wizard, the save conflict dialog, and the scan progress phases. Preset and checkpoint tag descriptions are translated as well. Available in English, Portuguese, Spanish, Russian, and Simplified Chinese, with partial German. Every translation key referenced by the interface now exists — none fall back to hardcoded text.
+- **Hub Connection Error States**: The hubs can now tell "the repository answered and there is nothing there" apart from "we never got an answer". An outage, a DNS failure, or a rejected Supabase key each explain themselves instead of silently rendering as an empty hub.
+- **Relative Dates in the Hubs**: Checkpoints and presets are dated "Today", "Yesterday", "3 days ago", or "2 weeks ago" rather than only as a raw calendar date.
+- **Anonymous Author Label**: Uploads published without an author name now show a single consistent "Anonymous" label.
+- **itch.io Release Page**: Luducard is now published on [itch.io](https://richenbergdev.itch.io/luducard) for Windows, macOS, and Linux, linked from the README next to GitHub Releases.
+- **Security Transparency**: Added an "Is it safe?" section to the README with the VirusTotal scan, an explanation of the single machine-learning false positive, and notes on SmartScreen and backup safety.
+- **Hub Seeding Scripts**: Added `scripts/seed_community_saves.py` and `scripts/seed_community_presets.py` for populating the community repository (maintainer tooling, not shipped with the app).
+
+- **Cover Size Control in the Library**: A selector next to the grid/list toggle picks small, medium, or large covers, and the choice is remembered between sessions.
+- **Window Size and Position Are Remembered**: Resizing or maximizing the window now survives a restart, instead of reopening at the default 1200×800 every time. Visibility is deliberately not restored, so an app that was hidden to the tray does not reopen invisible.
+- **Clear Button in the Hub Searches**: The Save Share Hub and Preset Hub search boxes get an "X" to empty them, matching the library search, which already had one.
+
+### Changed
+- **Emergency Shortcut Default**: The default quick-save shortcut moved from `Ctrl + Shift + S` to `Ctrl + Alt + S`. It is a *global* hotkey, so it was being captured ahead of whatever had focus, and `Ctrl + Shift + S` is "Save As" in a large number of applications. Configurations still on the old default are migrated automatically, once.
+- **Notification Titles**: Dropped the redundant `Luducard - ` prefix from notification titles, now that the OS labels each toast with the app name and icon.
+
+### Fixed
+- **Portable ZIP Missing Its Version**: The archive is now named `Luducard_<version>_x64_portable.zip`, matching how the installer bundles are named, instead of a fixed name identical across every release.
+- **Corrupted Text in the Library List**: The "Last Backup" column label was displaying mojibake from a mis-encoded string.
+- **Notifications Attributed to "Windows PowerShell"**: Notifications now carry Luducard's name and icon. Windows attributes every toast to an AppUserModelID and none was registered, so the OS fell back to PowerShell's. The ID is registered under `HKCU`, requiring no installer and no admin rights, so it also works from a portable copy on a USB drive.
+- **Notifications and Tray Menu Always in Portuguese**: Every notification and system tray label was hardcoded in Portuguese regardless of the selected language. All 17 strings are now translated into English, Portuguese, Spanish, Russian, and Simplified Chinese, falling back to English for the remaining languages.
+- **Language Not Applied on Startup**: The saved language was only applied once the settings screen had been opened, so notifications and the tray menu reverted to English on every launch.
+- **Tray Menu Language Needing a Restart**: The tray menu is now rebuilt when the language changes, instead of keeping the previous language until the app was restarted.
+- **Cover Art Lookup by Title Was Broken Everywhere**: The cover service passed the search term to SteamGridDB as a query string instead of in the URL path, which is not a route it serves — so every lookup by name answered 404 and no cover was ever resolved that way. Steam games hid the problem, because they were covered by an earlier step that fetches artwork by App ID.
+- **Cover Art Never Requested for Non-Emulator Games**: Even with the above fixed, the call was nested inside the emulator branch of the download chain, so it only ran for titles prefixed with "[Yuzu] ", "[Dolphin] " and similar. An ordinary PC game with no Steam App ID artwork — Halo 4, Enslaved: Odyssey to the West, Final Fantasy Tactics — never reached it and stayed uncovered no matter how many rescans ran.
+- **Missing Cover Art in the Save Share Hub and Preset Hub**: Both hubs looked for cover art only in the local library, so anything for a game the user did not have showed a placeholder — which was most of the hub, since downloading saves for games you do not own is the point. Covers are now resolved by title, which never required owning the game.
+- **Library Covers Grew Instead of Multiplying**: The game grid used a fixed column count per breakpoint, so past the widest breakpoint a larger window inflated each cover rather than fitting more of them. Columns are now added as the window grows.
+- **Wrong Store Badge on Game Cards**: Any game without a Steam or GOG id in the manifest was labelled "Epic", because the check was merely "does this entry list any file paths" — true for nearly every game in the manifest. Standalone downloads and the emulators the manifest tracks in their own right, such as Dolphin, all showed an Epic badge they had nothing to do with. Games with no manifest entry at all defaulted to "Steam" for the same reason. Both now show a neutral "Other" badge, since the manifest carries no information about any store beyond Steam and GOG.
+- **Emergency Shortcut Untranslated**: The "Emergency Shortcut (Manual Quick-Save)" setting, its description, and its input placeholder had no translation entries at all, so every language fell back to the hardcoded Portuguese text.
+- **Spanish Typo**: "Clear search" read "Limpar búsqueda", mixing in the Portuguese word for "clear".
+- **Dead Discord Invites**: Three expired invite links (README, CONTRIBUTING, and the in-app Support screen, which pointed at a different dead invite) now point to a permanent invite.
+- **Donation Link in Test Mode**: The Stripe payment link on the Support screen was a test-mode link and could not accept real payments.
+- **Outdated Shortcut in README**: The README still documented the emergency shortcut as `Ctrl + Shift + S`.
+
+
 ## [0.2.1] - 2026-07-13
 ### Added
 - **Goldberg Emulator (GSE) Autodetection**: Implemented automatic scanning and mapping of Goldberg Steam Emulator (GSE) saves under `%APPDATA%\GSE Saves\<AppId>\` to official PC game entries.

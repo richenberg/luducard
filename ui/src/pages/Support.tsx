@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button"
 import { useI18n } from "@/lib/i18n"
 
 const ITCH_URL = "https://richenbergdev.itch.io/luducard" // Link de doação do Itch.io
-const STRIPE_URL = "https://buy.stripe.com/test_fZu7sN5HaaAF2ST8CIgjC00" // Link de pagamento do Stripe (suporta Pix e Cartões)
-const DISCORD_URL = "https://discord.gg/QpG5gKZBA" // Link do servidor Discord
+const STRIPE_URL = "https://buy.stripe.com/fZu8wO2Ej7L8fdjeHR9fW00" // Link de pagamento do Stripe (suporta Pix e Cartões)
+const DISCORD_URL = "https://discord.gg/8K3TEBMyvK" // Link do servidor Discord
 
 const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 127.14 96.36" fill="currentColor" {...props}>

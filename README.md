@@ -1,17 +1,21 @@
 # 🎮 Luducard
 
-**Luducard** is a lightweight, modern, and beautiful game save manager for PC. It began as a simple fork of **Ludosavi**, but it has evolved tremendously into a feature-rich, community-driven backup and share hub.
+### Download a save from any point in a game — or the graphics preset from someone with your exact GPU.
 
-Join our community on [Discord](https://discord.gg/U2DEbDqgm)!
+**Luducard** is a lightweight game save manager for PC with something no other save manager has: a community hub. Back up and restore your saves locally like usual, then share checkpoints and performance configs with everyone else — one click to upload, one click to install. Built in Rust for Windows, macOS, and Linux.
 
-> ℹ️ **Developer's Note & AI-Assisted Development**
-> This project was created by a non-programmer who wanted a better visual, and add more modern features to the game save manager. The entire application, including its Rust backend, Tauri integrations, and React/Tailwind frontend, was built, refactored, and optimized using advanced Artificial Intelligence (such as Gemini). It stands as a testament to what AI collaboration can achieve!
+**[⬇️ Download on itch.io](https://richenbergdev.itch.io/luducard)** &nbsp;•&nbsp; [📦 GitHub Releases](https://github.com/richenberg/luducard/releases) &nbsp;•&nbsp; [💬 Discord](https://discord.gg/8K3TEBMyvK)
+
+- 🌐 **Community saves** — grab a checkpoint from right before the final boss, a 100%-completion file, or a "skip the tutorial" save.
+- 🎛️ **Community graphics presets** — apply an FPS config from someone running your hardware. Your original settings are backed up first, so a bad preset is one click away from undone.
+- 🕹️ **Emulators included** — Yuzu, Ryujinx, Dolphin, PCSX2 and RetroArch saves are detected automatically and named like real games instead of folder IDs.
+- 🤖 **Set it and forget it** — backs up the moment you close a game, quietly, from the system tray.
 
 ---
 
 ## 📥 How to Download and Install
 
-To use **Luducard**, you can download the latest version directly from our Releases page:
+You can get **Luducard** from **[itch.io](https://richenbergdev.itch.io/luducard)** (all platforms, name-your-own-price / free), or straight from GitHub:
 
 1. Go to the [Releases](https://github.com/richenberg/luducard/releases) section on GitHub.
 2. Under the latest stable version, scroll down to the **Assets** section at the bottom.
@@ -19,6 +23,15 @@ To use **Luducard**, you can download the latest version directly from our Relea
    - **Windows Portable (`Luducard_x64_portable.zip`) [Recommended]**: Simply extract it to any folder or USB drive and double-click `Luducard.exe` to run. No installation required.
    - **Windows Installer (`.msi`)**: The official installer to install Luducard on your system.
    - **macOS / Linux**: Download the appropriate package (`.dmg` or `.deb`/`.AppImage`).
+
+### 🛡️ Is it safe?
+
+Fair question — this app touches your save files, and the Windows build isn't code-signed yet (certificates are expensive for a free project). So here's everything you need to check for yourself:
+
+- **[VirusTotal scan of `Luducard.exe`](https://www.virustotal.com/gui/file/56696da402c3aace496d4a6870ff621c35f4d1c3fcfb9d9c8e0a801f8a6cfeed)** — 1 of 66 engines flags it, and that one detection is `Suspicious.low.ml.score` from Trapmine: a machine-learning guess, not a matched signature. Unsigned Rust binaries that read process names and write to `AppData` set this off routinely. The other 65 engines, including Microsoft, BitDefender, ESET, Kaspersky and CrowdStrike, report it clean.
+- **Windows SmartScreen may warn you** on first launch for the same reason (no signature, low download count). Click *More info → Run anyway* if you're comfortable.
+- **Backups are additive.** Restoring writes over your current save, and the app takes a backup of what it's replacing first — nothing is deleted without a copy kept.
+- **The full source is in this repo.** Every release is built from the tagged commit, so you can read exactly what you're running.
 
 ---
 
@@ -68,7 +81,7 @@ Tired of manually tweaking `.ini` and `.cfg` files to optimize your game's graph
 - **Emulator Badges**: Colorful labels in your library that show you exactly which console or emulator each game belongs to.
 
 ### 💖 Extra Tools for Gamers
-- **Panic Quick-Save Button**: Press a simple shortcut on your keyboard (like `Ctrl + Shift + S`) to instantly save your game status, complete with a quick notification sound.
+- **Panic Quick-Save Button**: Hit `Ctrl + Alt + S` at any moment to back up the game you're playing instantly, with a confirmation sound — no need to leave the game. The shortcut is configurable in Settings.
 - **Game Notes**: Write quick notes directly on each game's card to keep track of your goals, builds, or where you left off in your adventure.
 - **Automatic Game Cover Art**: Automatically downloads beautiful cover art for your games so your library looks organized and clean.
 - **Support the Creator**: A simple screen where you can support the project's cloud server costs.
@@ -102,6 +115,14 @@ Luducard is built with [Tauri v2](https://tauri.app/), [React](https://react.dev
    ```
 
 ---
+
+## 🙏 Credits
+
+Luducard began as a fork of [**Ludusavi**](https://github.com/mtkennerly/ludusavi) by [mtkennerly](https://github.com/mtkennerly), whose save-detection engine and game manifest are the foundation everything here is built on. Huge thanks for releasing it as open source.
+
+## ℹ️ Developer's Note & AI-Assisted Development
+
+This project was started by a non-programmer who just wanted a better-looking save manager with more modern features. The application — Rust backend, Tauri integration, and React/Tailwind frontend — was built, refactored, and optimized with heavy use of AI assistants. Every release is tested manually before it ships, and the full source is here for you to read and audit.
 
 ## 📄 License
 This project is open-source. For details on permissions and redistribution, see [LICENSE](./LICENSE).

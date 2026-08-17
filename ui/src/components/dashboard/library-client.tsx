@@ -18,6 +18,7 @@ import {
   Gamepad2,
   TimerReset,
   Loader2,
+  Images,
   X,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -285,7 +286,7 @@ function GameRow({ game, selected, onSelectedChange, onBackup, onRestore, onNote
       </div>
       <div className="hidden w-28 shrink-0 flex-col items-end text-xs md:flex">
         <span className="font-medium text-foreground">{displayLastBackup}</span>
-        <span className="text-muted-foreground">{t("luducard-last-backup", "Ãšltimo backup")}</span>
+        <span className="text-muted-foreground">{t("luducard-last-backup", "Last Backup")}</span>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <Button size="icon-sm" variant="ghost" onClick={() => onBackup(game.title)} title={t("luducard-manual-backup", "Backup manual")}>
@@ -306,11 +307,33 @@ interface LibraryClientProps {
   setSelected: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
 }
 
+type CardSize = "small" | "medium" | "large"
+
+const CARD_SIZE_STORAGE_KEY = "luducard_library_card_size"
+
+/**
+ * Minimum card width per size, fed to `repeat(auto-fill, minmax(...))`.
+ *
+ * The grid used fixed column counts per breakpoint (`lg:grid-cols-4 xl:grid-cols-5`),
+ * which capped the column count: past the last breakpoint the extra width went into
+ * making each cover bigger instead of fitting more of them. With `auto-fill` the card
+ * keeps its size and a wider window simply gains columns, which is what a library
+ * wants — and the size below is the user's choice rather than a function of the window.
+ */
+const CARD_MIN_WIDTH: Record<CardSize, string> = {
+  small: "140px",
+  medium: "200px",
+  large: "280px",
+}
+
 export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
   const { t } = useI18n()
   const { games, loading, loadGames, stats, scrollPositionRef, updateGameNotes } = useLibrary()
   const showNotes = localStorage.getItem("luducard_show_notes_in_library") !== "false"
   const [view, setView] = useState<"grid" | "list">("grid")
+  const [cardSize, setCardSize] = useState<CardSize>(
+    () => (localStorage.getItem(CARD_SIZE_STORAGE_KEY) as CardSize | null) ?? "medium"
+  )
   const [query, setQuery] = useState("")
   const [platform, setPlatform] = useState<Platform | "all">("all")
   const [onlyPending, setOnlyPending] = useState(false)
@@ -587,6 +610,29 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
             {t("luducard-pending", "Pendentes")}
           </Button>
 
+          {view === "grid" && (
+            <Select
+              value={cardSize}
+              onValueChange={(v) => {
+                const next = v as CardSize
+                setCardSize(next)
+                localStorage.setItem(CARD_SIZE_STORAGE_KEY, next)
+              }}
+            >
+              <SelectTrigger className="w-[160px]">
+                <Images className="size-4 mr-1.5 shrink-0 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="small">{t("luducard-card-size-small", "Small covers")}</SelectItem>
+                  <SelectItem value="medium">{t("luducard-card-size-medium", "Medium covers")}</SelectItem>
+                  <SelectItem value="large">{t("luducard-card-size-large", "Large covers")}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+
           <ToggleGroup
             value={[view]}
             onValueChange={(val) => {
@@ -630,7 +676,12 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
           </EmptyHeader>
         </Empty>
       ) : view === "grid" ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div
+          className="grid gap-4"
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${CARD_MIN_WIDTH[cardSize]}, 1fr))`,
+          }}
+        >
           {filtered.map((game) => (
             <GameCard
               key={game.id}

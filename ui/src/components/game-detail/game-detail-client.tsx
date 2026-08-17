@@ -43,23 +43,13 @@ import { type Game, type BackupKind, formatSize } from "@/lib/mock-data"
 import { cleanGameTitle } from "@/components/dashboard/library-client"
 import { ConflictResolutionModal } from "../cloud/conflict-resolution-modal"
 import { useLibrary } from "@/lib/library-context"
-
-interface TagInfo {
-  name: string
-  description: string
-}
-
-const PREDEFINED_PRESET_TAGS: TagInfo[] = [
-  { name: "Performance", description: "Otimizações focadas em ganho de FPS e fluidez." },
-  { name: "Qualidade / Visual", description: "Otimizações focadas em qualidade gráfica máxima." },
-  { name: "Balanced", description: "Equilíbrio ideal entre fidelidade visual e taxa de FPS." },
-  { name: "Steam Deck", description: "Perfil otimizado especificamente para a tela e bateria do Steam Deck/portáteis." },
-  { name: "Potato Mode", description: "Para rodar em PCs super antigos e notebooks modestos." },
-  { name: "Controles / Layout", description: "Mapeamento customizado de controles, gamepad ou hotkeys." },
-  { name: "Ray Tracing Opt", description: "Configuração refinada com traçado de raio ativo, visando boa taxa de quadros." },
-  { name: "4K Ready", description: "Otimizações focadas em TVs e monitores 4K de alta definição." },
-  { name: "VR Ready", description: "Configurações ajustadas para taxa de FPS ideal em realidade virtual." }
-]
+import {
+  ANONYMOUS_AUTHOR_ID,
+  getAuthorLabel,
+  getBackupKindLabel,
+  getPredefinedPresetTags,
+} from "@/lib/preset-tags"
+import { fetchHubRows, describeHubError, type HubFetchError } from "@/lib/hub-fetch"
 
 const kindColors: Record<BackupKind | string, string> = {
   "Automático": "text-primary",
@@ -98,7 +88,7 @@ function StatusPill({
           active ? "text-primary" : "text-muted-foreground",
         )}
       >
-        {active ? t("luducard-active", "Ativo") : t("luducard-disabled", "Desativado")}
+        {active ? t("luducard-active", "Active") : t("luducard-disabled", "Disabled")}
       </span>
     </div>
   )
@@ -112,6 +102,11 @@ interface GameDetailClientProps {
 export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
   const { t } = useI18n()
   const { updateGameNotes } = useLibrary()
+
+  const PREDEFINED_PRESET_TAGS = getPredefinedPresetTags(t)
+  const authorLabel = (name?: string | null) => getAuthorLabel(t, name)
+  const backupKindLabel = (kind: string) => getBackupKindLabel(t, kind)
+
   // Tabs & safety backup check
   const [activeTab, setActiveTab] = useState<"saves" | "presets" | "profiles">("saves")
   const [hasCrashSafetyBackup, setHasCrashSafetyBackup] = useState(false)
@@ -133,7 +128,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("save_campaign_note", { gameId: game.id, note: localNotes });
       } catch (err) {
-        toast.error(`Falha ao salvar anotação: ${err}`);
+        toast.error(`${t("luducard-toast-save-note-failed", "Failed to save note")}: ${err}`);
         return;
       }
     }
@@ -152,6 +147,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
   // Presets states
   const [presets, setPresets] = useState<any[]>([])
   const [loadingPresets, setLoadingPresets] = useState(false)
+  /** Non-null when the last load failed, so an outage never renders as "no presets". */
+  const [presetsError, setPresetsError] = useState<HubFetchError | null>(null)
   const [clientUuid, setClientUuid] = useState("")
   const [supabaseUrl, setSupabaseUrl] = useState("")
   const [supabaseAnonKey, setSupabaseAnonKey] = useState("")
@@ -209,7 +206,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       setSelectedLocalBackup(null)
       if (onRefresh) onRefresh()
     } catch (err) {
-      toast.error(`Falha ao salvar nota: ${err}`, { id })
+      toast.error(`${t("luducard-toast-save-note-failed-2", "Failed to save note")}: ${err}`, { id })
     }
   }
 
@@ -237,25 +234,25 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       }
     } catch (err) {
       console.error(err)
-      toast.error(`Erro ao alterar caminho: ${err}`)
+      toast.error(`${t("luducard-toast-change-path-failed", "Error changing path")}: ${err}`)
     }
   }
 
   const handleResetSavePath = async () => {
-    if (!confirm(t("luducard-confirm-reset-save-path", "Deseja realmente resetar o caminho de save deste jogo para o padrão do manifest?"))) {
+    if (!confirm(t("luducard-confirm-reset-save-path", "Do you really want to reset this game's save path to the manifest default?"))) {
       return
     }
-    const id = toast.loading(`Restaurando caminho padrão de "${game.title}"...`)
+    const id = toast.loading(`${t("luducard-toast-restoring-default-path", "Restoring default path of")} "${game.title}"...`)
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       await invoke("reset_game_save_path", {
         gameTitle: game.title,
       })
-      toast.success("Caminho padrão restaurado com sucesso!", { id })
+      toast.success(t("luducard-toast-default-path-restored", "Default path restored successfully!"), { id })
       if (onRefresh) onRefresh()
     } catch (err) {
       console.error(err)
-      toast.error(`Erro ao restaurar caminho: ${err}`, { id })
+      toast.error(`${t("luducard-toast-restore-path-failed", "Error restoring path")}: ${err}`, { id })
     }
   }
 
@@ -275,7 +272,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         toast.success(`Backup de "${game.title}" criado com sucesso!`, { id });
         if (onRefresh) onRefresh();
       } catch (err) {
-        toast.error(`Falha no backup: ${err}`, { id });
+        toast.error(`${t("luducard-toast-backup-failed", "Backup failed")}: ${err}`, { id });
       }
     } else {
       toast.success(`[Mock] Backup de "${game.title}" criado`);
@@ -287,23 +284,23 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     const title = conflictInfo.gameTitle;
     const id = toast.loading(
       direction === "local"
-        ? `Resolvendo conflito: mantendo a versão local de "${title}"...`
-        : `Resolvendo conflito: baixando a versão da nuvem de "${title}"...`
+        ? `${t("luducard-toast-resolving-keep-local", "Resolving conflict: keeping the local version of")} "${title}"...`
+        : `${t("luducard-toast-resolving-take-cloud", "Resolving conflict: downloading the cloud version of")} "${title}"...`
     );
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       if (direction === "local") {
         await invoke("backup_game", { gameTitle: title });
-        toast.success(`Versão local de "${title}" salva na nuvem!`, { id });
+        toast.success(`${t("luducard-toast-local-version-saved", "Local version of")} "${title}" ${t("luducard-toast-saved-to-cloud", "saved to the cloud!")}`, { id });
       } else {
         await invoke("restore_game", { gameTitle: title, backupId: null });
-        toast.success(`Versão da nuvem de "${title}" restaurada!`, { id });
+        toast.success(`${t("luducard-toast-cloud-version-restored", "Cloud version of")} "${title}" ${t("luducard-toast-restored-suffix", "restored!")}`, { id });
       }
       setConflictModalOpen(false);
       setConflictInfo(null);
       if (onRefresh) onRefresh();
     } catch (err) {
-      toast.error(`Falha ao resolver conflito de "${title}": ${err}`, { id });
+      toast.error(`${t("luducard-toast-resolve-conflict-failed", "Failed to resolve conflict for")} "${title}": ${err}`, { id });
     }
   };
 
@@ -313,10 +310,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("restore_game", { gameTitle: game.title, backupId: null });
-        toast.success(`Versão mais recente de "${game.title}" restaurada!`, { id });
+        toast.success(`${t("luducard-toast-latest-version-restored", "Latest version of")} "${game.title}" ${t("luducard-toast-restored-suffix", "restored!")}`, { id });
         if (onRefresh) onRefresh();
       } catch (err) {
-        toast.error(`Falha ao restaurar: ${err}`, { id });
+        toast.error(`${t("luducard-toast-restore-failed", "Failed to restore")}: ${err}`, { id });
       }
     } else {
       toast.info(`[Mock] Restaurando versão mais recente de "${game.title}"`);
@@ -325,14 +322,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   const handleRestoreVersion = async (versionId: string, versionDate: string) => {
     if (isTauri) {
-      const id = toast.loading(`Restaurando versão "${versionId}" de "${game.title}"...`);
+      const id = toast.loading(`${t("luducard-toast-restoring-version", "Restoring version")} "${versionId}" — "${game.title}"...`);
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("restore_game", { gameTitle: game.title, backupId: versionId });
-        toast.success(`Versão de ${versionDate} restaurada!`, { id });
+        toast.success(`${t("luducard-toast-version-restored", "Version from")} ${versionDate} ${t("luducard-toast-restored-suffix", "restored!")}`, { id });
         if (onRefresh) onRefresh();
       } catch (err) {
-        toast.error(`Falha ao restaurar versão: ${err}`, { id });
+        toast.error(`${t("luducard-toast-restore-version-failed", "Failed to restore version")}: ${err}`, { id });
       }
     } else {
       toast.info(`[Mock] Restaurando versão de ${versionDate}`);
@@ -359,8 +356,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       const metadata = await invoke<any>("export_luducard_backup", {
         gameTitle: game.title,
         gameId: game.id,
-        checkpointTitle: `Backup de ${game.title} - ${backupDate} ${backupTime}`,
-        description: `Exportado a partir do backup local realizado em ${backupDate} às ${backupTime}.`,
+        checkpointTitle: `${t("luducard-backup-of", "Backup of")} ${game.title} - ${backupDate} ${backupTime}`,
+        description: `${t("luducard-exported-from-backup", "Exported from the local backup taken on")} ${backupDate} ${t("luducard-at", "at")} ${backupTime}.`,
         backupPath: game.backupPath || "",
         backupId: backupId,
         savePath: game.savePath,
@@ -374,7 +371,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         { id: toastId }
       );
     } catch (err) {
-      toast.error(`Falha ao exportar backup: ${err}`);
+      toast.error(`${t("luducard-toast-export-backup-failed", "Failed to export backup")}: ${err}`);
     }
   };
 
@@ -383,8 +380,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       const nextLocked = !currentLocked;
       const id = toast.loading(
         nextLocked
-          ? `Bloqueando versão "${versionId}"...`
-          : `Desbloqueando versão "${versionId}"...`
+          ? `${t("luducard-toast-locking-version", "Locking version")} "${versionId}"...`
+          : `${t("luducard-toast-unlocking-version", "Unlocking version")} "${versionId}"...`
       );
       try {
         const { invoke } = await import("@tauri-apps/api/core");
@@ -395,13 +392,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         });
         toast.success(
           nextLocked
-            ? "Versão bloqueada com sucesso! Ela não será deletada automaticamente."
-            : "Versão desbloqueada com sucesso.",
+            ? t("luducard-toast-version-locked", "Version locked! It will not be deleted automatically.")
+            : t("luducard-toast-version-unlocked", "Version unlocked successfully."),
           { id }
         );
         if (onRefresh) onRefresh();
       } catch (err) {
-        toast.error(`Falha ao alterar status da versão: ${err}`, { id });
+        toast.error(`${t("luducard-toast-change-version-status-failed", "Failed to change version status")}: ${err}`, { id });
       }
     } else {
       toast.info(`[Mock] Alterado bloqueio da versão "${versionId}" para ${!currentLocked}`);
@@ -422,7 +419,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       });
     } catch (err) {
       console.error(err);
-      toast.error(`Erro ao abrir pasta: ${err}`);
+      toast.error(`${t("luducard-toast-open-folder-failed", "Error opening folder")}: ${err}`);
     }
   };
 
@@ -457,13 +454,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         { id: toastId }
       );
     } catch (err) {
-      toast.error(`Falha ao exportar: ${err}`);
+      toast.error(`${t("luducard-toast-export-failed", "Failed to export")}: ${err}`);
     }
   };
 
   // Preset sharing database fetch
   const fetchGamePresets = async () => {
     setLoadingPresets(true)
+    setPresetsError(null)
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       const settings = await invoke<any>("get_settings")
@@ -478,15 +476,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
       if (url && key) {
         setIsConfigured(true)
-        const response = await fetch(`${url}/rest/v1/public_presets?game_id=eq.${game.id}&select=*`, {
-          headers: {
-            "apikey": key,
-            "Authorization": `Bearer ${key}`
-          }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          const mapped = data.map((item: any) => ({
+        const result = await fetchHubRows(
+          `${url}/rest/v1/public_presets?game_id=eq.${game.id}&select=*`,
+          key
+        )
+
+        if (result.ok) {
+          const mapped = result.rows.map((item: any) => ({
             id: item.id,
             gameName: item.game_name,
             gameId: item.game_id,
@@ -495,7 +491,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             r2Path: item.r2_path,
             fileSize: Number(item.file_size || 0),
             description: item.description || "",
-            authorName: item.author_name || "Anônimo",
+            authorName: item.author_name || "",
             userUuid: item.user_uuid,
             cpu: item.cpu || "",
             gpu: item.gpu || "",
@@ -510,7 +506,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           }))
           setPresets(mapped)
         } else {
-          toast.error("Erro ao carregar presets comunitários.")
+          console.error("Failed to load public_presets for game:", result.error)
+          setPresets([])
+          setPresetsError(result.error)
+          toast.error(t("luducard-toast-load-community-presets-failed", "Error loading community presets."))
         }
       } else {
         setIsConfigured(false)
@@ -589,7 +588,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       setSaveProfiles(list)
     } catch (err) {
       console.error("Erro ao listar perfis de save:", err)
-      toast.error("Erro ao carregar perfis de save.")
+      toast.error(t("luducard-toast-load-profiles-failed", "Error loading save profiles."))
     } finally {
       setLoadingProfiles(false)
     }
@@ -597,10 +596,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   const handleCreateSaveProfile = async () => {
     if (!newProfileTitle.trim()) {
-      toast.error("Por favor, informe um título para o perfil.")
+      toast.error(t("luducard-toast-profile-title-required", "Please enter a title for the profile."))
       return
     }
-    const toastId = toast.loading("Criando novo perfil de save...")
+    const toastId = toast.loading(t("luducard-toast-creating-profile", "Creating new save profile..."))
     try {
       if (isTauri) {
         const { invoke } = await import("@tauri-apps/api/core")
@@ -621,13 +620,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       if (onRefresh) onRefresh()
     } catch (err: any) {
       console.error(err)
-      toast.error(`Falha ao criar perfil: ${err}`, { id: toastId })
+      toast.error(`${t("luducard-toast-create-profile-failed", "Failed to create profile")}: ${err}`, { id: toastId })
     }
   }
 
   const handleSwitchSaveProfile = async (profileId: string, profileTitle: string) => {
     setSwitchingProfileId(profileId)
-    const toastId = toast.loading(`Alternando para o perfil "${profileTitle}"... Isso pode levar alguns segundos.`)
+    const toastId = toast.loading(`${t("luducard-toast-switching-profile", "Switching to profile")} "${profileTitle}"... ${t("luducard-toast-may-take-seconds", "This may take a few seconds.")}`)
     try {
       if (isTauri) {
         const { invoke } = await import("@tauri-apps/api/core")
@@ -642,17 +641,17 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       if (onRefresh) onRefresh()
     } catch (err: any) {
       console.error(err)
-      toast.error(`Erro ao alternar perfil: ${err}`, { id: toastId })
+      toast.error(`${t("luducard-toast-switch-profile-failed", "Error switching profile")}: ${err}`, { id: toastId })
     } finally {
       setSwitchingProfileId(null)
     }
   }
 
   const handleDeleteSaveProfile = async (profileId: string, profileTitle: string) => {
-    if (!confirm(`Tem certeza de que deseja excluir o perfil "${profileTitle}"? Todos os saves deste perfil serão deletados permanentemente.`)) {
+    if (!confirm(`${t("luducard-confirm-delete-profile", "Are you sure you want to delete the profile")} "${profileTitle}"? ${t("luducard-confirm-delete-profile-warning", "All saves in this profile will be permanently deleted.")}`)) {
       return
     }
-    const toastId = toast.loading(`Excluindo perfil "${profileTitle}"...`)
+    const toastId = toast.loading(`${t("luducard-toast-deleting-profile", "Deleting profile")} "${profileTitle}"...`)
     try {
       if (isTauri) {
         const { invoke } = await import("@tauri-apps/api/core")
@@ -661,11 +660,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           profileId
         })
       }
-      toast.success(`Perfil "${profileTitle}" excluído com sucesso!`, { id: toastId })
+      toast.success(`${t("luducard-toast-profile-deleted", "Profile")} "${profileTitle}" ${t("luducard-toast-deleted-suffix", "deleted successfully!")}`, { id: toastId })
       fetchSaveProfiles()
     } catch (err: any) {
       console.error(err)
-      toast.error(`Erro ao excluir perfil: ${err}`, { id: toastId })
+      toast.error(`${t("luducard-toast-delete-profile-failed", "Error deleting profile")}: ${err}`, { id: toastId })
     }
   }
 
@@ -684,10 +683,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
   // Save Local Preset
   const handleSaveLocalPreset = async (title: string, description: string, files: string[]) => {
     if (files.length === 0) {
-      toast.error("Selecione pelo menos um arquivo de configuração.")
+      toast.error(t("luducard-toast-select-config-file", "Select at least one config file."))
       return
     }
-    const id = toast.loading("Salvando configurações locais como preset...")
+    const id = toast.loading(t("luducard-toast-saving-local-preset", "Saving local settings as a preset..."))
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -705,13 +704,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       setNewLocalTitle("")
       setNewLocalDesc("")
     } catch (err) {
-      toast.error(`Falha ao salvar preset local: ${err}`, { id })
+      toast.error(`${t("luducard-toast-save-local-preset-failed", "Failed to save local preset")}: ${err}`, { id })
     }
   }
 
   // Apply Local Preset
   const handleApplyLocalPreset = async (preset: any) => {
-    const id = toast.loading(`Iniciando Seguro-Crash para configurações de ${game.title}...`)
+    const id = toast.loading(`${t("luducard-toast-starting-crash-safety-for", "Starting Safe-Crash for settings of")} ${game.title}...`)
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -725,16 +724,16 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       } else {
         await new Promise(r => setTimeout(r, 1000))
       }
-      toast.success(`Preset local "${preset.title}" injetado com sucesso!`, { id })
+      toast.success(`${t("luducard-toast-local-preset-applied", "Local preset")} "${preset.title}" ${t("luducard-toast-applied-suffix", "applied successfully!")}`, { id })
     } catch (err) {
-      toast.error(`Falha ao aplicar preset local: ${err}`, { id })
+      toast.error(`${t("luducard-toast-apply-local-preset-failed", "Failed to apply local preset")}: ${err}`, { id })
     }
   }
 
   // Delete Local Preset
   const handleDeleteLocalPreset = async (presetId: string) => {
-    if (!confirm("Deseja realmente deletar este preset local permanentemente?")) return
-    const id = toast.loading("Excluindo preset local...")
+    if (!confirm(t("luducard-confirm-delete-local-preset", "Do you really want to permanently delete this local preset?"))) return
+    const id = toast.loading(t("luducard-toast-deleting-local-preset", "Deleting local preset..."))
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -746,7 +745,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       toast.success("Preset local deletado com sucesso!", { id })
       fetchLocalPresets()
     } catch (err) {
-      toast.error(`Erro ao deletar preset: ${err}`, { id })
+      toast.error(`${t("luducard-toast-delete-preset-failed", "Error deleting preset")}: ${err}`, { id })
     }
   }
 
@@ -765,7 +764,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
   // Apply Preset (Community)
   const handleApplyPreset = async (preset: any) => {
-    const toastId = toast.loading("Iniciando Seguro-Crash para salvaguardar configurações...")
+    const toastId = toast.loading(t("luducard-toast-crash-safety-starting", "Starting Safe-Crash to safeguard settings..."))
     try {
       const { invoke } = await import("@tauri-apps/api/core")
 
@@ -779,7 +778,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         setHasCrashSafetyBackup(true)
       }
 
-      toast.loading("Baixando e aplicando preset de configurações otimizadas...", { id: toastId })
+      toast.loading(t("luducard-toast-downloading-applying-preset", "Downloading and applying optimized settings preset..."), { id: toastId })
 
       // Step 2: Get download url
       let downloadUrl = ""
@@ -812,7 +811,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           gameId: game.id,
           gameTitle: game.title,
           title: preset.title,
-          description: `${preset.description} (Baixado da comunidade - Autor: ${preset.authorName})`,
+          description: `${preset.description} (${t("luducard-preset-downloaded-from-community", "Downloaded from the community - Author")}: ${authorLabel(preset.authorName)})`,
           files: preset.tags,
         }).catch(err => console.error(err))
 
@@ -831,18 +830,18 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         await new Promise(r => setTimeout(r, 1500))
       }
 
-      toast.success("Preset comunitário injetado com sucesso! Salvo na sua biblioteca local.", { id: toastId })
+      toast.success(t("luducard-toast-community-preset-applied", "Community preset applied successfully! Saved to your local library."), { id: toastId })
       fetchGamePresets()
       fetchLocalPresets()
     } catch (err) {
       console.error(err)
-      toast.error(`Falha ao aplicar preset: ${err}`, { id: toastId })
+      toast.error(`${t("luducard-toast-apply-preset-failed", "Failed to apply preset")}: ${err}`, { id: toastId })
     }
   }
 
   // Restore Original Configurations (Undo)
   const handleUndoPreset = async () => {
-    const toastId = toast.loading("Restaurando arquivos de configurações originais do Seguro-Crash...")
+    const toastId = toast.loading(t("luducard-toast-restoring-crash-safety", "Restoring original config files from Safe-Crash..."))
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -855,10 +854,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
       localStorage.removeItem(`luducard_preset_safety_${game.id}`)
       setHasCrashSafetyBackup(false)
-      toast.success("Configuração original restaurada com sucesso! Saves intocados.", { id: toastId })
+      toast.success(t("luducard-toast-original-config-restored", "Original settings restored successfully! Saves untouched."), { id: toastId })
     } catch (err) {
       console.error(err)
-      toast.error(`Falha ao restaurar backup Seguro-Crash: ${err}`, { id: toastId })
+      toast.error(`${t("luducard-toast-restore-crash-safety-failed", "Failed to restore Safe-Crash backup")}: ${err}`, { id: toastId })
     }
   }
 
@@ -890,7 +889,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         return p
       }))
     } catch (err) {
-      toast.error("Falha ao computar voto.")
+      toast.error(t("luducard-toast-vote-failed", "Failed to register vote."))
     }
   }
 
@@ -908,7 +907,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           body: JSON.stringify({ preset_id: presetId })
         })
       }
-      toast.success("Denúncia enviada! Preset será ocultado da comunidade se receber 3 denúncias.")
+      toast.success(t("luducard-toast-report-sent-preset", "Report sent! The preset will be hidden from the community after 3 reports."))
       
       // Update local state and hide if reports count reaches 3
       setPresets(prev => prev.map(p => {
@@ -918,7 +917,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
         return p
       }).filter(p => p.id !== presetId || p.reportsCount < 3))
     } catch (err) {
-      toast.error("Falha ao enviar denúncia.")
+      toast.error(t("luducard-toast-report-failed", "Failed to send report."))
     }
   }
 
@@ -971,7 +970,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
   const handlePublishPreset = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!presetTitle) {
-      toast.error("Por favor, preencha o título do preset.")
+      toast.error(t("luducard-toast-preset-title-required", "Please fill in the preset title."))
       return
     }
 
@@ -979,7 +978,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
     let tempPath = ""
     try {
       const { invoke } = await import("@tauri-apps/api/core")
-      const toastId = toast.loading("Empacotando arquivos de configuração...")
+      const toastId = toast.loading(t("luducard-toast-packing-config-files", "Packing config files..."))
 
       // Step 1: Export preset files to a temporary .luducard archive
       if (isTauri) {
@@ -992,7 +991,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           });
         } else {
           if (selectedConfigFiles.length === 0) {
-            toast.error("Selecione pelo menos um arquivo de configuração.")
+            toast.error(t("luducard-toast-select-config-file", "Select at least one config file."))
             setPublishing(false)
             return
           }
@@ -1031,7 +1030,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
           if (!edgeRes.ok) {
             const errData = await edgeRes.json().catch(() => ({}))
-            throw new Error(errData.error || `Erro de cota ou limite no repositório.`);
+            throw new Error(errData.error || t("luducard-error-quota-or-limit", "Storage quota or limit error in the repository."));
           }
 
           const { uploadUrl, r2Path } = await edgeRes.json()
@@ -1044,7 +1043,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             uploadUrl: uploadUrl,
           })
 
-          toast.loading("Publicando metadados do preset na comunidade...", { id: toastId })
+          toast.loading(t("luducard-toast-publishing-preset-metadata", "Publishing preset metadata to the community..."), { id: toastId })
 
           // Step 4: Write record to public_presets table
           const dbRes = await fetch(`${supabaseUrl}/rest/v1/public_presets`, {
@@ -1063,7 +1062,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               r2_path: r2Path,
               file_size: fileSize,
               description: presetDesc,
-              author_name: authorName || "Anônimo",
+              author_name: authorName || ANONYMOUS_AUTHOR_ID,
               user_uuid: clientUuid,
               cpu,
               gpu,
@@ -1076,9 +1075,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           if (!dbRes.ok) {
             const errText = await dbRes.text()
             if (errText.includes("enforce_user_preset_quota_trigger")) {
-              throw new Error("Você atingiu o limite de 5 presets ativos na nuvem.")
+              throw new Error(t("luducard-error-preset-cloud-limit", "You have reached the limit of 5 active presets in the cloud."))
             }
-            throw new Error(`Falha ao registrar preset: ${errText}`)
+            throw new Error(`${t("luducard-error-register-preset-failed", "Failed to register preset")}: ${errText}`)
           }
         }
 
@@ -1093,7 +1092,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
       fetchLocalPresets()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || `Erro ao publicar preset: ${err}`)
+      toast.error(err.message || `${t("luducard-toast-publish-preset-failed", "Error publishing preset")}: ${err}`)
     } finally {
       setPublishing(false)
       setSelectedLocalPresetForShare(null)
@@ -1136,7 +1135,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <div className="flex flex-wrap items-center gap-2">
               <PlatformBadge platform={game.platform} emulator={game.emulator} />
               <span className="text-xs text-muted-foreground">
-                {game.backups.length} {t("luducard-saved-versions", "versões salvas")}
+                {game.backups.length} {t("luducard-saved-versions", "saved versions")}
               </span>
             </div>
             <h2 className="text-balance text-2xl font-bold leading-tight sm:text-3xl">
@@ -1146,10 +1145,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <button
                 onClick={copyPath}
                 className="group flex w-fit max-w-[550px] items-center gap-2 rounded-md border border-border bg-background/60 px-2.5 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
-                title={game.savePath || t("luducard-no-save-path", "Caminho não configurado")}
+                title={game.savePath || t("luducard-no-save-path", "Path not configured")}
               >
                 <FolderOpen className="size-3.5 shrink-0 text-primary" />
-                <span className="truncate">{game.savePath || t("luducard-no-save-path", "Caminho não configurado")}</span>
+                <span className="truncate">{game.savePath || t("luducard-no-save-path", "Path not configured")}</span>
                 <Copy className="size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
               </button>
               
@@ -1159,7 +1158,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                     variant="outline"
                     size="icon-sm"
                     onClick={handleChangeSavePath}
-                    title={t("luducard-change-save-path-btn", "Alterar caminho do save")}
+                    title={t("luducard-change-save-path-btn", "Change save path")}
                     className="h-8 w-8 px-0"
                   >
                     <SlidersHorizontal className="size-3.5" />
@@ -1170,7 +1169,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       variant="ghost"
                       size="icon-sm"
                       onClick={handleResetSavePath}
-                      title={t("luducard-reset-save-path-btn", "Resetar para o caminho padrão")}
+                      title={t("luducard-reset-save-path-btn", "Reset to default path")}
                       className="h-8 w-8 px-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                       <RotateCcw className="size-3.5" />
@@ -1182,14 +1181,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleBackup}>
                 <ArrowUpToLine data-icon="inline-start" />
-                {t("luducard-backup-now", "Fazer backup agora")}
+                {t("luducard-backup-now", "Backup now")}
               </Button>
               <Button
                 variant="secondary"
                 onClick={handleRestoreLatest}
               >
                 <ArrowDownToLine data-icon="inline-start" />
-                {t("luducard-restore-latest", "Restaurar última")}
+                {t("luducard-restore-latest", "Restore latest")}
               </Button>
             </div>
             <div className="flex flex-wrap gap-2 mt-1">
@@ -1197,38 +1196,38 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenFolder("game")}
-                title={t("luducard-open-game-folder-desc", "Abrir pasta de instalação do jogo no Windows Explorer")}
+                title={t("luducard-open-game-folder-desc", "Open game installation folder in Windows Explorer")}
               >
                 <Folder className="size-3.5" data-icon="inline-start" />
-                {t("luducard-game-folder", "Pasta do Jogo")}
+                {t("luducard-game-folder", "Game Folder")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenFolder("save")}
-                title={t("luducard-open-save-folder-desc", "Abrir pasta onde os saves ativos ficam armazenados")}
+                title={t("luducard-open-save-folder-desc", "Open folder where active saves are stored")}
               >
                 <FolderSync className="size-3.5" data-icon="inline-start" />
-                {t("luducard-save-folder", "Pasta do Save")}
+                {t("luducard-save-folder", "Save Folder")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleOpenFolder("backup")}
-                title={t("luducard-open-backup-folder-desc", "Abrir pasta de backup de saves do Luducard")}
+                title={t("luducard-open-backup-folder-desc", "Open Luducard save backup folder")}
               >
                 <Package className="size-3.5" data-icon="inline-start" />
-                {t("luducard-backup-folder", "Pasta de Backups")}
+                {t("luducard-backup-folder", "Backups Folder")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExportSave}
-                title={t("luducard-export-save-desc", "Exportar save como arquivo .luducard compactado para compartilhar")}
+                title={t("luducard-export-save-desc", "Export save as compressed .luducard file to share")}
                 className="border-primary/30 text-primary hover:bg-primary/10"
               >
                 <Share2 className="size-3.5" data-icon="inline-start" />
-                {t("luducard-export-save", "Exportar Save (.luducard)")}
+                {t("luducard-export-save", "Export Save (.luducard)")}
               </Button>
             </div>
           </div>
@@ -1245,27 +1244,27 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <CardContent className="flex flex-col gap-2.5">
               <StatusPill
                 active={game.autoBackup}
-                label={t("luducard-file-watcher", "Backup automático")}
+                label={t("luducard-file-watcher", "File Watcher")}
                 onIcon={Zap}
                 offIcon={Zap}
               />
               <StatusPill
                 active={game.cloudSync}
-                label={t("luducard-cloud-sync", "Sincronização na nuvem")}
+                label={t("luducard-cloud-sync", "Cloud sync")}
                 onIcon={Cloud}
                 offIcon={CloudOff}
               />
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <span className="flex items-center gap-2 text-sm">
                   <HardDrive className="size-4 text-muted-foreground" />
-                  {t("luducard-saves-on-pc", "Saves no PC")}
+                  {t("luducard-saves-on-pc", "Saves on PC")}
                 </span>
                 <span className="text-xs font-medium">{formatSize(game.sizeMB)}</span>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 px-3 py-2.5">
                 <span className="flex items-center gap-2 text-sm">
                   <Package className="size-4 text-muted-foreground" />
-                  {t("luducard-total-backups", "Total em backups")}
+                  {t("luducard-total-backups", "Total in backups")}
                 </span>
                 <span className="text-xs font-medium">{formatSize(game.backupsSizeMB || 0)}</span>
               </div>
@@ -1276,10 +1275,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Gamepad2 className="size-4 text-primary" />
-                {t("luducard-campaign-notes", "Diário de Bordo")}
+                {t("luducard-campaign-notes", "Logbook")}
               </CardTitle>
               <CardDescription className="text-xs">
-                {t("luducard-campaign-notes-desc", "Anotações rápidas sobre o seu progresso")}
+                {t("luducard-campaign-notes-desc", "Quick notes about your progress")}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-1">
@@ -1287,7 +1286,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 value={localNotes}
                 onChange={(e) => setLocalNotes(e.target.value)}
                 onBlur={saveNotes}
-                placeholder={t("luducard-campaign-notes-placeholder", "Escreva anotações rápidas sobre o seu progresso neste jogo...")}
+                placeholder={t("luducard-campaign-notes-placeholder", "Write quick notes about your progress in this game...")}
                 className="w-full min-h-[100px] resize-y bg-muted/40 border border-border focus:border-primary/50 rounded-md p-2.5 text-xs leading-normal outline-none transition-colors text-foreground placeholder:text-muted-foreground/40 font-normal"
               />
             </CardContent>
@@ -1295,18 +1294,18 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{t("luducard-quick-preferences", "Preferências rápidas")}</CardTitle>
+              <CardTitle className="text-base">{t("luducard-quick-preferences", "Quick preferences")}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <label className="flex items-center justify-between gap-2">
-                <span className="text-sm">{t("luducard-file-watcher", "Backup automático")}</span>
+                <span className="text-sm">{t("luducard-file-watcher", "File Watcher")}</span>
                 <Switch
                   checked={game.autoBackup}
                   disabled={true} /* Controlled by main settings config */
                 />
               </label>
               <label className="flex items-center justify-between gap-2">
-                <span className="text-sm">{t("luducard-cloud-sync", "Enviar para a nuvem")}</span>
+                <span className="text-sm">{t("luducard-cloud-sync-upload", "Upload to cloud")}</span>
                 <Switch
                   checked={game.cloudSync}
                   disabled={true} /* Controlled by main settings config */
@@ -1330,10 +1329,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 )}
                 <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground/90">
                   {activeTab === "saves"
-                    ? t("luducard-save-history", "Histórico de Saves")
+                    ? t("luducard-save-history", "Saves History")
                     : activeTab === "presets"
-                    ? t("luducard-config-presets", "Presets de Configuração")
-                    : t("luducard-save-profiles-title", "Perfis de Saves (Modding)")}
+                    ? t("luducard-config-presets", "Config Presets")
+                    : t("luducard-save-profiles-title", "Save Profiles (Modding)")}
                 </CardTitle>
               </div>
 
@@ -1348,7 +1347,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t("luducard-saves-timeline", "Linha do Tempo (Saves)")}
+                  {t("luducard-saves-timeline", "Saves Timeline")}
                 </button>
                 <button
                   onClick={() => setActiveTab("presets")}
@@ -1359,7 +1358,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t("luducard-presets-configs", "Presets & Configurações")}
+                  {t("luducard-presets-configs", "Presets & Configs")}
                 </button>
                 <button
                   onClick={() => setActiveTab("profiles")}
@@ -1370,7 +1369,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {t("luducard-save-profiles-tab", "Perfis de Save")}
+                  {t("luducard-save-profiles-tab", "Save Profiles")}
                 </button>
               </div>
             </div>
@@ -1385,9 +1384,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                     <EmptyMedia variant="icon">
                       <CloudOff />
                     </EmptyMedia>
-                    <EmptyTitle>{t("luducard-no-backups-yet", "Nenhum backup ainda")}</EmptyTitle>
+                    <EmptyTitle>{t("luducard-no-backups-yet", "No backups yet")}</EmptyTitle>
                     <EmptyDescription>
-                      {t("luducard-do-first-backup-desc", "Faça o primeiro backup deste jogo para começar a linha do tempo.")}
+                      {t("luducard-do-first-backup-desc", "Create the first backup of this game to start the timeline.")}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -1412,7 +1411,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">
-                              {b.date} às {b.time}
+                              {b.date} {t("luducard-at", "at")} {b.time}
                             </span>
                             {b.cloud ? (
                               <Cloud className="size-3.5 text-primary" />
@@ -1422,14 +1421,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                             {b.locked && (
                               <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500 border border-amber-500/20">
                                 <Pin className="size-2.5 fill-current" />
-                                Alfinetado
+                                {t("luducard-pinned", "Pinned")}
                               </span>
                             )}
                           </div>
                           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <span className={cn("font-medium", kindColors[b.kind] || "text-muted-foreground")}>
-                                {b.kind}
+                                {backupKindLabel(b.kind)}
                               </span>
                               <span>⬢</span>
                               <span>{formatSize(b.sizeMB)}</span>
@@ -1453,7 +1452,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                             onClick={() => handleRestoreVersion(b.id, `${b.date} ${b.time}`)}
                           >
                             <RotateCcw data-icon="inline-start" />
-                            Restaurar
+                            {t("luducard-restore-btn", "Restore")}
                           </Button>
                           <Button
                             size="sm"
@@ -1461,13 +1460,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                             onClick={() => handleExportBackupVersion(b.id, b.date, b.time)}
                           >
                             <Share2 data-icon="inline-start" />
-                            Exportar
+                            {t("luducard-export-btn", "Export")}
                           </Button>
                           <Button
                             size="icon-sm"
                             variant={b.locked ? "secondary" : "ghost"}
                             onClick={() => handleToggleLocked(b.id, !!b.locked)}
-                            title={b.locked ? "Desafixar versão (permitir exclusão automática)" : "Fixar/Alfinetar versão (impedir exclusão automática)"}
+                            title={b.locked ? t("luducard-unpin-version", "Unpin version (allow automatic deletion)") : t("luducard-pin-version", "Pin version (prevent automatic deletion)")}
                             className={cn(
                               b.locked ? "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10" : "text-muted-foreground hover:text-foreground"
                             )}
@@ -1478,11 +1477,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                           <Button
                             size="icon-sm"
                             variant="ghost"
-                            onClick={() => toast.error("Por favor, gerencie exclusões de backups pelo app central")}
-                            title="Deletar versão"
+                            onClick={() => toast.error(t("luducard-toast-manage-deletions-in-app", "Please manage backup deletions from the main app"))}
+                            title={t("luducard-delete-version", "Delete version")}
                           >
                             <Trash2 />
-                            <span className="sr-only">Deletar versão</span>
+                            <span className="sr-only">{t("luducard-delete-version", "Delete version")}</span>
                           </Button>
                         </div>
                       </div>
@@ -1504,7 +1503,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Meus Presets (Locais & Baixados)
+                    {t("luducard-my-presets-tab", "My Presets (Local & Downloaded)")}
                   </button>
                   <button
                     onClick={() => setPresetSubTab("community")}
@@ -1515,7 +1514,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Presets da Comunidade
+                    {t("luducard-community-presets-tab", "Community Presets")}
                   </button>
                 </div>
 
@@ -1526,8 +1525,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       <div className="flex items-center gap-2">
                         <SlidersHorizontal className="size-4.5 text-primary" />
                         <div>
-                          <h4 className="text-sm font-semibold">Salvar Configuração Atual</h4>
-                          <p className="text-xs text-muted-foreground">Crie um preset local a partir das configurações ativas do seu jogo.</p>
+                          <h4 className="text-sm font-semibold">{t("luducard-save-current-config", "Save Current Config")}</h4>
+                          <p className="text-xs text-muted-foreground">{t("luducard-save-current-config-desc", "Create a local preset from your game's active settings.")}</p>
                         </div>
                       </div>
                       <Button
@@ -1556,16 +1555,16 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         className="border-primary/40 hover:bg-primary/5 text-primary flex items-center gap-1.5 font-medium"
                       >
                         <HardDrive className="size-3.5" />
-                        Salvar Nova Config
+                        {t("luducard-save-new-config-btn", "Save New Config")}
                       </Button>
                     </div>
 
                     {localPresets.length === 0 ? (
                       <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed border-border rounded-xl bg-card/20">
                         <Info className="size-8 text-muted-foreground/60 mb-2" />
-                        <h5 className="font-semibold text-sm">Nenhum preset local</h5>
+                        <h5 className="font-semibold text-sm">{t("luducard-no-local-presets", "No local presets")}</h5>
                         <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                          Capture suas configurações de gráficos e controles locais para salvá-las como um preset ou compartilhá-las.
+                          {t("luducard-no-local-presets-hint", "Capture your local graphics and controller settings to save them as a preset or share them.")}
                         </p>
                       </div>
                     ) : (
@@ -1584,7 +1583,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                 })}
                               >
                                 <h5 className="font-bold text-sm leading-tight text-foreground truncate">{lp.title}</h5>
-                                <p className="line-clamp-1 text-xs text-muted-foreground leading-relaxed mt-0.5">{lp.description || "Sem descrição."}</p>
+                                <p className="line-clamp-1 text-xs text-muted-foreground leading-relaxed mt-0.5">{lp.description || t("luducard-no-description", "No description.")}</p>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                                 <Button
@@ -1593,7 +1592,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                   className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold flex items-center gap-1"
                                 >
                                   <Zap className="size-3 fill-current" />
-                                  Aplicar
+                                  {t("luducard-apply-btn", "Apply")}
                                 </Button>
                                 <Button
                                   size="sm"
@@ -1602,7 +1601,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                   className="flex items-center gap-1 text-xs"
                                 >
                                   <Share2 className="size-3 text-primary" />
-                                  Upar Pro HUB
+                                  {t("luducard-upload-to-hub-btn", "Upload to HUB")}
                                 </Button>
                                 <Button
                                   size="icon-sm"
@@ -1620,9 +1619,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                 {lp.cpu ? `${lp.cpu} | ` : ""}{lp.gpu ? `${lp.gpu} | ` : ""}{lp.ram || ""}
                               </span>
                               <span>⬢</span>
-                              <span>Criado em: {new Date(lp.createdAt).toLocaleDateString("pt-BR")}</span>
+                              <span>{t("luducard-created-at", "Created on")}: {new Date(lp.createdAt).toLocaleDateString(t("luducard-date-locale", "en-US"))}</span>
                               <span>⬢</span>
-                              <span>{lp.files.length} arquivos mapeados</span>
+                              <span>{lp.files.length} {t("luducard-files-mapped", "mapped files")}</span>
                             </div>
                           </div>
                         ))}
@@ -1638,8 +1637,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="size-4.5 text-red-400 animate-pulse" />
                           <div className="text-xs text-red-400">
-                            <span className="font-semibold block">Seguro-Crash Ativo</span>
-                            Você aplicou um preset recentemente. Se houver falhas, restaure as configs originais.
+                            <span className="font-semibold block">{t("luducard-crash-safety-active", "Safe-Crash Active")}</span>
+                            {t("luducard-crash-safety-active-desc", "You applied a preset recently. If anything breaks, restore the original configs.")}
                           </div>
                         </div>
                         <Button
@@ -1649,7 +1648,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                           className="h-8 text-xs font-semibold flex items-center gap-1.5"
                         >
                           <RotateCcw className="size-3.5" />
-                          Desfazer e Voltar ao Original
+                          {t("luducard-undo-restore-original", "Undo & Restore Original")}
                         </Button>
                       </div>
                     )}
@@ -1657,14 +1656,31 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                     {loadingPresets ? (
                       <div className="flex h-[150px] flex-col items-center justify-center gap-2">
                         <Clock className="size-7 animate-spin text-primary" />
-                        <span className="text-xs text-muted-foreground">Buscando presets na nuvem...</span>
+                        <span className="text-xs text-muted-foreground">{t("luducard-fetching-cloud-presets", "Fetching presets from the cloud...")}</span>
+                      </div>
+                    ) : presetsError ? (
+                      <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed border-red-500/30 rounded-xl bg-red-500/5">
+                        <CloudOff className="size-8 text-red-400/70 mb-2" />
+                        <h5 className="font-semibold text-sm">{describeHubError(t, presetsError).title}</h5>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                          {describeHubError(t, presetsError).description}
+                        </p>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={fetchGamePresets}
+                          className="mt-3 h-7 text-xs"
+                        >
+                          <RefreshCw className="size-3" data-icon="inline-start" />
+                          {t("luducard-btn-try-again", "Try again")}
+                        </Button>
                       </div>
                     ) : presets.length === 0 ? (
                       <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed border-border rounded-xl bg-card/20">
                         <Info className="size-8 text-muted-foreground/60 mb-2" />
-                        <h5 className="font-semibold text-sm">Nenhum preset comunitário</h5>
+                        <h5 className="font-semibold text-sm">{t("luducard-no-community-presets", "No community presets")}</h5>
                         <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                          Não há presets publicados para este jogo na nuvem. Crie um local e compartilhe!
+                          {t("luducard-no-community-presets-desc", "There are no presets published for this game in the cloud. Create a local one and share it!")}
                         </p>
                       </div>
                     ) : (
@@ -1692,7 +1708,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                     {preset.isOfficial && (
                                       <span className="inline-flex items-center gap-0.5 rounded bg-primary/20 border border-primary/30 px-1.5 py-0.5 text-[9px] font-bold text-primary uppercase shrink-0">
                                         <Sparkles className="size-2.5 fill-current" />
-                                        Oficial
+                                        {t("luducard-badge-official", "Official")}
                                       </span>
                                     )}
                                   </h5>
@@ -1720,12 +1736,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                   {importingPreset === preset.id ? (
                                     <>
                                       <RefreshCw className="size-3 animate-spin" />
-                                      Instalando...
+                                      {t("luducard-installing", "Installing...")}
                                     </>
                                   ) : (
                                     <>
                                       <Download className="size-3" />
-                                      Baixar & Aplicar
+                                      {t("luducard-download-apply-btn", "Download & Apply")}
                                     </>
                                   )}
                                 </Button>
@@ -1737,10 +1753,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                     <Cpu className="size-3" />
                                     {preset.cpu ? `${preset.cpu} | ` : ""}{preset.gpu ? `${preset.gpu} | ` : ""}{preset.ram || ""}
                                   </span>
-                                  <span>Por: <strong className="text-foreground">{preset.authorName}</strong></span>
+                                  <span>{t("luducard-author-by-label", "By:")} <strong className="text-foreground">{authorLabel(preset.authorName)}</strong></span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                  <div className="flex items-center gap-1" title="Aprovação">
+                                  <div className="flex items-center gap-1" title={t("luducard-approval", "Approval")}>
                                     <ThumbsUp className="size-3 text-primary" />
                                     <span className="font-semibold text-foreground">{approvalRatio}%</span>
                                   </div>
@@ -1764,7 +1780,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                   >
                                     <AlertTriangle className="size-3" />
                                   </button>
-                                  <span>Downloads: <strong className="text-foreground">{preset.downloadsCount}</strong></span>
+                                  <span>{t("luducard-downloads-label", "Downloads:")} <strong className="text-foreground">{preset.downloadsCount}</strong></span>
                                 </div>
                               </div>
                             </div>
@@ -1782,10 +1798,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
                    <div className="flex flex-col gap-1">
                      <h3 className="text-sm font-semibold text-foreground">
-                       {t("luducard-profiles-header", "Gerenciamento de Perfis de Save")}
+                       {t("luducard-profiles-header", "Save Profile Management")}
                      </h3>
                      <p className="text-xs text-muted-foreground">
-                       {t("luducard-profiles-intro", "Crie campanhas separadas ou separe gameplay com mods. O Luducard cuidará de trocar e guardar os saves correspondentes automaticamente.")}
+                       {t("luducard-profiles-intro", "Create separate campaigns or isolate modded gameplay. Luducard will automatically handle switching and storing the corresponding saves.")}
                      </p>
                    </div>
                    <Button
@@ -1798,14 +1814,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                      className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs py-1.5 h-auto rounded-xl shadow-md cursor-pointer flex items-center gap-1.5 self-start sm:self-auto shrink-0"
                    >
                      <FolderSync className="size-3.5" />
-                     {t("luducard-create-profile-btn", "Novo Perfil de Save")}
+                     {t("luducard-new-save-profile-btn", "New Save Profile")}
                    </Button>
                  </div>
 
                  {loadingProfiles ? (
                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-3">
                      <RefreshCw className="size-8 animate-spin text-primary" />
-                     <span className="text-xs">{t("luducard-loading-profiles", "Carregando perfis de save...")}</span>
+                     <span className="text-xs">{t("luducard-loading-profiles", "Loading save profiles...")}</span>
                    </div>
                  ) : saveProfiles.length === 0 ? (
                    <Empty>
@@ -1813,9 +1829,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                        <EmptyMedia variant="icon">
                          <FolderSync />
                        </EmptyMedia>
-                       <EmptyTitle>{t("luducard-no-profiles-yet", "Nenhum Perfil de Save")}</EmptyTitle>
+                       <EmptyTitle>{t("luducard-no-profiles-yet", "No Save Profiles")}</EmptyTitle>
                        <EmptyDescription>
-                         {t("luducard-no-profiles-desc", "O jogo está usando os arquivos de save padrão do seu sistema. Crie o primeiro perfil para começar a organizar suas campanhas.")}
+                         {t("luducard-no-profiles-desc", "The game is using your system's default save files. Create the first profile to start organizing your campaigns.")}
                        </EmptyDescription>
                      </EmptyHeader>
                    </Empty>
@@ -1826,11 +1842,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                        <Info className="size-4 shrink-0 mt-0.5 text-primary" />
                        <div className="flex flex-col gap-1 leading-relaxed">
                          <span className="font-semibold text-primary">
-                           {t("luducard-active-profile-banner", "Perfil Ativo no Sistema:")} {" "}
-                           {saveProfiles.find(p => p.active)?.title || t("luducard-none", "Nenhum (Usando saves soltos)")}
+                           {t("luducard-active-profile-banner", "Active Profile on System:")} {" "}
+                           {saveProfiles.find(p => p.active)?.title || t("luducard-none", "None (Using loose saves)")}
                          </span>
                          <span>
-                           {t("luducard-active-profile-banner-desc", "Ao alternar de perfil, os saves atuais da pasta do jogo são guardados automaticamente no perfil ativo anterior para evitar perda de dados.")}
+                           {t("luducard-active-profile-banner-desc", "When switching profiles, the game folder's current saves are automatically stored in the previously active profile to prevent data loss.")}
                          </span>
                        </div>
                      </div>
@@ -1851,11 +1867,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                <span className="font-bold text-sm text-foreground truncate">{p.title}</span>
                                {p.active ? (
                                  <span className="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 text-[9px] font-bold text-emerald-500 select-none">
-                                   {t("luducard-profile-active-tag", "Ativo no Sistema")}
+                                   {t("luducard-profile-active-tag", "Active on System")}
                                  </span>
                                ) : (
                                  <span className="inline-flex items-center rounded-full bg-muted border border-border px-2 py-0.5 text-[9px] font-medium text-muted-foreground select-none">
-                                   {t("luducard-profile-inactive-tag", "Inativo")}
+                                   {t("luducard-profile-inactive-tag", "Inactive")}
                                  </span>
                                )}
                              </div>
@@ -1865,7 +1881,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                </p>
                              )}
                              <span className="text-[10px] text-muted-foreground/80 mt-1">
-                               {t("luducard-created-at", "Criado em")}: {new Date(p.createdAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                               {t("luducard-created-at", "Created on")}: {new Date(p.createdAt).toLocaleString(t("luducard-date-locale", "en-US"), { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                              </span>
                            </div>
 
@@ -1883,7 +1899,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                  ) : (
                                    <FolderSync className="size-3.5" />
                                  )}
-                                 {t("luducard-activate-profile-btn", "Ativar Perfil")}
+                                 {t("luducard-activate-profile-btn", "Activate Profile")}
                                </Button>
                              )}
                              <Button
@@ -1891,11 +1907,11 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                                variant="ghost"
                                disabled={p.active || switchingProfileId !== null}
                                onClick={() => handleDeleteSaveProfile(p.id, p.title)}
-                               title={p.active ? t("luducard-cant-delete-active", "Não é possível deletar o perfil ativo") : t("luducard-delete-profile", "Excluir perfil")}
+                               title={p.active ? t("luducard-cant-delete-active", "Cannot delete the active profile") : t("luducard-delete-profile", "Delete profile")}
                                className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 cursor-pointer disabled:opacity-30"
                              >
                                <Trash2 className="size-4" />
-                               <span className="sr-only">Excluir</span>
+                               <span className="sr-only">{t("luducard-delete", "Delete")}</span>
                              </Button>
                            </div>
                          </div>
@@ -1915,8 +1931,8 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
           <Card className="w-full max-w-md shadow-2xl border border-border animate-in fade-in zoom-in-95 duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-border">
               <div>
-                <CardTitle className="text-base">Detalhes do Backup Local</CardTitle>
-                <CardDescription className="text-xs">Informações da versão e notas de campanha.</CardDescription>
+                <CardTitle className="text-base">{t("luducard-local-backup-details", "Local Backup Details")}</CardTitle>
+                <CardDescription className="text-xs">{t("luducard-version-info-desc", "Version information and campaign notes.")}</CardDescription>
               </div>
               <Button
                 variant="ghost"
@@ -1930,29 +1946,29 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5 bg-muted/20 border border-border p-3.5 rounded-xl text-xs">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Data e Hora:</span>
-                  <span className="font-semibold text-foreground">{selectedLocalBackup.date} às {selectedLocalBackup.time}</span>
+                  <span className="text-muted-foreground">{t("luducard-date-time-label", "Date and Time:")}</span>
+                  <span className="font-semibold text-foreground">{selectedLocalBackup.date} {t("luducard-at", "at")} {selectedLocalBackup.time}</span>
                 </div>
                 <div className="flex justify-between mt-1">
-                  <span className="text-muted-foreground">Tipo de Backup:</span>
+                  <span className="text-muted-foreground">{t("luducard-backup-type-label", "Backup Type:")}</span>
                   <span className={cn("font-semibold", kindColors[selectedLocalBackup.kind] || "text-foreground")}>
-                    {selectedLocalBackup.kind}
+                    {backupKindLabel(selectedLocalBackup.kind)}
                   </span>
                 </div>
                 <div className="flex justify-between mt-1">
-                  <span className="text-muted-foreground">Tamanho do Arquivo:</span>
+                  <span className="text-muted-foreground">{t("luducard-file-size-label", "File Size:")}</span>
                   <span className="font-semibold text-foreground">{formatSize(selectedLocalBackup.sizeMB)}</span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="local-backup-note" className="text-xs font-semibold text-muted-foreground">
-                  Notas de Campanha / Descrição do Progresso
+                  {t("luducard-campaign-notes-label", "Campaign Notes / Progress Description")}
                 </label>
                 <textarea
                   id="local-backup-note"
                   rows={4}
-                  placeholder="Ex: Parei após derrotar o dragão. Nível 45, build de destreza..."
+                  placeholder={t("luducard-campaign-notes-placeholder", "E.g. Stopped after beating the dragon. Level 45, dexterity build...")}
                   value={localNote}
                   onChange={(e) => setLocalNote(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary whitespace-pre-wrap leading-relaxed"
@@ -1964,13 +1980,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   variant="ghost"
                   onClick={() => setSelectedLocalBackup(null)}
                 >
-                  Cancelar
+                  {t("luducard-cancel", "Cancel")}
                 </Button>
                 <Button
                   onClick={handleSaveNote}
                   className="bg-primary hover:bg-primary/95 text-primary-foreground font-medium"
                 >
-                  Salvar Notas
+                  {t("luducard-save-notes-btn", "Save Notes")}
                 </Button>
               </div>
             </CardContent>
@@ -1986,10 +2002,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div>
                 <CardTitle className="text-base flex items-center gap-1.5">
                   <Share2 className="size-4.5 text-primary" />
-                  Compartilhar Preset de Configuração
+                  {t("luducard-share-config-preset-title", "Share Config Preset")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Salve e envie suas otimizações locais para a comunidade.
+                  {t("luducard-share-config-preset-desc", "Save and send your local optimizations to the community.")}
                 </CardDescription>
               </div>
               <Button
@@ -2008,17 +2024,17 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 <div className="flex flex-col gap-1.5 border border-border rounded-xl p-3 bg-muted/10">
                   <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                     <FolderSync className="size-3.5 text-primary" />
-                    Arquivos de Configuração Detectados:
+                    {t("luducard-detected-config-files", "Detected Config Files:")}
                   </label>
                   {loadingConfigs ? (
                     <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
                       <Clock className="size-3.5 animate-spin text-primary" />
-                      Mapeando arquivos locais...
+                      {t("luducard-mapping-local-files", "Mapping local files...")}
                     </div>
                   ) : configFiles.length === 0 ? (
                     <div className="text-xs text-red-400 bg-red-500/5 border border-red-500/10 p-2.5 rounded-lg flex items-start gap-1.5">
                       <AlertTriangle className="size-4 shrink-0" />
-                      Não foi possível detectar arquivos de configuração usando o mapeamento do Ludosavi.
+                      {t("luducard-no-config-files-detected", "Could not detect config files using the Ludusavi mapping.")}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1.5 max-h-[100px] overflow-y-auto border border-border/60 rounded bg-background p-2">
@@ -2052,12 +2068,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 <div className="grid gap-3.5 sm:grid-cols-2">
                   <div className="flex flex-col gap-1.5 sm:col-span-2">
                     <label htmlFor="preset-title" className="text-xs font-semibold text-muted-foreground">
-                      Título do Preset *
+                      {t("luducard-preset-title-label", "Preset Title *")}
                     </label>
                     <input
                       id="preset-title"
                       type="text"
-                      placeholder="Ex: Potato Mode (Max Performance) ou Balanced DF Specs"
+                      placeholder={t("luducard-preset-title-placeholder", "E.g. Potato Mode (Max Performance) or Balanced DF Specs")}
                       value={presetTitle}
                       onChange={(e) => setPresetTitle(e.target.value)}
                       required
@@ -2067,12 +2083,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
                   <div className="flex flex-col gap-1.5">
                     <label htmlFor="preset-author" className="text-xs font-semibold text-muted-foreground">
-                      Seu Nome / Nickname
+                      {t("luducard-your-name-label", "Your Name / Nickname")}
                     </label>
                     <input
                       id="preset-author"
                       type="text"
-                      placeholder="Ex: Anônimo"
+                      placeholder={t("luducard-checkpoint-author-placeholder", "E.g. Anonymous")}
                       value={authorName}
                       onChange={(e) => setAuthorName(e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2082,16 +2098,16 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   {/* Tags */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">
-                      Tags do Preset
+                      {t("luducard-preset-tags-label", "Preset Tags")}
                     </label>
                     <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto border border-border/80 p-2.5 rounded-md bg-muted/10">
                       {PREDEFINED_PRESET_TAGS.map(tag => {
-                        const active = selectedTags.includes(tag.name)
+                        const active = selectedTags.includes(tag.id)
                         return (
                           <button
-                            key={tag.name}
+                            key={tag.id}
                             type="button"
-                            onClick={() => handleToggleTag(tag.name)}
+                            onClick={() => handleToggleTag(tag.id)}
                             title={tag.description}
                             className={cn(
                               "px-2 py-0.5 rounded text-[10px] font-medium border transition-all select-none",
@@ -2110,12 +2126,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="preset-desc" className="text-xs font-semibold text-muted-foreground">
-                    Descrição (Versão do jogo, melhorias de FPS estimadas, etc.)
+                    {t("luducard-preset-desc-detailed-label", "Description (Game version, estimated FPS gains, etc.)")}
                   </label>
                   <textarea
                     id="preset-desc"
                     rows={2}
-                    placeholder="Ex: Aumenta cerca de 15% do FPS na cidade. Testado na versão 1.63."
+                    placeholder={t("luducard-preset-desc-placeholder", "E.g. Around 15% more FPS in the city. Tested on version 1.63.")}
                     value={presetDesc}
                     onChange={(e) => setPresetDesc(e.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary whitespace-pre-wrap"
@@ -2126,17 +2142,17 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                 <div className="flex flex-col gap-2.5 border border-border rounded-xl p-3 bg-muted/10">
                   <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                     <Cpu className="size-3.5 text-primary" />
-                    Hardware Detectado (Especificações do Autor):
+                    {t("luducard-detected-hardware-label", "Detected Hardware (Author Specs):")}
                   </span>
                   {loadingHardware ? (
                     <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
                       <Clock className="size-3.5 animate-spin text-primary" />
-                      Detectando hardware local...
+                      {t("luducard-detecting-hardware", "Detecting local hardware...")}
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="flex flex-col gap-1">
-                        <label htmlFor="hw-cpu" className="text-[10px] font-semibold text-muted-foreground">Processador (CPU)</label>
+                        <label htmlFor="hw-cpu" className="text-[10px] font-semibold text-muted-foreground">{t("luducard-cpu-full-label", "Processor (CPU)")}</label>
                         <input
                           id="hw-cpu"
                           type="text"
@@ -2146,7 +2162,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label htmlFor="hw-gpu" className="text-[10px] font-semibold text-muted-foreground">Placa de Vídeo (GPU)</label>
+                        <label htmlFor="hw-gpu" className="text-[10px] font-semibold text-muted-foreground">{t("luducard-gpu-label", "Graphics Card (GPU)")}</label>
                         <input
                           id="hw-gpu"
                           type="text"
@@ -2156,7 +2172,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                         />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label htmlFor="hw-ram" className="text-[10px] font-semibold text-muted-foreground">Memória RAM</label>
+                        <label htmlFor="hw-ram" className="text-[10px] font-semibold text-muted-foreground">{t("luducard-ram-label", "RAM Memory")}</label>
                         <input
                           id="hw-ram"
                           type="text"
@@ -2176,7 +2192,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   variant="ghost"
                   onClick={() => setIsSharePresetModalOpen(false)}
                 >
-                  Cancelar
+                  {t("luducard-cancel", "Cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -2201,7 +2217,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   <Gamepad2 className="size-4.5 text-primary" />
                   {selectedDetailPreset.gameName}
                 </CardTitle>
-                <CardDescription className="text-xs">Visualizando metadados completos do preset.</CardDescription>
+                <CardDescription className="text-xs">{t("luducard-preset-detail-modal-desc", "Viewing complete preset metadata.")}</CardDescription>
               </div>
               <Button
                 variant="ghost"
@@ -2214,13 +2230,13 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             </CardHeader>
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground font-semibold">Título do Preset:</span>
+                <span className="text-xs text-muted-foreground font-semibold">{t("luducard-detail-preset-title", "Preset Title:")}</span>
                 <span className="text-sm font-bold text-foreground leading-snug">{selectedDetailPreset.title}</span>
               </div>
 
               {selectedDetailPreset.description && (
                 <div className="flex flex-col gap-1 bg-muted/20 border border-border p-3 rounded-lg">
-                  <span className="text-[11px] text-muted-foreground font-semibold">Descrição / Otimizações:</span>
+                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-preset-desc", "Description / Optimizations:")}</span>
                   <div className="max-h-[160px] overflow-y-auto pr-1.5 scrollbar-thin">
                     <p className="text-xs leading-relaxed text-muted-foreground mt-0.5 whitespace-pre-wrap">{selectedDetailPreset.description}</p>
                   </div>
@@ -2229,17 +2245,17 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
               {selectedDetailPreset.tags && selectedDetailPreset.tags.length > 0 && (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] text-muted-foreground font-semibold">Marcadores:</span>
+                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-tags-label", "Tags:")}</span>
                   <div className="flex flex-wrap gap-1">
-                    {selectedDetailPreset.tags.map((t: string) => {
-                      const info = PREDEFINED_PRESET_TAGS.find(pt => pt.name === t)
+                    {selectedDetailPreset.tags.map((tagId: string) => {
+                      const info = PREDEFINED_PRESET_TAGS.find(pt => pt.id === tagId)
                       return (
                         <span
-                          key={t}
+                          key={tagId}
                           title={info?.description}
                           className="inline-flex items-center rounded bg-primary/10 border border-primary/25 px-1.5 py-0.2 text-[9px] font-semibold text-primary select-none cursor-help"
                         >
-                          {t}
+                          {info?.name ?? tagId}
                         </span>
                       )
                     })}
@@ -2249,27 +2265,27 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
               <div className="grid grid-cols-2 gap-3 bg-muted/20 border border-border p-3.5 rounded-xl text-xs">
                 <div className="flex flex-col gap-0.5 col-span-2">
-                  <span className="text-muted-foreground font-semibold">Especificações do Autor:</span>
+                  <span className="text-muted-foreground font-semibold">{t("luducard-detail-author-specs", "Author Specs:")}</span>
                   <span className="font-mono text-foreground mt-0.5 leading-relaxed">
                     {selectedDetailPreset.cpu ? `${selectedDetailPreset.cpu} | ` : ""}{selectedDetailPreset.gpu ? `${selectedDetailPreset.gpu} | ` : ""}{selectedDetailPreset.ram || ""}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground">Tamanho Comprimido:</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-size-label", "Compressed Size:")}</span>
                   <span className="font-semibold text-foreground">{formatSize(selectedDetailPreset.fileSize)}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground">Total Downloads:</span>
-                  <span className="font-semibold text-foreground">{selectedDetailPreset.downloadsCount.toLocaleString("pt-BR")}</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-downloads-label", "Total Downloads:")}</span>
+                  <span className="font-semibold text-foreground">{selectedDetailPreset.downloadsCount.toLocaleString(t("luducard-date-locale", "en-US"))}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground font-medium">Enviado por:</span>
-                  <span className="font-semibold text-foreground">{selectedDetailPreset.authorName || "Local"}</span>
+                  <span className="text-muted-foreground font-medium">{t("luducard-detail-author-label", "Uploaded by:")}</span>
+                  <span className="font-semibold text-foreground">{selectedDetailPreset.authorName ? authorLabel(selectedDetailPreset.authorName) : "Local"}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground font-medium">Enviado em:</span>
+                  <span className="text-muted-foreground font-medium">{t("luducard-detail-date-label", "Uploaded on:")}</span>
                   <span className="font-semibold text-foreground">
-                    {new Date(selectedDetailPreset.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                    {new Date(selectedDetailPreset.createdAt).toLocaleDateString(t("luducard-date-locale", "en-US"), { day: "2-digit", month: "short", year: "numeric" })}
                   </span>
                 </div>
               </div>
@@ -2285,10 +2301,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div>
                 <CardTitle className="text-base flex items-center gap-1.5">
                   <SlidersHorizontal className="size-4.5 text-primary" />
-                  Criar Preset Local
+                  {t("luducard-create-local-preset-title", "Create Local Preset")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Salve as configurações atuais deste jogo em um perfil local.
+                  {t("luducard-create-local-preset-desc", "Save this game's current settings into a local profile.")}
                 </CardDescription>
               </div>
               <Button
@@ -2302,22 +2318,22 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             </CardHeader>
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="local-preset-title" className="text-xs font-semibold text-muted-foreground">Título do Preset *</label>
+                <label htmlFor="local-preset-title" className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-title-label", "Preset Title *")}</label>
                 <input
                   id="local-preset-title"
                   type="text"
-                  placeholder="Ex: Minha Otimização 60fps ou Controles de Voo"
+                  placeholder={t("luducard-local-preset-title-placeholder", "E.g. My 60fps Optimization or Flight Controls")}
                   value={newLocalTitle}
                   onChange={(e) => setNewLocalTitle(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="local-preset-desc" className="text-xs font-semibold text-muted-foreground">Descrição</label>
+                <label htmlFor="local-preset-desc" className="text-xs font-semibold text-muted-foreground">{t("luducard-profile-desc-label", "Description")}</label>
                 <textarea
                   id="local-preset-desc"
                   rows={2.5}
-                  placeholder="Descreva o que este preset altera (ex: reduz sombras volumétricas para melhor performance)."
+                  placeholder={t("luducard-local-preset-desc-placeholder", "Describe what this preset changes (e.g. reduces volumetric shadows for better performance).")}
                   value={newLocalDesc}
                   onChange={(e) => setNewLocalDesc(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2327,12 +2343,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                   <FolderSync className="size-3.5 text-primary" />
-                  Arquivos Incluídos (Detectados automaticamente):
+                  {t("luducard-included-files-label", "Included Files (Auto-detected):")}
                 </span>
                 {loadingConfigs ? (
-                  <div className="text-xs text-muted-foreground py-1">Mapeando arquivos...</div>
+                  <div className="text-xs text-muted-foreground py-1">{t("luducard-mapping-files", "Mapping files...")}</div>
                 ) : configFiles.length === 0 ? (
-                  <div className="text-xs text-red-400 bg-red-500/5 p-2 rounded-lg border border-red-500/10">Nenhum arquivo detectado pelo Ludosavi.</div>
+                  <div className="text-xs text-red-400 bg-red-500/5 p-2 rounded-lg border border-red-500/10">{t("luducard-no-files-detected", "No files detected by Ludusavi.")}</div>
                 ) : (
                   <div className="flex flex-col gap-1 max-h-24 overflow-y-auto border border-border/80 bg-muted/10 p-2 rounded-md">
                     {configFiles.map(c => {
@@ -2352,14 +2368,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   variant="ghost"
                   onClick={() => setIsCreateLocalPresetModalOpen(false)}
                 >
-                  Cancelar
+                  {t("luducard-cancel", "Cancel")}
                 </Button>
                 <Button
                   disabled={loadingConfigs || configFiles.length === 0 || !newLocalTitle}
                   onClick={() => handleSaveLocalPreset(newLocalTitle, newLocalDesc, configFiles)}
                   className="bg-primary hover:bg-primary/95 text-primary-foreground font-medium"
                 >
-                  Criar Preset
+                  {t("luducard-create-preset-btn", "Create Preset")}
                 </Button>
               </div>
             </CardContent>
@@ -2375,10 +2391,10 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               <div>
                 <CardTitle className="text-base flex items-center gap-1.5">
                   <FolderSync className="size-4.5 text-primary" />
-                  {t("luducard-create-profile-title", "Criar Perfil de Save")}
+                  {t("luducard-create-profile-title", "Create Save Profile")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {t("luducard-create-profile-desc", "Inicie uma campanha paralela ou isole saves com mods.")}
+                  {t("luducard-create-profile-desc", "Start a parallel campaign or isolate saves with mods.")}
                 </CardDescription>
               </div>
               <Button
@@ -2393,12 +2409,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="save-profile-title" className="text-xs font-semibold text-muted-foreground">
-                  {t("luducard-profile-name-label", "Nome do Perfil *")}
+                  {t("luducard-profile-name-label", "Profile Name *")}
                 </label>
                 <input
                   id="save-profile-title"
                   type="text"
-                  placeholder={t("luducard-profile-name-placeholder", "Ex: Minha Campanha Vanilla ou Modded Run")}
+                  placeholder={t("luducard-profile-name-placeholder", "E.g. My Vanilla Campaign or Modded Run")}
                   value={newProfileTitle}
                   onChange={(e) => setNewProfileTitle(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2406,12 +2422,12 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="save-profile-desc" className="text-xs font-semibold text-muted-foreground">
-                  {t("luducard-profile-desc-label", "Descrição")}
+                  {t("luducard-profile-desc-label", "Description")}
                 </label>
                 <textarea
                   id="save-profile-desc"
                   rows={2.5}
-                  placeholder={t("luducard-profile-desc-placeholder", "Descreva o propósito deste perfil (ex: jogando com a classe guerreiro).")}
+                  placeholder={t("luducard-profile-desc-placeholder", "Describe the purpose of this profile (e.g. playing with the warrior class).")}
                   value={newProfileDesc}
                   onChange={(e) => setNewProfileDesc(e.target.value)}
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -2420,7 +2436,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
               <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/20 p-3 text-xs">
                 <span className="font-semibold text-muted-foreground flex items-center gap-1">
-                  {t("luducard-creation-options", "Opções de Inicialização:")}
+                  {t("luducard-creation-options", "Startup Options:")}
                 </span>
 
                 <div className="flex flex-col gap-2.5">
@@ -2433,9 +2449,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       className="mt-0.5 text-primary focus:ring-primary"
                     />
                     <div className="flex flex-col gap-0.5">
-                      <span>{t("luducard-clone-current-saves", "Clonar progresso atual")}</span>
+                      <span>{t("luducard-clone-current-saves", "Clone current progress")}</span>
                       <span className="text-[10px] text-muted-foreground font-normal">
-                        {t("luducard-clone-current-saves-desc", "Copia os saves que atualmente estão na pasta do jogo para este perfil (recomendado).")}
+                        {t("luducard-clone-current-saves-desc", "Copies the saves currently in the game folder to this profile (recommended).")}
                       </span>
                     </div>
                   </label>
@@ -2449,9 +2465,9 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                       className="mt-0.5 text-primary focus:ring-primary"
                     />
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-amber-500">{t("luducard-start-empty", "Começar do zero (Vazio)")}</span>
+                      <span className="text-amber-500">{t("luducard-start-empty", "Start from scratch (Empty)")}</span>
                       <span className="text-[10px] text-muted-foreground font-normal">
-                        {t("luducard-start-empty-desc", "A pasta de saves atual do jogo será limpa para você iniciar um progresso 100% novo.")}
+                        {t("luducard-start-empty-desc", "The game's current save folder will be cleared so you can start 100% fresh progress.")}
                       </span>
                     </div>
                   </label>
@@ -2463,14 +2479,14 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
                   variant="ghost"
                   onClick={() => setIsCreateProfileModalOpen(false)}
                 >
-                  {t("luducard-cancel", "Cancelar")}
+                  {t("luducard-cancel", "Cancel")}
                 </Button>
                 <Button
                   disabled={!newProfileTitle}
                   onClick={handleCreateSaveProfile}
                   className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold"
                 >
-                  {t("luducard-create-profile-btn", "Criar Perfil")}
+                  {t("luducard-create-profile-btn", "Create Profile")}
                 </Button>
               </div>
             </CardContent>

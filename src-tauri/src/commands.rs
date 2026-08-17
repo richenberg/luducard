@@ -557,38 +557,46 @@ fn start_cover_downloads(
                             }
                         }
                     }
+                }
 
-                    if !downloaded {
-                        let (supabase_url, supabase_anon_key) = load_supabase_settings(&app_data_dir);
-                        let edge_function_url =
-                            format!("{}/functions/v1/get-game-cover", supabase_url.trim_end_matches('/'));
-                        let req_payload = serde_json::json!({
-                            "gameTitle": clean_title
-                        });
+                // Last resort for every game, emulator or not: resolve a cover from the
+                // title through our Edge Function.
+                //
+                // This block used to be nested inside the `!emulator_name.is_empty()`
+                // branch above, so it only ever ran for titles prefixed with "[Yuzu] ",
+                // "[Dolphin] " and friends. An ordinary PC game whose Steam CDN asset
+                // 404s — Halo 4, Enslaved, anything not sold on Steam under that id —
+                // never reached it and stayed uncovered no matter how many rescans ran.
+                if !downloaded {
+                    let (supabase_url, supabase_anon_key) = load_supabase_settings(&app_data_dir);
+                    let edge_function_url =
+                        format!("{}/functions/v1/get-game-cover", supabase_url.trim_end_matches('/'));
+                    let req_payload = serde_json::json!({
+                        "gameTitle": clean_title
+                    });
 
-                        if let Ok(resp) = client
-                            .post(&edge_function_url)
-                            .header("apikey", &supabase_anon_key)
-                            .header("Authorization", format!("Bearer {}", supabase_anon_key))
-                            .json(&req_payload)
-                            .send()
-                            && resp.status().is_success()
-                            && let Ok(json_res) = resp.json::<serde_json::Value>()
-                            && let Some(cover_url) = json_res.get("coverUrl").and_then(|v| v.as_str())
-                            && let Ok(img_resp) = client.get(cover_url).send()
-                            && img_resp.status().is_success()
-                            && let Ok(bytes) = img_resp.bytes()
-                            && bytes.len() > 1000
-                        {
-                            let file_path = covers_dir.join(format!("{}.jpg", slug));
-                            if std::fs::write(&file_path, &bytes).is_ok() {
-                                let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                                base64_uri = format!("data:image/jpeg;base64,{}", encoded);
+                    if let Ok(resp) = client
+                        .post(&edge_function_url)
+                        .header("apikey", &supabase_anon_key)
+                        .header("Authorization", format!("Bearer {}", supabase_anon_key))
+                        .json(&req_payload)
+                        .send()
+                        && resp.status().is_success()
+                        && let Ok(json_res) = resp.json::<serde_json::Value>()
+                        && let Some(cover_url) = json_res.get("coverUrl").and_then(|v| v.as_str())
+                        && let Ok(img_resp) = client.get(cover_url).send()
+                        && img_resp.status().is_success()
+                        && let Ok(bytes) = img_resp.bytes()
+                        && bytes.len() > 1000
+                    {
+                        let file_path = covers_dir.join(format!("{}.jpg", slug));
+                        if std::fs::write(&file_path, &bytes).is_ok() {
+                            let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
+                            base64_uri = format!("data:image/jpeg;base64,{}", encoded);
 
-                                let mut cache = COVER_CACHE.lock().unwrap();
-                                cache.insert(slug.clone(), base64_uri.clone());
-                                downloaded = true;
-                            }
+                            let mut cache = COVER_CACHE.lock().unwrap();
+                            cache.insert(slug.clone(), base64_uri.clone());
+                            downloaded = true;
                         }
                     }
                 }
@@ -880,9 +888,13 @@ fn build_frontend_game(
 
     let cover_path = get_game_cover(app_data_dir, &slug);
 
-    // Determine platform from manifest metadata
+    // Determine platform from manifest metadata.
+    //
+    // "Other" rather than "Steam" as the starting value: the manifest only carries Steam
+    // and GOG ids, so anything else is genuinely unknown and claiming a store we cannot
+    // verify puts a wrong badge on the card.
     let game_meta = api.manifest.0.get(name);
-    let mut platform = "Steam".to_string();
+    let mut platform = "Other".to_string();
     let mut emulator = None;
 
     if name.starts_with('[') {
@@ -910,9 +922,12 @@ fn build_frontend_game(
             platform = "Steam".to_string();
         } else if meta.gog.id.is_some() {
             platform = "GOG".to_string();
-        } else if !meta.files.is_empty() {
-            platform = "Epic".to_string();
         }
+        // No Epic branch: this used to read `else if !meta.files.is_empty()`, which is
+        // true for practically every manifest entry — it only means "we know where this
+        // game keeps its saves". That labelled every non-Steam, non-GOG game as Epic,
+        // including standalone downloads and the emulators the manifest tracks in their
+        // own right, such as Dolphin.
     }
 
     let auto_backup = api.config.is_game_enabled_for_backup(name);
@@ -933,7 +948,7 @@ fn build_frontend_game(
     let has_known_store = game_meta
         .map(|m| m.steam.id.is_some() || m.gog.id.is_some())
         .unwrap_or(false)
-        || matches!(platform.as_str(), "Steam" | "GOG" | "Epic" | "Origin" | "Ea" | "Uplay");
+        || matches!(platform.as_str(), "Steam" | "GOG" | "Origin" | "Ea" | "Uplay");
 
     let installed = if has_known_store {
         check_if_game_installed(api, name)
@@ -1227,8 +1242,8 @@ pub async fn scan_games(app: tauri::AppHandle) -> Result<Vec<FrontendGame>, Stri
 
         // Show a native Windows notification when scan is complete
         crate::watcher::show_notification(
-            "Varredura concluída",
-            &format!("{} jogo(s) encontrado(s) na biblioteca.", total_found),
+            &ludusavi::lang::TRANSLATOR.notify_scan_done_title(),
+            &ludusavi::lang::TRANSLATOR.notify_scan_done(total_found),
         );
 
         Ok(frontend_games)
@@ -1522,7 +1537,7 @@ pub async fn get_settings(app: tauri::AppHandle) -> Result<FrontendSettings, Str
             .path()
             .app_data_dir()
             .map(|dir| crate::hotkey::load_quick_save_settings(&dir))
-            .unwrap_or((true, "Ctrl+Shift+S".to_string()));
+            .unwrap_or((true, crate::hotkey::DEFAULT_SHORTCUT.to_string()));
 
         let start_with_windows = is_autostart_enabled();
         let portable = ludusavi::prelude::is_portable();
@@ -1579,6 +1594,7 @@ pub async fn save_settings(app: tauri::AppHandle, settings: FrontendSettings) ->
             api.config.language = lang;
             api.config.has_set_language = settings.has_set_language;
             ludusavi::lang::TRANSLATOR.set_language(lang);
+            crate::refresh_tray_menu(&app_clone);
         }
 
         api.config.save();
@@ -1636,7 +1652,7 @@ pub async fn save_settings(app: tauri::AppHandle, settings: FrontendSettings) ->
 }
 
 #[tauri::command]
-pub async fn save_language(language: String) -> Result<(), String> {
+pub async fn save_language(app: tauri::AppHandle, language: String) -> Result<(), String> {
     tokio::task::spawn_blocking(move || {
         let mut config = ludusavi::resource::config::Config::load().map_err(|e| format!("{:?}", e))?;
         if let Ok(lang) = serde_json::from_str::<ludusavi::lang::Language>(&format!("\"{}\"", language)) {
@@ -1644,6 +1660,7 @@ pub async fn save_language(language: String) -> Result<(), String> {
             config.has_set_language = true;
             config.save();
             ludusavi::lang::TRANSLATOR.set_language(lang);
+            crate::refresh_tray_menu(&app);
         }
         Ok(())
     })

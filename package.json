@@ -1,6 +1,5 @@
 {
   "name": "luducard",
-  "version": "0.2.0",
   "private": true,
   "scripts": {
     "tauri": "cd src-tauri && node ../ui/node_modules/@tauri-apps/cli/tauri.js"

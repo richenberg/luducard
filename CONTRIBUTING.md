@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to **Luducard**! 
 
-Join our community on [Discord](https://discord.gg/U2DEbDqgm) to discuss features, get help, or coordinate development!
+Join our community on [Discord](https://discord.gg/8K3TEBMyvK) to discuss features, get help, or coordinate development!
 
 Luducard is a community-driven project. As the main application has been built and developed with the support of AI coding assistants, contributions of any kind are welcome.
 

@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Globe,
   Database,
+  CloudOff,
   X,
   SlidersHorizontal,
   Cpu,
@@ -28,32 +29,23 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { useLibrary } from "@/lib/library-context"
 import { cn } from "@/lib/utils"
 import { type CommunityPreset } from "@/lib/mock-data"
 import { useI18n } from "@/lib/i18n"
+import { fetchHubRows, describeHubError, type HubFetchError } from "@/lib/hub-fetch"
+import { useHubCovers, coverKey } from "@/lib/hub-covers"
+import {
+  ANONYMOUS_AUTHOR_ID,
+  getAuthorLabel,
+  getPredefinedPresetTags,
+  getTagLabel,
+} from "@/lib/preset-tags"
 
 const isTauri =
   typeof window !== "undefined" &&
   (window as any).__TAURI_INTERNALS__ !== undefined
-
-interface TagInfo {
-  name: string
-  description: string
-}
-
-const getPredefinedPresetTags = (t: any): TagInfo[] => [
-  { name: "Performance", description: t("luducard-preset-tag-desc-perf", "Otimizações focadas em ganho de FPS e fluidez.") },
-  { name: "Qualidade / Visual", description: t("luducard-preset-tag-desc-quality", "Otimizações focadas em qualidade gráfica máxima.") },
-  { name: "Balanced", description: t("luducard-preset-tag-desc-balanced", "Equilíbrio ideal entre fidelidade visual e taxa de FPS.") },
-  { name: "Steam Deck", description: t("luducard-preset-tag-desc-deck", "Perfil otimizado especificamente para a tela e bateria do Steam Deck/portáteis.") },
-  { name: "Potato Mode", description: t("luducard-preset-tag-desc-potato", "Para rodar em PCs super antigos e notebooks modestos.") },
-  { name: "Controles / Layout", description: t("luducard-preset-tag-desc-controls", "Mapeamento customizado de controles, gamepad ou hotkeys.") },
-  { name: "Ray Tracing Opt", description: t("luducard-preset-tag-desc-rt", "Configuração refinada com traçado de raio ativo, visando boa taxa de quadros.") },
-  { name: "4K Ready", description: t("luducard-preset-tag-desc-4k", "Otimizações focadas em TVs e monitores 4K de alta definição.") },
-  { name: "VR Ready", description: t("luducard-preset-tag-desc-vr", "Configurações ajustadas para taxa de FPS ideal em realidade virtual.") }
-]
 
 interface LocalPresetOption {
   id: string
@@ -78,11 +70,11 @@ function formatRelativeDate(isoDate: string, t: any): string {
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  if (diffDays === 0) return t("luducard-date-today", "Hoje")
-  if (diffDays === 1) return t("luducard-date-yesterday", "Ontem")
-  if (diffDays < 7) return `${diffDays} ${t("luducard-date-days-ago", "dias atrás")}`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} ${t("luducard-date-weeks-ago", "semanas atrás")}`
-  return date.toLocaleDateString(t("luducard-date-locale", "pt-BR"), { day: "2-digit", month: "short", year: "numeric" })
+  if (diffDays === 0) return t("luducard-date-today", "Today")
+  if (diffDays === 1) return t("luducard-date-yesterday", "Yesterday")
+  if (diffDays < 7) return `${diffDays} ${t("luducard-date-days-ago", "days ago")}`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} ${t("luducard-date-weeks-ago", "weeks ago")}`
+  return date.toLocaleDateString(t("luducard-date-locale", "en-US"), { day: "2-digit", month: "short", year: "numeric" })
 }
 
 export default function PresetHub() {
@@ -90,9 +82,14 @@ export default function PresetHub() {
   const { games } = useLibrary()
   const PREDEFINED_PRESET_TAGS = getPredefinedPresetTags(t)
 
+  const tagLabel = (id: string) => getTagLabel(PREDEFINED_PRESET_TAGS, id)
+  const authorLabel = (name?: string | null) => getAuthorLabel(t, name)
+
   // Presets and state
   const [presets, setPresets] = useState<CommunityPreset[]>([])
   const [loading, setLoading] = useState(true)
+  /** Non-null when the last load failed, so an outage never renders as an empty hub. */
+  const [loadError, setLoadError] = useState<HubFetchError | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortMode, setSortMode] = useState<SortMode>("popular")
   const [importingPreset, setImportingPreset] = useState<string | null>(null)
@@ -129,6 +126,7 @@ export default function PresetHub() {
 
   const loadConfigAndData = async () => {
     setLoading(true)
+    setLoadError(null)
     if (!isTauri) {
       // Offline fallback
       setSupabaseUrl("mock")
@@ -157,15 +155,10 @@ export default function PresetHub() {
         setIsConfigured(true)
         localStorage.setItem("luducard_supabase_configured", "true")
 
-        const resPresets = await fetch(`${url}/rest/v1/public_presets?select=*`, {
-          headers: {
-            "apikey": key,
-            "Authorization": `Bearer ${key}`
-          }
-        })
-        if (resPresets.ok) {
-          const data = await resPresets.json()
-          const mapped = data.map((item: any) => ({
+        const result = await fetchHubRows(`${url}/rest/v1/public_presets?select=*`, key)
+
+        if (result.ok) {
+          const mapped = result.rows.map((item: any) => ({
             id: item.id,
             gameName: item.game_name,
             gameId: item.game_id,
@@ -174,7 +167,7 @@ export default function PresetHub() {
             r2Path: item.r2_path,
             fileSize: Number(item.file_size || 0),
             description: item.description || "",
-            authorName: item.author_name || "Anônimo",
+            authorName: item.author_name || "",
             userUuid: item.user_uuid,
             cpu: item.cpu || "",
             gpu: item.gpu || "",
@@ -188,6 +181,11 @@ export default function PresetHub() {
             createdAt: item.created_at
           }))
           setPresets(mapped)
+        } else {
+          console.error("Failed to load public_presets:", result.error)
+          setPresets([])
+          setLoadError(result.error)
+          toast.error(describeHubError(t, result.error).title)
         }
       } else {
         setIsConfigured(false)
@@ -197,7 +195,7 @@ export default function PresetHub() {
       }
     } catch (err) {
       console.error(err)
-      toast.error("Erro ao carregar dados do hub de presets.")
+      toast.error(t("luducard-toast-load-hub-failed", "Error loading preset hub data."))
     } finally {
       setLoading(false)
     }
@@ -290,11 +288,25 @@ export default function PresetHub() {
     return 0
   })
 
+  /**
+   * Titles the local library cannot cover. Most of the hub is games the viewer does not
+   * own, so these are resolved remotely by title — see `useHubCovers`.
+   */
+  const uncoveredTitles = presets
+    .map((p) => p.gameName)
+    .filter(
+      (gameName) =>
+        !games.some((g) => g.title.toLowerCase() === gameName.toLowerCase() && g.cover)
+    )
+
+  const remoteCovers = useHubCovers(uncoveredTitles, supabaseUrl, supabaseAnonKey)
+
   const getGameCover = (gameName: string): string => {
     const match = games.find(
       (g) => g.title.toLowerCase() === gameName.toLowerCase()
     )
-    return match?.cover || "/placeholder.svg"
+    // Prefer the local copy: already on disk, and works offline.
+    return match?.cover || remoteCovers[coverKey(gameName)] || "/placeholder.svg"
   }
 
   // Inject / Apply Preset
@@ -302,7 +314,7 @@ export default function PresetHub() {
     if (!isConfigured) return
 
     setImportingPreset(preset.id)
-    const toastId = toast.loading(`Iniciando Seguro-Crash para configurações de ${preset.gameName}...`)
+    const toastId = toast.loading(`${t("luducard-toast-starting-crash-safety-for-game", "Starting Safe-Crash for settings of")} ${preset.gameName}...`)
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       const matchedGame = games.find(
@@ -311,7 +323,7 @@ export default function PresetHub() {
 
       if (!matchedGame?.savePath) {
         toast.error(
-          `Jogo "${preset.gameName}" não encontrado na sua biblioteca local ou sem pasta de saves configurada.`,
+          `${t("luducard-game-label", "Game")} "${preset.gameName}" ${t("luducard-error-game-not-found", "not found in your local library, or it has no save folder configured.")}`,
           { id: toastId }
         )
         setImportingPreset(null)
@@ -328,7 +340,7 @@ export default function PresetHub() {
         setHasSafetyPresetsBackup(prev => ({ ...prev, [matchedGame.id]: true }))
       }
 
-      toast.loading(`Instalando preset "${preset.title}"...`, { id: toastId })
+      toast.loading(`${t("luducard-toast-installing-preset", "Installing preset")} "${preset.title}"...`, { id: toastId })
 
       // 2. Fetch presigned url
       const edgeRes = await fetch(`${supabaseUrl}/functions/v1/get-download-url`, {
@@ -342,7 +354,7 @@ export default function PresetHub() {
       })
 
       if (!edgeRes.ok) {
-        throw new Error(`Falha ao obter URL de download: ${edgeRes.statusText}`)
+        throw new Error(`${t("luducard-error-get-download-url-failed", "Failed to get download URL")}: ${edgeRes.statusText}`)
       }
 
       const { downloadUrl } = await edgeRes.json()
@@ -374,13 +386,13 @@ export default function PresetHub() {
       })
 
       toast.success(
-        `Preset aplicado e guardado em seus presets locais. Seguro-Crash ativo!`,
+        t("luducard-toast-preset-applied-saved", "Preset applied and saved to your local presets. Safe-Crash active!"),
         { id: toastId }
       )
       loadConfigAndData()
     } catch (err) {
       console.error(err)
-      toast.error(`Falha ao injetar preset: ${err}`, { id: toastId })
+      toast.error(`${t("luducard-toast-inject-preset-failed", "Failed to apply preset")}: ${err}`, { id: toastId })
     } finally {
       setImportingPreset(null)
     }
@@ -388,7 +400,7 @@ export default function PresetHub() {
 
   // Revert Preset / Undo
   const handleUndoPreset = async (gameId: string, gameTitle: string) => {
-    const toastId = toast.loading(`Restaurando configurações originais de "${gameTitle}"...`)
+    const toastId = toast.loading(`${t("luducard-toast-restoring-original-settings", "Restoring original settings of")} "${gameTitle}"...`)
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       if (isTauri) {
@@ -398,10 +410,10 @@ export default function PresetHub() {
       }
       localStorage.removeItem(`luducard_preset_safety_${gameId}`)
       setHasSafetyPresetsBackup(prev => ({ ...prev, [gameId]: false }))
-      toast.success(`Configurações de "${gameTitle}" restauradas. Saves intocados!`, { id: toastId })
+      toast.success(`${t("luducard-toast-settings-restored", "Settings of")} "${gameTitle}" ${t("luducard-toast-restored-saves-untouched", "restored. Saves untouched!")}`, { id: toastId })
     } catch (err) {
       console.error(err)
-      toast.error(`Falha ao reverter configs: ${err}`, { id: toastId })
+      toast.error(`${t("luducard-toast-revert-configs-failed", "Failed to revert settings")}: ${err}`, { id: toastId })
     }
   }
 
@@ -432,7 +444,7 @@ export default function PresetHub() {
         return p
       }))
     } catch (err) {
-      toast.error("Erro ao computar voto.")
+      toast.error(t("luducard-toast-vote-error", "Error registering vote."))
     }
   }
 
@@ -450,10 +462,10 @@ export default function PresetHub() {
           body: JSON.stringify({ preset_id: presetId })
         })
       }
-      toast.success("Denúncia enviada! Presets com 3+ denúncias são ocultados.")
+      toast.success(t("luducard-toast-report-sent-hub", "Report sent! Presets with 3+ reports are hidden."))
       setPresets(prev => prev.filter(p => p.id !== presetId))
     } catch (err) {
-      toast.error("Falha ao denunciar.")
+      toast.error(t("luducard-toast-report-send-failed", "Failed to report."))
     }
   }
 
@@ -461,7 +473,7 @@ export default function PresetHub() {
   const handlePublishPreset = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedGameId || !selectedLocalPresetId || !presetTitle) {
-      toast.error("Por favor, preencha todos os campos obrigatórios.")
+      toast.error(t("luducard-toast-fill-required-fields", "Please fill in all required fields."))
       return
     }
 
@@ -472,7 +484,7 @@ export default function PresetHub() {
     let tempZipPath = ""
     try {
       const { invoke } = await import("@tauri-apps/api/core")
-      const toastId = toast.loading("Compactando e criptografando arquivos de configuração...")
+      const toastId = toast.loading(t("luducard-toast-compressing-encrypting", "Compressing and encrypting config files..."))
 
       // Step 1: Pack preset files to temporary `.luducard` archive
       const tempInfo = await invoke<any>("export_local_preset_archive", {
@@ -485,7 +497,7 @@ export default function PresetHub() {
       const fileSize = tempInfo.fileSize
       const fileName = tempInfo.fileName
 
-      toast.loading("Requisitando permissão de upload seguro...", { id: toastId })
+      toast.loading(t("luducard-toast-requesting-upload-permission", "Requesting secure upload permission..."), { id: toastId })
 
       // Step 2: Get upload Presigned URL
       const edgeRes = await fetch(`${supabaseUrl}/functions/v1/get-upload-url`, {
@@ -505,12 +517,12 @@ export default function PresetHub() {
 
       if (!edgeRes.ok) {
         const errData = await edgeRes.json().catch(() => ({}))
-        throw new Error(errData.error || `Erro de cota de armazenamento na nuvem.`);
+        throw new Error(errData.error || t("luducard-error-cloud-storage-quota", "Cloud storage quota error."));
       }
 
       const { uploadUrl, r2Path } = await edgeRes.json()
 
-      toast.loading(`Enviando preset para a nuvem (${formatCompactSize(fileSize)})...`, { id: toastId })
+      toast.loading(`${t("luducard-toast-uploading-preset", "Uploading preset to the cloud")} (${formatCompactSize(fileSize)})...`, { id: toastId })
 
       // Step 3: Run Rust direct upload
       await invoke("upload_file_to_url", {
@@ -518,7 +530,7 @@ export default function PresetHub() {
         uploadUrl: uploadUrl,
       })
 
-      toast.loading("Publicando metadados no repositório de presets...", { id: toastId })
+      toast.loading(t("luducard-toast-publishing-to-preset-repo", "Publishing metadata to the preset repository..."), { id: toastId })
 
       // Step 4: Write record to public_presets table
       const dbRes = await fetch(`${supabaseUrl}/rest/v1/public_presets`, {
@@ -537,7 +549,7 @@ export default function PresetHub() {
           r2_path: r2Path,
           file_size: fileSize,
           description: presetDesc,
-          author_name: authorName || "Anônimo",
+          author_name: authorName || ANONYMOUS_AUTHOR_ID,
           user_uuid: clientUuid,
           cpu: cpu,
           gpu: gpu,
@@ -549,9 +561,9 @@ export default function PresetHub() {
       if (!dbRes.ok) {
         const errText = await dbRes.text()
         if (errText.includes("enforce_user_preset_quota_trigger")) {
-          throw new Error("Você já atingiu o limite de 5 presets ativos na nuvem.")
+          throw new Error(t("luducard-error-preset-cloud-limit-reached", "You have already reached the limit of 5 active presets in the cloud."))
         }
-        throw new Error(`Falha ao registrar preset: ${errText}`)
+        throw new Error(`${t("luducard-error-register-preset-failed-2", "Failed to register preset")}: ${errText}`)
       }
 
       toast.success("Preset publicado no HUB com sucesso!", { id: toastId })
@@ -559,7 +571,7 @@ export default function PresetHub() {
       loadConfigAndData()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || `Erro ao publicar preset: ${err}`)
+      toast.error(err.message || `${t("luducard-toast-publish-preset-failed-2", "Error publishing preset")}: ${err}`)
     } finally {
       if (tempZipPath && isTauri) {
         const { invoke } = await import("@tauri-apps/api/core")
@@ -572,12 +584,12 @@ export default function PresetHub() {
   return (
     <AppShell
       title={t("luducard-presethub-title", "Preset Share HUB")}
-      description={t("luducard-presethub-desc", "Descubra e compartilhe otimizações de gráficos e controles da comunidade")}
+      description={t("luducard-presethub-desc", "Discover and share graphics and controller optimizations from the community")}
       actions={
         isConfigured && (
           <Button size="sm" onClick={() => setIsShareModalOpen(true)}>
             <Upload data-icon="inline-start" />
-            {t("luducard-btn-share-preset", "Compartilhar Preset")}
+            {t("luducard-btn-share-preset", "Share Preset")}
           </Button>
         )
       }
@@ -588,9 +600,9 @@ export default function PresetHub() {
             <Database className="size-6 animate-pulse" />
           </div>
           <div className="flex flex-col gap-2">
-            <h2 className="text-lg font-bold">{t("luducard-presethub-disconnected", "Repositório de Presets Desconectado")}</h2>
+            <h2 className="text-lg font-bold">{t("luducard-presethub-disconnected", "Preset Repository Disconnected")}</h2>
             <p className="text-sm text-muted-foreground">
-              {t("luducard-presethub-disconnected-desc", "Não foi possível conectar ao servidor de presets comunitários. Verifique sua conexão com a internet.")}
+              {t("luducard-presethub-disconnected-desc", "To load community presets and share yours, you need to configure your Supabase URL and public Anon Key in Settings.")}
             </p>
           </div>
         </div>
@@ -615,7 +627,7 @@ export default function PresetHub() {
                 <span className="text-lg font-bold leading-none">
                   {new Set(presets.map(p => p.userUuid)).size}
                 </span>
-                <span className="text-[11px] text-muted-foreground">{t("luducard-contributors", "Contribuidores")}</span>
+                <span className="text-[11px] text-muted-foreground">{t("luducard-contributors", "Contributors")}</span>
               </div>
             </div>
           </div>
@@ -626,11 +638,22 @@ export default function PresetHub() {
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="preset-search"
-                placeholder={t("luducard-preset-search-placeholder", "Buscar por jogo, título ou hardware (ex: RTX 4070)...")}
-                className="pl-9"
+                placeholder={t("luducard-preset-search-placeholder", "Search by game, title, or hardware (e.g. RTX 4070)...")}
+                className={cn("pl-9", searchQuery && "pr-9")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  aria-label={t("luducard-clear-search", "Clear search")}
+                  title={t("luducard-clear-search", "Clear search")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -647,7 +670,7 @@ export default function PresetHub() {
                 onClick={() => setSortMode("recent")}
               >
                 <Clock className="size-3.5" data-icon="inline-start" />
-                {t("luducard-sort-recent-hub", "Recentes")}
+                {t("luducard-sort-recent-hub", "Recent")}
               </Button>
               <Button
                 variant={sortMode === "size" ? "secondary" : "ghost"}
@@ -655,7 +678,7 @@ export default function PresetHub() {
                 onClick={() => setSortMode("size")}
               >
                 <Package className="size-3.5" data-icon="inline-start" />
-                {t("luducard-sort-size-hub", "Tamanho")}
+                {t("luducard-sort-size-hub", "Size")}
               </Button>
             </div>
           </div>
@@ -664,8 +687,24 @@ export default function PresetHub() {
           {loading ? (
             <div className="flex h-[300px] flex-col items-center justify-center gap-2">
               <RefreshCw className="size-7 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">{t("luducard-syncing-presets", "Sincronizando presets...")}</span>
+              <span className="text-sm text-muted-foreground">{t("luducard-syncing-presets", "Syncing presets...")}</span>
             </div>
+          ) : loadError ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon" className="bg-red-500/10 text-red-400">
+                  <CloudOff />
+                </EmptyMedia>
+                <EmptyTitle>{describeHubError(t, loadError).title}</EmptyTitle>
+                <EmptyDescription>{describeHubError(t, loadError).description}</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button variant="secondary" size="sm" onClick={loadConfigAndData}>
+                  <RefreshCw className="size-3.5" data-icon="inline-start" />
+                  {t("luducard-btn-try-again", "Try again")}
+                </Button>
+              </EmptyContent>
+            </Empty>
           ) : sortedPresets.length === 0 ? (
             <Empty>
               <EmptyHeader>
@@ -674,13 +713,13 @@ export default function PresetHub() {
                 </EmptyMedia>
                 <EmptyTitle>
                   {presets.length === 0 
-                    ? "Aqui ainda não tem presets" 
-                    : t("luducard-no-presets-found", "Nenhum preset gráfico encontrado")}
+                    ? t("luducard-no-presets-here", "No presets here yet") 
+                    : t("luducard-no-presets-found", "No graphic presets found")}
                 </EmptyTitle>
                 <EmptyDescription>
                   {presets.length === 0 
-                    ? "Seja o primeiro a compartilhar um preset gráfico ou de controles para a comunidade!" 
-                    : t("luducard-search-terms-desc-preset", "Tente redefinir seus termos de busca.")}
+                    ? t("luducard-be-first-to-share", "Be the first to share a graphics or controller preset with the community!") 
+                    : t("luducard-search-terms-desc-preset", "Try resetting your search terms.")}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -721,7 +760,7 @@ export default function PresetHub() {
                               {p.isOfficial && (
                                 <Badge variant="outline" className="text-[9px] font-bold text-primary border-primary/35 bg-primary/10 select-none uppercase shrink-0">
                                   <Sparkles className="size-2 ml-0.5 fill-current" />
-                                  {t("luducard-badge-official", "Oficial")}
+                                  {t("luducard-badge-official", "Official")}
                                 </Badge>
                               )}
                             </h3>
@@ -735,7 +774,7 @@ export default function PresetHub() {
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {p.tags.map(tag => (
                                   <Badge key={tag} variant="outline" className="text-[9px] px-1.5 py-0.2 bg-primary/5 text-primary border-primary/20 select-none shrink-0">
-                                    {tag}
+                                    {tagLabel(tag)}
                                   </Badge>
                                 ))}
                               </div>
@@ -743,7 +782,7 @@ export default function PresetHub() {
                           </div>
 
                           <p className="line-clamp-1 text-xs leading-relaxed text-muted-foreground mt-0.5">
-                            {p.description || t("luducard-no-desc-provided", "Nenhuma descrição fornecida.")}
+                            {p.description || t("luducard-no-desc-provided", "No detailed description provided.")}
                           </p>
 
                           {/* Hardware / Author mini row */}
@@ -752,8 +791,8 @@ export default function PresetHub() {
                               <Cpu className="inline-block size-3 mr-0.5 text-primary -translate-y-0.5" />
                               {p.gpu || t("luducard-gpu", "GPU")}
                             </span>
-                            <span>â€¢</span>
-                            <span>{p.authorName}</span>
+                            <span>•</span>
+                            <span>{authorLabel(p.authorName)}</span>
                           </div>
                         </div>
                       </div>
@@ -761,7 +800,7 @@ export default function PresetHub() {
                       {/* Action & Voting Bar */}
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground mt-auto">
                         <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1" title={t("luducard-approval", "Aprovação")}>
+                          <div className="flex items-center gap-1" title={t("luducard-approval", "Approval")}>
                             <ThumbsUp className="size-3 text-primary" />
                             <span className="font-semibold text-foreground">{approval}%</span>
                             <span className="text-[10px] text-muted-foreground">({p.downloadsCount})</span>
@@ -774,7 +813,7 @@ export default function PresetHub() {
                                 handleVotePreset(p.id, true);
                               }}
                               className="p-1 hover:bg-primary/10 hover:text-primary transition-colors border-r border-border"
-                              title={t("luducard-useful", "Ãštil")}
+                              title={t("luducard-useful", "Useful")}
                             >
                               <ThumbsUp className="size-3" />
                             </button>
@@ -784,7 +823,7 @@ export default function PresetHub() {
                                 handleVotePreset(p.id, false);
                               }}
                               className="p-1 hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                              title={t("luducard-useless", "Inútil")}
+                              title={t("luducard-useless", "Useless")}
                             >
                               <ThumbsDown className="size-3" />
                             </button>
@@ -796,7 +835,7 @@ export default function PresetHub() {
                               handleReportPreset(p.id);
                             }}
                             className="p-1 text-muted-foreground hover:text-red-400 hover:bg-red-500/5 rounded transition-colors"
-                            title={t("luducard-report-preset", "Denunciar preset")}
+                            title={t("luducard-report-preset", "Report preset")}
                           >
                             <AlertTriangle className="size-3" />
                           </button>
@@ -814,7 +853,7 @@ export default function PresetHub() {
                               className="h-7 text-[10px] font-semibold"
                             >
                               <RotateCcw className="size-3" data-icon="inline-start" />
-                              {t("luducard-btn-undo", "Desfazer")}
+                              {t("luducard-btn-undo", "Undo")}
                             </Button>
                           )}
                           <Button
@@ -829,12 +868,12 @@ export default function PresetHub() {
                             {importingPreset === p.id ? (
                               <>
                                 <RefreshCw className="size-2.5 animate-spin" data-icon="inline-start" />
-                                {t("luducard-btn-injecting", "Injetando...")}
+                                {t("luducard-btn-injecting", "Injecting...")}
                               </>
                             ) : (
                               <>
                                 <Zap className="size-2.5 fill-current" data-icon="inline-start" />
-                                {isInstalledLocally ? t("luducard-btn-inject", "Injetar") : t("luducard-not-installed", "Não Instalado")}
+                                {isInstalledLocally ? t("luducard-btn-inject", "Inject") : t("luducard-not-installed", "Not Installed")}
                               </>
                             )}
                           </Button>
@@ -852,9 +891,9 @@ export default function PresetHub() {
             <div className="flex items-start gap-3">
               <Shield className="mt-0.5 size-4 shrink-0 text-amber-400" />
               <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{t("luducard-security-safety-title", "Segurança Garantida pelo Seguro-Crash")}</span>
+                <span className="font-medium text-foreground">{t("luducard-security-safety-title", "Safety Guaranteed by Safe-Crash")}</span>
                 <span>
-                  {t("luducard-security-safety-desc", "Ao baixar qualquer preset gráfico do HUB, o Luducard faz backup das suas configurações anteriores. Os seus saves de progresso permanecem intocados.")}
+                  {t("luducard-security-safety-desc", "When downloading any graphic preset from the HUB, Luducard backs up your previous settings. Your progress saves remain untouched.")}
                 </span>
               </div>
             </div>
@@ -872,7 +911,7 @@ export default function PresetHub() {
                   <Gamepad2 className="size-4.5 text-primary" />
                   {selectedDetailPreset.gameName}
                 </CardTitle>
-                <CardDescription className="text-xs">{t("luducard-detail-modal-desc", "Visualizando metadados completos do preset.")}</CardDescription>
+                <CardDescription className="text-xs">{t("luducard-detail-modal-desc", "Viewing complete checkpoint metadata.")}</CardDescription>
               </div>
               <Button
                 variant="ghost"
@@ -885,13 +924,13 @@ export default function PresetHub() {
             </CardHeader>
             <CardContent className="pt-4 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-muted-foreground font-semibold font-medium">{t("luducard-detail-preset-title", "Título do Preset:")}</span>
+                <span className="text-xs text-muted-foreground font-semibold font-medium">{t("luducard-detail-preset-title", "Preset Title:")}</span>
                 <span className="text-sm font-bold text-foreground leading-snug">{selectedDetailPreset.title}</span>
               </div>
 
               {selectedDetailPreset.description && (
                 <div className="flex flex-col gap-1 bg-muted/20 border border-border p-3 rounded-lg">
-                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-preset-desc", "Descrição / Otimizações:")}</span>
+                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-preset-desc", "Description / Optimizations:")}</span>
                   <div className="max-h-[160px] overflow-y-auto pr-1.5 scrollbar-thin">
                     <p className="text-xs leading-relaxed text-muted-foreground mt-0.5 whitespace-pre-wrap">{selectedDetailPreset.description}</p>
                   </div>
@@ -900,18 +939,18 @@ export default function PresetHub() {
 
               {selectedDetailPreset.tags && selectedDetailPreset.tags.length > 0 && (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-tags-label", "Marcadores:")}</span>
+                  <span className="text-[11px] text-muted-foreground font-semibold">{t("luducard-detail-tags-label", "Tags:")}</span>
                   <div className="flex flex-wrap gap-1">
-                    {selectedDetailPreset.tags.map((t: string) => {
-                      const info = PREDEFINED_PRESET_TAGS.find(pt => pt.name === t)
+                    {selectedDetailPreset.tags.map((tagId: string) => {
+                      const info = PREDEFINED_PRESET_TAGS.find(pt => pt.id === tagId)
                       return (
                         <Badge
-                          key={t}
+                          key={tagId}
                           variant="outline"
                           title={info?.description}
                           className="text-[10px] px-2 py-0.5 bg-primary/5 text-primary border-primary/20 select-none cursor-help font-semibold"
                         >
-                          {t}
+                          {info?.name ?? tagId}
                         </Badge>
                       )
                     })}
@@ -921,27 +960,27 @@ export default function PresetHub() {
 
               <div className="grid grid-cols-2 gap-3 bg-muted/20 border border-border p-3.5 rounded-xl text-xs">
                 <div className="flex flex-col gap-0.5 col-span-2">
-                  <span className="text-muted-foreground font-semibold">{t("luducard-detail-author-specs", "Especificações do Autor:")}</span>
+                  <span className="text-muted-foreground font-semibold">{t("luducard-detail-author-specs", "Author Specs:")}</span>
                   <span className="font-mono text-foreground mt-0.5 leading-relaxed">
                     {selectedDetailPreset.cpu ? `${selectedDetailPreset.cpu} | ` : ""}{selectedDetailPreset.gpu ? `${selectedDetailPreset.gpu} | ` : ""}{selectedDetailPreset.ram || ""}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground">{t("luducard-detail-size-label", "Tamanho Comprimido:")}</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-size-label", "Compressed Size:")}</span>
                   <span className="font-semibold text-foreground">{formatCompactSize(selectedDetailPreset.fileSize)}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
                   <span className="text-muted-foreground">{t("luducard-detail-downloads-label", "Total Downloads:")}</span>
-                  <span className="font-semibold text-foreground">{selectedDetailPreset.downloadsCount.toLocaleString(t("luducard-date-locale", "pt-BR"))}</span>
+                  <span className="font-semibold text-foreground">{selectedDetailPreset.downloadsCount.toLocaleString(t("luducard-date-locale", "en-US"))}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground">{t("luducard-detail-author-label", "Enviado por:")}</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-author-label", "Uploaded by:")}</span>
                   <span className="font-semibold text-foreground">{selectedDetailPreset.authorName}</span>
                 </div>
                 <div className="flex flex-col gap-0.5 mt-1">
-                  <span className="text-muted-foreground">{t("luducard-detail-date-label", "Enviado em:")}</span>
+                  <span className="text-muted-foreground">{t("luducard-detail-date-label", "Uploaded on:")}</span>
                   <span className="font-semibold text-foreground">
-                    {new Date(selectedDetailPreset.createdAt).toLocaleDateString(t("luducard-date-locale", "pt-BR"), { day: "2-digit", month: "short", year: "numeric" })}
+                    {new Date(selectedDetailPreset.createdAt).toLocaleDateString(t("luducard-date-locale", "en-US"), { day: "2-digit", month: "short", year: "numeric" })}
                   </span>
                 </div>
               </div>
@@ -956,8 +995,8 @@ export default function PresetHub() {
           <Card className="w-full max-w-lg shadow-2xl border border-border animate-in fade-in zoom-in-95 duration-200 !overflow-visible">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 border-b border-border">
               <div>
-                <CardTitle className="text-base">{t("luducard-share-preset-modal-title", "Compartilhar Preset Gráfico")}</CardTitle>
-                <CardDescription className="text-xs">{t("luducard-share-preset-modal-desc", "Envie um preset gráfico local para a comunidade.")}</CardDescription>
+                <CardTitle className="text-base">{t("luducard-share-preset-modal-title", "Share Graphic Preset")}</CardTitle>
+                <CardDescription className="text-xs">{t("luducard-share-preset-modal-desc", "Send a local graphic preset to the community.")}</CardDescription>
               </div>
               <Button
                 variant="ghost"
@@ -972,12 +1011,12 @@ export default function PresetHub() {
               <form onSubmit={handlePublishPreset} className="flex flex-col gap-4">
                 {/* Searchable Game Selector */}
                 <div className="flex flex-col gap-1.5 relative">
-                  <label className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-game-label", "Jogo do Preset *")}</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-game-label", "Preset Game *")}</label>
                   {!selectedGameId ? (
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
-                        placeholder={t("luducard-search-installed-game-preset", "Pesquisar jogo instalado...")}
+                        placeholder={t("luducard-search-installed-game-preset", "Search installed game...")}
                         value={gameSearchQuery}
                         onChange={(e) => {
                           setGameSearchQuery(e.target.value)
@@ -991,7 +1030,7 @@ export default function PresetHub() {
                           {games
                             .filter(g => g.installed && (!gameSearchQuery || g.title.toLowerCase().includes(gameSearchQuery.toLowerCase())))
                             .length === 0 ? (
-                            <div className="py-2 px-3 text-xs text-muted-foreground">{t("luducard-no-games-found", "Nenhum jogo encontrado")}</div>
+                            <div className="py-2 px-3 text-xs text-muted-foreground">{t("luducard-no-games-found", "No games found")}</div>
                           ) : (
                             games
                               .filter(g => g.installed && (!gameSearchQuery || g.title.toLowerCase().includes(gameSearchQuery.toLowerCase())))
@@ -1038,11 +1077,11 @@ export default function PresetHub() {
                 {/* Local Preset Selector */}
                 {selectedGameId && (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">{t("luducard-choose-local-preset-label", "Escolher Preset Local *")}</label>
+                    <label className="text-xs font-semibold text-muted-foreground">{t("luducard-choose-local-preset-label", "Choose Local Preset *")}</label>
                     {localPresets.length === 0 ? (
                       <div className="text-xs text-amber-400 bg-amber-500/5 border border-amber-500/10 p-2.5 rounded-lg flex items-center gap-2">
                         <SlidersHorizontal className="size-4 shrink-0 text-amber-400" />
-                        {t("luducard-no-local-presets-desc", "Nenhum preset local salvo para este jogo. Vá na aba do jogo e crie um preset local primeiro!")}
+                        {t("luducard-no-local-presets-desc", "No local preset saved for this game. Go to the game tab and create a local preset first!")}
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto border border-border/80 rounded-md bg-muted/10 p-2.5">
@@ -1082,7 +1121,7 @@ export default function PresetHub() {
                   <>
                     <div className="grid gap-3.5 sm:grid-cols-2">
                       <div className="flex flex-col gap-1.5">
-                        <label htmlFor="preset-title" className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-title-label", "Título do Preset *")}</label>
+                        <label htmlFor="preset-title" className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-title-label", "Preset Title *")}</label>
                         <input
                           id="preset-title"
                           type="text"
@@ -1093,7 +1132,7 @@ export default function PresetHub() {
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label htmlFor="preset-author" className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-creator-label", "Autor / Criador")}</label>
+                        <label htmlFor="preset-author" className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-creator-label", "Author / Creator")}</label>
                         <input
                           id="preset-author"
                           type="text"
@@ -1105,7 +1144,7 @@ export default function PresetHub() {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <label htmlFor="preset-desc" className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-desc-label", "Descrição / Notas do Preset")}</label>
+                      <label htmlFor="preset-desc" className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-desc-label", "Description / Preset Notes")}</label>
                       <textarea
                         id="preset-desc"
                         rows={2}
@@ -1117,19 +1156,19 @@ export default function PresetHub() {
 
                     {/* Predefined Tags Selector */}
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-tags-label", "Tags do Preset")}</label>
+                      <label className="text-xs font-semibold text-muted-foreground">{t("luducard-preset-tags-label", "Preset Tags")}</label>
                       <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto border border-border/80 p-2.5 rounded-md bg-muted/10">
                         {PREDEFINED_PRESET_TAGS.map(tag => {
-                          const active = selectedUploadTags.includes(tag.name)
+                          const active = selectedUploadTags.includes(tag.id)
                           return (
                             <button
-                              key={tag.name}
+                              key={tag.id}
                               type="button"
                               onClick={() => {
                                 if (active) {
-                                  setSelectedUploadTags(prev => prev.filter(t => t !== tag.name))
+                                  setSelectedUploadTags(prev => prev.filter(id => id !== tag.id))
                                 } else {
-                                  setSelectedUploadTags(prev => [...prev, tag.name])
+                                  setSelectedUploadTags(prev => [...prev, tag.id])
                                 }
                               }}
                               title={tag.description}
@@ -1151,7 +1190,7 @@ export default function PresetHub() {
                     <div className="flex flex-col gap-2 border border-border rounded-xl p-3 bg-muted/10">
                       <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
                         <Cpu className="size-3.5 text-primary" />
-                        {t("luducard-preset-hardware-label", "Hardware do Autor (Auto-preenchido do preset local):")}
+                        {t("luducard-preset-hardware-label", "Author Hardware (Auto-filled from local preset):")}
                       </span>
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="flex flex-col gap-0.5">
@@ -1193,14 +1232,14 @@ export default function PresetHub() {
                     variant="ghost"
                     onClick={() => setIsShareModalOpen(false)}
                   >
-                    {t("luducard-btn-cancel", "Cancelar")}
+                    {t("luducard-btn-cancel", "Cancel")}
                   </Button>
                   <Button
                     type="submit"
                     disabled={uploading || !selectedGameId || !selectedLocalPresetId}
                     className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold"
                   >
-                    {uploading ? t("luducard-btn-publishing", "Publicando...") : t("luducard-btn-publish-preset", "Publicar Preset")}
+                    {uploading ? t("luducard-btn-publishing", "Publishing...") : t("luducard-btn-publish-preset", "Publish Preset")}
                   </Button>
                 </div>
               </form>

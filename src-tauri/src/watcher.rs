@@ -6,6 +6,7 @@
 //! 3. A background thread periodically checks if the game process has exited.
 //! 4. Once the game exits, it performs a silent backup and shows a Windows notification.
 
+use ludusavi::lang::TRANSLATOR;
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -75,16 +76,78 @@ pub fn save_file_watcher_setting(app_data_dir: &Path, enabled: bool) {
     let _ = std::fs::write(&config_path, serde_json::to_string_pretty(&json).unwrap_or_default());
 }
 
+/// The AppUserModelID Windows uses to attribute our toasts. Must match the key
+/// registered by `register_toast_app_id`.
+#[cfg(target_os = "windows")]
+pub const TOAST_APP_ID: &str = "com.luducard.app";
+
+/// Extracts the app icon next to our config so `IconUri` has a real file to point at.
+/// The registry only accepts a path, and the bundled icon is not guaranteed to exist
+/// on disk in portable mode, so we write our embedded copy once.
+#[cfg(target_os = "windows")]
+fn ensure_toast_icon() -> Option<std::path::PathBuf> {
+    const ICON: &[u8] = include_bytes!("../icons/128x128.png");
+
+    let dir = dirs::data_local_dir()?.join("Luducard");
+    let path = dir.join("toast-icon.png");
+
+    if path.metadata().map(|m| m.len() as usize).ok() != Some(ICON.len()) {
+        std::fs::create_dir_all(&dir).ok()?;
+        std::fs::write(&path, ICON).ok()?;
+    }
+
+    Some(path)
+}
+
+/// Registers our AppUserModelID so toasts show "Luducard" and our icon.
+///
+/// Windows attributes every toast to an AUMID, and `notify-rust` falls back to
+/// PowerShell's AUMID when none is set — which is why our notifications used to be
+/// labelled "Windows PowerShell". Writing the AUMID under HKCU needs no installer
+/// and no admin rights, so this also works from a portable USB copy.
+#[cfg(target_os = "windows")]
+pub fn register_toast_app_id() {
+    use winreg::RegKey;
+    use winreg::enums::HKEY_CURRENT_USER;
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let key = match hkcu.create_subkey(format!("Software\\Classes\\AppUserModelId\\{TOAST_APP_ID}")) {
+        Ok((key, _)) => key,
+        Err(e) => {
+            log::warn!("Could not register toast AppUserModelID: {e}");
+            return;
+        }
+    };
+
+    if let Err(e) = key.set_value("DisplayName", &"Luducard") {
+        log::warn!("Could not set toast DisplayName: {e}");
+    }
+
+    if let Some(icon) = ensure_toast_icon()
+        && let Err(e) = key.set_value("IconUri", &icon.to_string_lossy().to_string())
+    {
+        log::warn!("Could not set toast IconUri: {e}");
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn register_toast_app_id() {}
+
 /// Shows a native OS toast notification.
 pub fn show_notification(title: &str, body: &str) {
-    let result = notify_rust::Notification::new()
+    let mut notification = notify_rust::Notification::new();
+
+    notification
         .summary(title)
         .body(body)
         .appname("Luducard")
-        .timeout(notify_rust::Timeout::Milliseconds(5000))
-        .show();
+        .timeout(notify_rust::Timeout::Milliseconds(5000));
 
-    if let Err(e) = result {
+    // `appname` is the Linux/XDG field; Windows identifies the sender by AUMID.
+    #[cfg(target_os = "windows")]
+    notification.app_id(TOAST_APP_ID);
+
+    if let Err(e) = notification.show() {
         log::warn!("Failed to show notification: {}", e);
     }
 }
@@ -307,8 +370,8 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
                     Ok(()) => {
                         log::info!("[FileWatcher] '{}' - backup completed successfully.", game_title);
                         show_notification(
-                            "Luducard - Backup automático",
-                            &format!("Save de \"{}\" salvo com sucesso! ✅", game_title),
+                            &TRANSLATOR.notify_auto_backup_title(),
+                            &TRANSLATOR.notify_auto_backup_done(game_title),
                         );
 
                         // Notify frontend
@@ -323,8 +386,8 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
                     Err(e) => {
                         log::error!("[FileWatcher] '{}' - backup failed: {}", game_title, e);
                         show_notification(
-                            "Luducard - Falha no backup",
-                            &format!("Erro ao salvar \"{}\": {}", game_title, e),
+                            &TRANSLATOR.notify_auto_backup_failed_title(),
+                            &TRANSLATOR.notify_auto_backup_failed(game_title, &e),
                         );
 
                         let _ = app_handle.emit(

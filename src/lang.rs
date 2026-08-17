@@ -30,6 +30,7 @@ const MESSAGE: &str = "message";
 const APP: &str = "app";
 const GAME: &str = "game";
 const VERSION: &str = "version";
+const EXE: &str = "exe";
 
 pub const TRANSLATOR: Translator = Translator {};
 pub const ADD_SYMBOL: &str = "+";
@@ -1364,6 +1365,90 @@ impl Translator {
         translate_args("label-change-count", &args)
     }
 
+    // Native OS notifications and tray menu, sent from the Tauri layer.
+
+    pub fn notify_quick_save_title(&self) -> String {
+        translate("luducard-notify-quick-save-title")
+    }
+
+    pub fn notify_quick_save_done_title(&self) -> String {
+        translate("luducard-notify-quick-save-done-title")
+    }
+
+    pub fn notify_quick_save_done(&self, game: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set(GAME, game);
+        translate_args("luducard-notify-quick-save-done", &args)
+    }
+
+    pub fn notify_quick_save_failed_title(&self) -> String {
+        translate("luducard-notify-quick-save-failed-title")
+    }
+
+    pub fn notify_quick_save_failed(&self, game: &str, message: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set(GAME, game);
+        args.set(MESSAGE, message);
+        translate_args("luducard-notify-quick-save-failed", &args)
+    }
+
+    pub fn notify_quick_save_no_game(&self) -> String {
+        translate("luducard-notify-quick-save-no-game")
+    }
+
+    pub fn notify_quick_save_unmatched(&self, exe: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set(EXE, exe);
+        translate_args("luducard-notify-quick-save-unmatched", &args)
+    }
+
+    pub fn notify_auto_backup_title(&self) -> String {
+        translate("luducard-notify-auto-backup-title")
+    }
+
+    pub fn notify_auto_backup_done(&self, game: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set(GAME, game);
+        translate_args("luducard-notify-auto-backup-done", &args)
+    }
+
+    pub fn notify_auto_backup_failed_title(&self) -> String {
+        translate("luducard-notify-auto-backup-failed-title")
+    }
+
+    pub fn notify_auto_backup_failed(&self, game: &str, message: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set(GAME, game);
+        args.set(MESSAGE, message);
+        translate_args("luducard-notify-auto-backup-failed", &args)
+    }
+
+    pub fn notify_scan_done_title(&self) -> String {
+        translate("luducard-notify-scan-done-title")
+    }
+
+    pub fn notify_scan_done(&self, total: usize) -> String {
+        let mut args = FluentArgs::new();
+        args.set(TOTAL, total);
+        translate_args("luducard-notify-scan-done", &args)
+    }
+
+    pub fn notify_tray_title(&self) -> String {
+        translate("luducard-notify-tray-title")
+    }
+
+    pub fn notify_tray_body(&self) -> String {
+        translate("luducard-notify-tray-body")
+    }
+
+    pub fn tray_show(&self) -> String {
+        translate("luducard-tray-show")
+    }
+
+    pub fn tray_quit(&self) -> String {
+        translate("luducard-tray-quit")
+    }
+
     pub fn synchronize_automatically(&self) -> String {
         translate("synchronize-automatically")
     }
@@ -1561,7 +1646,7 @@ impl Translator {
 
 #[cfg(test)]
 mod tests {
-    use crate::lang::TRANSLATOR;
+    use crate::lang::{Language, TRANSLATOR};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -1571,5 +1656,103 @@ mod tests {
         assert_eq!("1.03 KiB", &TRANSLATOR.adjusted_size(1_050));
         assert_eq!("100.00 KiB", &TRANSLATOR.adjusted_size(102_400));
         assert_eq!("114.98 GiB", &TRANSLATOR.adjusted_size(123_456_789_000));
+    }
+
+    /// A message id repeated inside one file makes `add_resource` fail, which panics the
+    /// app on the very first translation lookup — it compiles fine and dies at startup.
+    /// Cheap to check, and it caught a real duplicate that shipped past `cargo check`.
+    #[test]
+    fn no_duplicate_message_ids_in_any_language() {
+        let files: &[(&str, &str)] = &[
+            ("ar-SA", include_str!("../lang/ar-SA.ftl")),
+            ("cs-CZ", include_str!("../lang/cs-CZ.ftl")),
+            ("de-DE", include_str!("../lang/de-DE.ftl")),
+            ("en-US", include_str!("../lang/en-US.ftl")),
+            ("eo-UY", include_str!("../lang/eo-UY.ftl")),
+            ("es-ES", include_str!("../lang/es-ES.ftl")),
+            ("fi-FI", include_str!("../lang/fi-FI.ftl")),
+            ("fil-PH", include_str!("../lang/fil-PH.ftl")),
+            ("fr-FR", include_str!("../lang/fr-FR.ftl")),
+            ("it-IT", include_str!("../lang/it-IT.ftl")),
+            ("ja-JP", include_str!("../lang/ja-JP.ftl")),
+            ("ko-KR", include_str!("../lang/ko-KR.ftl")),
+            ("nl-NL", include_str!("../lang/nl-NL.ftl")),
+            ("no-NO", include_str!("../lang/no-NO.ftl")),
+            ("pl-PL", include_str!("../lang/pl-PL.ftl")),
+            ("pt-BR", include_str!("../lang/pt-BR.ftl")),
+            ("ru-RU", include_str!("../lang/ru-RU.ftl")),
+            ("sv-SE", include_str!("../lang/sv-SE.ftl")),
+            ("th-TH", include_str!("../lang/th-TH.ftl")),
+            ("tr-TR", include_str!("../lang/tr-TR.ftl")),
+            ("uk-UA", include_str!("../lang/uk-UA.ftl")),
+            ("vi-VN", include_str!("../lang/vi-VN.ftl")),
+            ("zh-CN", include_str!("../lang/zh-CN.ftl")),
+            ("zh-TW", include_str!("../lang/zh-TW.ftl")),
+        ];
+
+        for (name, content) in files {
+            let mut seen = std::collections::HashSet::new();
+            let mut duplicates = Vec::new();
+
+            for line in content.lines() {
+                // Message ids start at column zero; indented lines are continuations or
+                // attributes, and `#` is a comment.
+                if line.starts_with(char::is_whitespace) || line.starts_with('#') {
+                    continue;
+                }
+                if let Some((id, _)) = line.split_once('=') {
+                    let id = id.trim();
+                    if !id.is_empty() && !seen.insert(id.to_string()) {
+                        duplicates.push(id.to_string());
+                    }
+                }
+            }
+
+            assert!(duplicates.is_empty(), "duplicate ids in {name}.ftl: {duplicates:?}");
+        }
+    }
+
+    /// The notification strings are the only ones rendered from a background thread with
+    /// no UI to reveal a mistake, so check every language we ship them in actually parses
+    /// and substitutes its arguments instead of falling back or leaking a placeholder.
+    #[test]
+    fn notifications_render_in_every_translated_language() {
+        for language in [
+            Language::English,
+            Language::PortugueseBrazilian,
+            Language::Spanish,
+            Language::Russian,
+            Language::ChineseSimplified,
+        ] {
+            TRANSLATOR.set_language(language);
+
+            let rendered = [
+                TRANSLATOR.notify_quick_save_done("Hollow Knight"),
+                TRANSLATOR.notify_quick_save_failed("Hollow Knight", "disk full"),
+                TRANSLATOR.notify_quick_save_unmatched("Photoshop.exe"),
+                TRANSLATOR.notify_auto_backup_done("Hollow Knight"),
+                TRANSLATOR.notify_auto_backup_failed("Hollow Knight", "disk full"),
+                TRANSLATOR.notify_scan_done(1),
+                TRANSLATOR.notify_scan_done(42),
+                TRANSLATOR.notify_tray_body(),
+                TRANSLATOR.tray_show(),
+                TRANSLATOR.tray_quit(),
+            ];
+
+            for text in rendered {
+                assert!(!text.is_empty(), "empty string for {language:?}");
+                assert!(!text.contains('{'), "unresolved placeholder in {language:?}: {text}");
+                assert!(!text.starts_with("fluent-"), "lookup failed for {language:?}: {text}");
+            }
+
+            assert!(
+                TRANSLATOR
+                    .notify_quick_save_done("Hollow Knight")
+                    .contains("Hollow Knight")
+            );
+            assert!(TRANSLATOR.notify_scan_done(42).contains("42"));
+        }
+
+        TRANSLATOR.set_language(Language::English);
     }
 }

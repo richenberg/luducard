@@ -1,4 +1,5 @@
-export type Platform = "Steam" | "Epic" | "GOG" | "Emulador" | "Origin"
+/** "Other" covers games whose store the manifest cannot identify — most non-Steam, non-GOG entries. */
+export type Platform = "Steam" | "Epic" | "GOG" | "Emulador" | "Origin" | "Other"
 
 export type BackupStatus = "ok" | "pending" | "never"
 
@@ -43,6 +44,7 @@ export const platformColors: Record<Platform, string> = {
   GOG: "bg-violet-500/15 text-violet-300 border-violet-500/30",
   Emulador: "bg-amber-500/15 text-amber-300 border-amber-500/30",
   Origin: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+  Other: "bg-slate-500/15 text-slate-300 border-slate-500/30",
 }
 
 export const emulatorColors: Record<string, string> = {

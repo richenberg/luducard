@@ -42,6 +42,12 @@ import { useTheme, type Theme } from "@/lib/theme-context"
 
 const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ !== undefined;
 
+/**
+ * Must match `DEFAULT_SHORTCUT` in src-tauri/src/hotkey.rs. Ctrl+Alt rather than Ctrl+Shift
+ * because this is a global hotkey and Ctrl+Shift+S is "Save As" in many applications.
+ */
+const DEFAULT_QUICK_SAVE_SHORTCUT = "Ctrl+Alt+S";
+
 function SettingRow({
   icon: Icon,
   title,
@@ -101,7 +107,7 @@ export function SettingsClient() {
   const [supabaseAnonKey, setSupabaseAnonKey] = useState("")
   const [confirmReset, setConfirmReset] = useState(false)
   const [quickSaveEnabled, setQuickSaveEnabled] = useState(true)
-  const [quickSaveShortcut, setQuickSaveShortcut] = useState("Ctrl+Shift+S")
+  const [quickSaveShortcut, setQuickSaveShortcut] = useState(DEFAULT_QUICK_SAVE_SHORTCUT)
   const [hasCloudRemote, setHasCloudRemote] = useState(false)
   const [showNotesInLibrary, setShowNotesInLibrary] = useState(() => {
     return localStorage.getItem("luducard_show_notes_in_library") !== "false";
@@ -145,7 +151,7 @@ export function SettingsClient() {
       setSupabaseUrl(s.supabaseUrl || "");
       setSupabaseAnonKey(s.supabaseAnonKey || "");
       setQuickSaveEnabled(s.quickSaveEnabled);
-      setQuickSaveShortcut(s.quickSaveShortcut || "Ctrl+Shift+S");
+      setQuickSaveShortcut(s.quickSaveShortcut || DEFAULT_QUICK_SAVE_SHORTCUT);
       setHasCloudRemote(s.hasCloudRemote);
     } catch (err) {
       console.error("Failed to load settings from Tauri:", err);
@@ -235,7 +241,7 @@ export function SettingsClient() {
         setSupabaseUrl(s.supabaseUrl || "");
         setSupabaseAnonKey(s.supabaseAnonKey || "");
         setQuickSaveEnabled(s.quickSaveEnabled);
-        setQuickSaveShortcut(s.quickSaveShortcut || "Ctrl+Shift+S");
+        setQuickSaveShortcut(s.quickSaveShortcut || DEFAULT_QUICK_SAVE_SHORTCUT);
         setHasCloudRemote(s.hasCloudRemote);
       } catch (err) {
         if (id) {
@@ -436,7 +442,7 @@ export function SettingsClient() {
                     readOnly
                     placeholder={t("luducard-quicksave-press-keys", "Pressione as teclas...")}
                     className="w-36 text-center font-mono text-xs cursor-pointer bg-muted/30 focus:bg-background h-8"
-                    title="Clique e pressione a combinação de teclas desejada"
+                    title={t("luducard-shortcut-input-title", "Click and press the key combination you want")}
                   />
                   <Switch
                     checked={quickSaveEnabled}
