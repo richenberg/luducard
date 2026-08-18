@@ -32,7 +32,7 @@ fn prepare_logging(debug: bool) -> Result<flexi_logger::LoggerHandle, flexi_logg
                     now.format("%Y-%m-%dT%H:%M:%S%.3fZ"),
                     record.level(),
                     record.module_path().unwrap_or("<unnamed>"),
-                    &record.args(),
+                    record.args(),
                 )
             })
             .start()
@@ -54,7 +54,7 @@ fn prepare_logging(debug: bool) -> Result<flexi_logger::LoggerHandle, flexi_logg
                     now.format("%Y-%m-%dT%H:%M:%S%.3fZ"),
                     record.level(),
                     record.module_path().unwrap_or("<unnamed>"),
-                    &record.args(),
+                    record.args(),
                 )
             })
             .start()
@@ -276,7 +276,7 @@ fn debug_on_exit(debug: bool) {
         let path = app_dir();
         if let Err(e) = opener::open(path.raw()) {
             eprintln!("{}", TRANSLATOR.unable_to_open_dir(&path));
-            log::error!("Unable to open directory: `{:?}` - {:?}", &path, e);
+            log::error!("Unable to open directory: `{:?}` - {:?}", path, e);
         }
     }
 }

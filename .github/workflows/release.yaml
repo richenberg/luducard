@@ -5,6 +5,14 @@ on:
     tags:
       - 'v*'
 
+# Pinned rather than "stable" on purpose. With a floating toolchain, a Rust
+# release can turn CI red on code nobody touched: 1.97 taught clippy to see
+# through log:: macros, and dozens of untouched files started failing
+# --deny warnings. Pin means the build breaks when we choose to move, and
+# what passes locally passes here. Bump this deliberately.
+env:
+  RUST_TOOLCHAIN: "1.96.0"
+
 jobs:
   release:
     permissions:
@@ -34,10 +42,10 @@ jobs:
         with:
           version: 11
 
-      - name: install Rust stable
+      - name: install Rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: install dependencies (ubuntu only)

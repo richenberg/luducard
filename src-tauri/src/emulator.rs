@@ -713,27 +713,26 @@ pub fn scan_gse_saves() -> Vec<DetectedSave> {
     if let Ok(entries) = std::fs::read_dir(&gse_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_dir() {
-                if let Some(name_str) = path.file_name().and_then(|n| n.to_str()) {
-                    if let Ok(app_id) = name_str.parse::<u32>() {
-                        // Cruza o App ID com o manifest do Ludusavi para tentar achar o nome oficial do jogo
-                        let mut game_title = None;
-                        for (manifest_game, meta) in &api.manifest.0 {
-                            if meta.steam.id == Some(app_id) {
-                                game_title = Some(manifest_game.clone());
-                                break;
-                            }
-                        }
-
-                        // Se o jogo for detectado no manifest, registra o save na pasta do Goldberg
-                        if let Some(title) = game_title {
-                            saves.push(DetectedSave {
-                                game_title: title,
-                                save_path: path.to_string_lossy().to_string().replace('\\', "/"),
-                                emulator_name: "GSE".to_string(),
-                            });
-                        }
+            if path.is_dir()
+                && let Some(name_str) = path.file_name().and_then(|n| n.to_str())
+                && let Ok(app_id) = name_str.parse::<u32>()
+            {
+                // Cross-reference the App ID with Ludusavi's manifest to find the official title
+                let mut game_title = None;
+                for (manifest_game, meta) in &api.manifest.0 {
+                    if meta.steam.id == Some(app_id) {
+                        game_title = Some(manifest_game.clone());
+                        break;
                     }
+                }
+
+                // Only register the Goldberg save folder for games the manifest knows
+                if let Some(title) = game_title {
+                    saves.push(DetectedSave {
+                        game_title: title,
+                        save_path: path.to_string_lossy().to_string().replace('\\', "/"),
+                        emulator_name: "GSE".to_string(),
+                    });
                 }
             }
         }
