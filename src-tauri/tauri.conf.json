@@ -36,6 +36,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "Richenberg",
+    "copyright": "Copyright (c) 2026 Richenberg. MIT licensed.",
+    "homepage": "https://github.com/richenberg/luducard",
+    "category": "Utility",
+    "shortDescription": "Game save manager and community hub for PC.",
+    "longDescription": "Luducard backs up and restores PC and emulator game saves, and adds a community hub where you can download save checkpoints and graphics presets shared by other players. Built in Rust. Free and open source."
   }
 }

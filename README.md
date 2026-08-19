@@ -20,8 +20,8 @@ You can get **Luducard** from **[itch.io](https://richenbergdev.itch.io/luducard
 1. Go to the [Releases](https://github.com/richenberg/luducard/releases) section on GitHub.
 2. Under the latest stable version, scroll down to the **Assets** section at the bottom.
 3. Download the correct file for your operating system:
-   - **Windows Portable (`Luducard_x64_portable.zip`) [Recommended]**: Simply extract it to any folder or USB drive and double-click `Luducard.exe` to run. No installation required.
-   - **Windows Installer (`.msi`)**: The official installer to install Luducard on your system.
+   - **Windows Installer (`.msi`) [Recommended]**: The standard installer. Run it and you're done.
+   - **Windows Portable (`_x64_portable.zip`)**: Extract anywhere — a folder, a USB drive — and run `Luducard.exe`. No installation needed. See the note below before using this one.
    - **macOS / Linux**: Download the appropriate package (`.dmg` or `.deb`/`.AppImage`).
 
 ### 🛡️ Is it safe?
@@ -29,7 +29,8 @@ You can get **Luducard** from **[itch.io](https://richenbergdev.itch.io/luducard
 Fair question — this app touches your save files, and the Windows build isn't code-signed yet (certificates are expensive for a free project). So here's everything you need to check for yourself:
 
 - **[VirusTotal scan of `Luducard.exe`](https://www.virustotal.com/gui/file/56696da402c3aace496d4a6870ff621c35f4d1c3fcfb9d9c8e0a801f8a6cfeed)** — 1 of 66 engines flags it, and that one detection is `Suspicious.low.ml.score` from Trapmine: a machine-learning guess, not a matched signature. Unsigned Rust binaries that read process names and write to `AppData` set this off routinely. The other 65 engines, including Microsoft, BitDefender, ESET, Kaspersky and CrowdStrike, report it clean.
-- **Windows SmartScreen may warn you** on first launch for the same reason (no signature, low download count). Click *More info → Run anyway* if you're comfortable.
+- **Windows Defender may delete the portable `.zip`**, reporting `Trojan:Script/Wacatac.B!ml`. This is a false positive and it is why the installer is the recommended download for now. The `!ml` suffix means the verdict came from a machine-learning model rather than a matched signature, and `Wacatac.B!ml` is Microsoft's most false-positive-prone generic detection — it regularly flags unsigned open-source software. The `.msi` and `.exe` installers, which contain the same application, are not flagged. It has been reported to Microsoft.
+- **Windows SmartScreen may warn you** on first launch, because the build is not code-signed and has few downloads. Click *More info → Run anyway* if you're comfortable.
 - **Backups are additive.** Restoring writes over your current save, and the app takes a backup of what it's replacing first — nothing is deleted without a copy kept.
 - **The full source is in this repo.** Every release is built from the tagged commit, so you can read exactly what you're running.
 

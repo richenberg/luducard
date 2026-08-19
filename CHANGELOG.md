@@ -4,6 +4,11 @@ All notable changes to the **Luducard** project will be documented in this file.
 
 This project is a new application based on the core of Ludosavi. The change history of Luducard starts with this release.
 
+## [Unreleased]
+### Changed
+- **The Executable Identifies Itself**: The build now declares a publisher, copyright, description and homepage. Windows showed a blank "Publisher" on the installer before, and an unsigned binary that carries no identifying metadata is treated with more suspicion by antivirus heuristics than one that says who made it.
+- **The Installer Is Now the Recommended Windows Download**: Windows Defender deletes the portable `.zip` of 0.2.3, reporting `Trojan:Script/Wacatac.B!ml`. It is a false positive — the `!ml` suffix marks a machine-learning verdict rather than a matched signature, and the `.msi` and `.exe` installers containing the same application are not flagged. Reported to Microsoft; the README explains it so nobody has to guess.
+
 ## [0.2.3] - 2026-08-17
 ### Added
 - **Save Versioning Settings**: Version history is now configurable in Settings — a switch to turn it off entirely, plus how many complete copies to keep and how many change-only backups to layer on each. Pinned saves are exempt from these limits and kept indefinitely.
