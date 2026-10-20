@@ -366,6 +366,11 @@ fn backup_game_silent(game_title: &str, app_data_dir: Option<&Path>) -> Result<(
 }
 
 pub fn trigger_quick_save(app: &tauri::AppHandle) {
+    if crate::backup_folder::backups_paused() {
+        log::info!("[Hotkey] Quick-save skipped: backups are being moved to a new folder.");
+        return;
+    }
+
     #[cfg(target_os = "windows")]
     {
         use ludusavi::lang::TRANSLATOR;

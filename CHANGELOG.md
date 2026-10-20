@@ -5,6 +5,13 @@ All notable changes to the **Luducard** project will be documented in this file.
 This project is a new application based on the core of Ludosavi. The change history of Luducard starts with this release.
 
 ## [Unreleased]
+### Added
+- **Choose Where Backups Go**: On a fresh install, Luducard asks where to keep backups before anything else, suggesting `Documents\Luducard Backups` (or a `backups` folder next to the app in portable mode). Existing installs keep their folder and are not asked.
+- **Moving Backups With the Folder**: Changing the backup folder in Settings now offers to move the existing backups. They are copied, checked, and only then removed from the old folder; a failure or cancel leaves everything as it was. Automatic backups and the quick-save hotkey pause during the move. Only game backups are moved, so anything else kept in the old folder stays put.
+
+### Fixed
+- **Changing the Backup Folder No Longer Hides Your Backups**: It used to switch the path and leave every existing backup behind, where the app no longer looked.
+
 ### Changed
 - **The Executable Identifies Itself**: The build now declares a publisher, copyright, description and homepage. Windows showed a blank "Publisher" on the installer before, and an unsigned binary that carries no identifying metadata is treated with more suspicion by antivirus heuristics than one that says who made it.
 - **The Installer Is Now the Recommended Windows Download**: Windows Defender deletes the portable `.zip` of 0.2.3, reporting `Trojan:Script/Wacatac.B!ml`. It is a false positive — the `!ml` suffix marks a machine-learning verdict rather than a matched signature, and the `.msi` and `.exe` installers containing the same application are not flagged. Reported to Microsoft; the README explains it so nobody has to guess.

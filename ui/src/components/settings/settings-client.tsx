@@ -41,6 +41,7 @@ import { games } from "@/lib/mock-data"
 import { useLibrary } from "@/lib/library-context"
 import { PlatformBadge } from "@/components/platform-badge"
 import { cn } from "@/lib/utils"
+import { ChangeBackupFolderButton } from "@/components/backup-folder/backup-folder"
 import { useTheme, type Theme } from "@/lib/theme-context"
 
 const isTauri = typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__ !== undefined;
@@ -625,9 +626,15 @@ export function SettingsClient() {
               <span className="text-xs text-muted-foreground">{t("luducard-backup-dir-desc", "Onde os saves dos seus jogos serão guardados localmente.")}</span>
               <Input
                 value={backupPath}
-                onChange={(e) => setBackupPath(e.target.value)}
-                placeholder="Ex: C:/Users/Player/LuducardBackups"
+                readOnly
                 className="max-w-md font-mono text-xs"
+              />
+              <ChangeBackupFolderButton
+                onChanged={async () => {
+                  const { invoke } = await import("@tauri-apps/api/core")
+                  const s = await invoke<{ backupPath: string }>("get_settings")
+                  setBackupPath(s.backupPath)
+                }}
               />
             </div>
 

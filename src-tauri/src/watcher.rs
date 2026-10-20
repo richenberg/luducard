@@ -394,6 +394,11 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
         loop {
             std::thread::sleep(Duration::from_secs(10));
 
+            // Backups are being moved to a new folder; pending games are picked up after.
+            if crate::backup_folder::backups_paused() {
+                continue;
+            }
+
             // Check if watcher is still enabled
             {
                 let state = WATCHER_STATE.lock().unwrap();

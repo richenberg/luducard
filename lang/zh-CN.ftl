@@ -978,3 +978,32 @@ luducard-retention-full = 保留的完整副本数
 luducard-retention-full-desc = 每个副本包含该游戏的全部存档文件。副本越多越安全，占用磁盘也越多。
 luducard-retention-differential = 每个副本的增量备份数
 luducard-retention-differential-desc = 仅保存自上次完整副本以来的变化，因此小得多。可恢复点总数 = 完整副本 ×（1 + 此数字）。
+
+# Backup folder
+luducard-bf-chosen = 已设置备份文件夹。
+luducard-bf-not-writable = Luducard 无法写入该文件夹，请选择其他文件夹。
+luducard-bf-first-title = 备份要保存在哪里？
+luducard-bf-first-desc = Luducard 会在此文件夹中保存游戏存档的副本。之后可以在设置中更改。
+luducard-bf-choose-other = 选择其他…
+luducard-bf-use-this = 使用此文件夹
+luducard-bf-changed = 备份文件夹已更改。
+luducard-bf-same = 这已经是当前的备份文件夹。
+luducard-bf-nested = 新文件夹不能位于当前文件夹内，也不能包含当前文件夹。
+luducard-bf-moved-left = 备份已移动。旧文件夹中的部分文件无法删除，你可以手动删除。
+luducard-bf-moved = 备份已移动到新文件夹。
+luducard-bf-cancelled = 已取消移动，未做任何更改。
+luducard-bf-move-failed = 无法移动备份，未做任何更改。
+luducard-bf-change = 更改…
+luducard-bf-move-title = 要将备份移动到新文件夹吗？
+luducard-bf-move-desc = 如果不移动，当前备份会留在旧文件夹中，并且不再显示在 Luducard 中。
+luducard-bf-size = 备份大小：
+luducard-bf-no-space = 该磁盘没有足够的可用空间来移动备份。
+luducard-bf-cancel = 取消
+luducard-bf-dont-move = 不移动
+luducard-bf-move = 移动
+luducard-bf-has-backups-title = 该文件夹已包含 Luducard 备份
+luducard-bf-has-backups-desc = 你可以改用该文件夹中已有的备份。当前备份不会被移动或混合。
+luducard-bf-choose-other-folder = 选择其他文件夹
+luducard-bf-use-existing = 使用已有的备份
+luducard-bf-moving-title = 正在移动备份…
+luducard-bf-moving-desc = 完成前自动备份将暂停。

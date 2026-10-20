@@ -3,6 +3,7 @@
 
 use tauri::Manager;
 
+mod backup_folder;
 mod commands;
 pub mod emulator;
 pub mod hotkey;
@@ -74,6 +75,11 @@ fn main() {
                 .build(),
         )
         .setup(|app| {
+            // Before anything loads the config, since loading creates it.
+            if let Ok(dir) = app.path().app_data_dir() {
+                backup_folder::mark_new_install(&dir);
+            }
+
             // Apply the saved language before building anything user-visible. The tray menu
             // and the background notifications are produced on the Rust side, and nothing
             // else calls `set_language` until the user opens the settings screen — so
@@ -201,6 +207,11 @@ fn main() {
             commands::save_settings,
             commands::save_language,
             commands::get_translations,
+            backup_folder::get_backup_folder_setup,
+            backup_folder::check_backup_folder,
+            backup_folder::set_backup_folder,
+            backup_folder::move_backup_folder,
+            backup_folder::cancel_backup_folder_move,
             commands::download_rclone,
             commands::configure_cloud_remote,
             commands::test_cloud_connection,

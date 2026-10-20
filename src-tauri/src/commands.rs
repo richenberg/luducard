@@ -1694,7 +1694,8 @@ pub async fn save_settings(app: tauri::AppHandle, settings: FrontendSettings) ->
     tokio::task::spawn_blocking(move || {
         let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
-        api.config.backup.path = StrictPath::new(settings.backup_path);
+        // The backup folder is changed only through `backup_folder`, which offers to move
+        // the existing backups; writing it here would strand them in the old folder.
         api.config.apps.rclone.path = StrictPath::new(settings.rclone_path);
         api.config.cloud.path = settings.cloud_path;
         api.config.cloud.synchronize = settings.cloud_sync;

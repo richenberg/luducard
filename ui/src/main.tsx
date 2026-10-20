@@ -6,6 +6,7 @@ import { LibraryProvider } from "@/lib/library-context";
 import { I18nProvider } from "@/lib/i18n";
 import { ThemeProvider } from "@/lib/theme-context";
 import App from "./App";
+import { FirstRunBackupFolder } from "@/components/backup-folder/backup-folder";
 import "./globals.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -15,6 +16,7 @@ createRoot(document.getElementById("root")!).render(
         <ThemeProvider>
           <LibraryProvider>
             <App />
+            <FirstRunBackupFolder />
             <Toaster position="bottom-right" />
           </LibraryProvider>
         </ThemeProvider>
