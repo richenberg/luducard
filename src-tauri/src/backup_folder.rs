@@ -80,17 +80,7 @@ fn clear_pending(app_data_dir: &Path) {
 }
 
 fn suggested_folder() -> PathBuf {
-    if ludusavi::prelude::is_portable()
-        && let Ok(mut exe) = std::env::current_exe()
-    {
-        exe.pop();
-        return exe.join("backups");
-    }
-
-    dirs::document_dir()
-        .or_else(dirs::home_dir)
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("Luducard Backups")
+    PathBuf::from(ludusavi::resource::config::default_backup_dir().render())
 }
 
 fn current_folder(config: &Config) -> Option<PathBuf> {

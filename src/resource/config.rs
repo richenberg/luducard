@@ -21,12 +21,14 @@ use crate::{
 pub const MANIFEST_URL: &str =
     "https://raw.githubusercontent.com/mtkennerly/ludusavi-manifest/master/data/manifest.yaml";
 
-fn default_backup_dir() -> StrictPath {
+/// Where backups go unless the user picks somewhere else: Documents\Luducard Backups, or
+/// next to the app in portable mode.
+pub fn default_backup_dir() -> StrictPath {
     if crate::prelude::is_portable() {
-        crate::prelude::app_dir().joined("luducard-backups")
-    } else {
-        StrictPath::new(format!("{}/ludusavi-backup", CommonPath::Home.get().unwrap())).rendered()
+        return crate::prelude::app_dir().joined("luducard-backups");
     }
+    let base = CommonPath::Document.get().or_else(|| CommonPath::Home.get()).unwrap_or(".");
+    StrictPath::new(format!("{}/Luducard Backups", base)).rendered()
 }
 
 #[derive(Debug, Clone)]

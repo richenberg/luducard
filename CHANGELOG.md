@@ -6,7 +6,7 @@ This project is a new application based on the core of Ludosavi. The change hist
 
 ## [Unreleased]
 ### Added
-- **Choose Where Backups Go**: On a fresh install, Luducard asks where to keep backups before anything else, suggesting `Documents\Luducard Backups` (or a `backups` folder next to the app in portable mode). Existing installs keep their folder and are not asked.
+- **Choose Where Backups Go**: On a fresh install, Luducard asks where to keep backups before anything else, suggesting `Documents\Luducard Backups` (or `luducard-backups` next to the app in portable mode). New installs no longer default to Ludusavi's `ludusavi-backup` folder in the user's home. Existing installs keep their folder and are not asked.
 - **Moving Backups With the Folder**: Changing the backup folder in Settings now offers to move the existing backups. They are copied, checked, and only then removed from the old folder; a failure or cancel leaves everything as it was. Automatic backups and the quick-save hotkey pause during the move. Only game backups are moved, so anything else kept in the old folder stays put.
 
 ### Fixed
