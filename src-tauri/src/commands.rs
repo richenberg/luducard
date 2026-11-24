@@ -202,6 +202,8 @@ fn backup_created_version(output: &ludusavi::report::ApiOutput, game_title: &str
 /// be automatic even when the user had clicked "Back up now" themselves.
 pub const BACKUP_KIND_MANUAL: &str = "manual";
 pub const BACKUP_KIND_AUTO: &str = "auto";
+// Only the Windows quick-save hotkey writes this kind, so elsewhere it would be dead code.
+#[cfg(target_os = "windows")]
 pub const BACKUP_KIND_QUICK: &str = "quick";
 
 /// Name of a game's most recent backup, which is the one a just-finished backup produced.

@@ -343,14 +343,14 @@ fn find_game_for_exe(exe_path: &Path, app: &tauri::AppHandle) -> Option<String> 
 }
 
 pub fn trigger_quick_save(app: &tauri::AppHandle) {
-    if crate::backup_folder::backups_paused() {
-        log::info!("[Hotkey] Quick-save skipped: backups are being moved to a new folder.");
-        return;
-    }
-
     #[cfg(target_os = "windows")]
     {
         use ludusavi::lang::TRANSLATOR;
+
+        if crate::backup_folder::backups_paused() {
+            log::info!("[Hotkey] Quick-save skipped: backups are being moved to a new folder.");
+            return;
+        }
 
         let exe_path = match get_foreground_process_path() {
             Some(path) => path,
