@@ -27,6 +27,8 @@ export interface Game {
   sizeMB: number
   backupsSizeMB: number
   lastBackup: string
+  /** RFC 3339 timestamp of the newest backup, if any. */
+  lastBackupAt?: string | null
   status: BackupStatus
   autoBackup: boolean
   cloudSync: boolean

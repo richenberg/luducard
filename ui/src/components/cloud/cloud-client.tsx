@@ -6,8 +6,8 @@ import {
   LinkIcon, 
   Unlink, 
   HardDrive, 
-  ArrowUpFromLine, 
-  ArrowDownToLine, 
+  
+  
   Loader2, 
   Sparkles, 
   Download, 
@@ -21,11 +21,11 @@ import {
   Folder
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
+import { CloudRules } from "@/components/cloud/cloud-rules"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/lib/i18n"
 
@@ -57,6 +57,7 @@ export function CloudClient() {
   const [activeProvider, setActiveProvider] = useState<CloudProvider>("Google Drive")
   const [remoteConnected, setRemoteConnected] = useState(() => typeof window !== "undefined" && localStorage.getItem("luducard_has_cloud_remote") === "true")
   const [cloudEmail, setCloudEmail] = useState("")
+  const [emailLookupDone, setEmailLookupDone] = useState(false)
   
   // Wizard flow states
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1)
@@ -68,15 +69,12 @@ export function CloudClient() {
   
   // Test steps progress
   const [testSteps, setTestSteps] = useState([
-    { id: 1, label: "Criar arquivo temporário de teste", status: "idle" as "idle" | "running" | "success" | "error" },
-    { id: 2, label: "Fazer upload do arquivo de teste para a nuvem", status: "idle" as "idle" | "running" | "success" | "error" },
-    { id: 3, label: "Baixar e verificar o arquivo de teste", status: "idle" as "idle" | "running" | "success" | "error" },
-    { id: 4, label: "Limpar os arquivos temporários", status: "idle" as "idle" | "running" | "success" | "error" },
+    { id: 1, label: "luducard-cw-test-step1", status: "idle" as "idle" | "running" | "success" | "error" },
+    { id: 2, label: "luducard-cw-test-step2", status: "idle" as "idle" | "running" | "success" | "error" },
+    { id: 3, label: "luducard-cw-test-step3", status: "idle" as "idle" | "running" | "success" | "error" },
+    { id: 4, label: "luducard-cw-test-step4", status: "idle" as "idle" | "running" | "success" | "error" },
   ])
   
-  // Other settings
-  const [autoUpload, setAutoUpload] = useState(true)
-  const [autoDownload, setAutoDownload] = useState(true)
 
   // Load settings on startup
   const loadSettings = async () => {
@@ -114,9 +112,17 @@ export function CloudClient() {
       
       if (hasRemote) {
         setShowDashboard(true)
+        if (!s.cloudEmail) {
+          invoke<string | null>("refresh_cloud_email")
+            .then((email) => email && setCloudEmail(email))
+            .catch((err) => console.error("Failed to fetch the cloud account e-mail:", err))
+            .finally(() => setEmailLookupDone(true))
+        }
       } else if (s.rclonePath) {
+        setShowDashboard(false)
         setCurrentStep(2) // Go to login if rclone is installed
       } else {
+        setShowDashboard(false)
         setCurrentStep(1) // Otherwise start at installer
       }
     } catch (err) {
@@ -131,15 +137,15 @@ export function CloudClient() {
   // Action: Download Rclone
   const handleDownloadRclone = async () => {
     setIsDownloading(true)
-    const id = toast.loading("Baixando Rclone... Isso pode levar alguns segundos.")
+    const id = toast.loading(t("luducard-cw-rclone-downloading", "Downloading Rclone... This can take a few seconds."))
     try {
       const { invoke } = await import("@tauri-apps/api/core")
       const path = await invoke<string>("download_rclone")
       setRclonePath(path)
-      toast.success("Rclone baixado e instalado com sucesso!", { id })
+      toast.success(t("luducard-cw-rclone-installed", "Rclone downloaded and installed!"), { id })
       setCurrentStep(2)
     } catch (err) {
-      toast.error(`Falha no download do Rclone: ${err}`, { id })
+      toast.error(`${t("luducard-cw-rclone-download-failed", "Could not download Rclone:")} ${err}`, { id })
     } finally {
       setIsDownloading(false)
     }
@@ -168,23 +174,23 @@ export function CloudClient() {
           }
         })
         setRclonePath(path)
-        toast.success("Caminho do Rclone atualizado!")
+        toast.success(t("luducard-cw-rclone-path-updated", "Rclone path updated!"))
         setCurrentStep(2)
       }
     } catch (err) {
-      toast.error(`Erro ao selecionar pasta: ${err}`)
+      toast.error(`${t("luducard-cw-select-folder-failed", "Could not select the folder:")} ${err}`)
     }
   }
 
   // Action: Link account via OAuth (no email required)
   const handleLinkAccount = async () => {
     setIsLinking(true)
-    const id = toast.loading("Abrindo navegador para autenticação. Por favor, autorize no navegador...")
+    const id = toast.loading(t("luducard-cw-linking", "Opening the browser to sign in. Please authorize there..."))
     try {
       if (!isTauri) {
         await new Promise((resolve) => setTimeout(resolve, 2000))
         setRemoteConnected(true)
-        toast.success("Conta vinculada com sucesso!", { id })
+        toast.success(t("luducard-cw-linked", "Account linked!"), { id })
         setCurrentStep(3)
         return
       }
@@ -193,10 +199,10 @@ export function CloudClient() {
       await invoke("configure_cloud_remote", { provider: activeProvider, email: "cloud_user" })
       setRemoteConnected(true)
       localStorage.setItem("luducard_has_cloud_remote", "true")
-      toast.success("Conta vinculada com sucesso!", { id })
+      toast.success(t("luducard-cw-linked", "Account linked!"), { id })
       setCurrentStep(3)
     } catch (err) {
-      toast.error(`Falha ao vincular conta: ${err}`, { id })
+      toast.error(`${t("luducard-cw-link-failed", "Could not link the account:")} ${err}`, { id })
     } finally {
       setIsLinking(false)
     }
@@ -205,10 +211,10 @@ export function CloudClient() {
   // Action: Save Cloud Folder Path (Step 3)
   const handleSaveCloudFolder = async () => {
     if (!cloudPath.trim()) {
-      toast.error("O nome da pasta não pode ser vazio.")
+      toast.error(t("luducard-cw-folder-empty", "The folder name cannot be empty."))
       return
     }
-    const id = toast.loading("Salvando pasta da nuvem...")
+    const id = toast.loading(t("luducard-cw-folder-saving", "Saving the cloud folder..."))
     try {
       if (isTauri) {
         const { invoke } = await import("@tauri-apps/api/core")
@@ -220,16 +226,16 @@ export function CloudClient() {
           }
         })
       }
-      toast.success("Pasta de backup configurada!", { id })
+      toast.success(t("luducard-cw-folder-saved", "Backup folder set!"), { id })
       setCurrentStep(4)
     } catch (err) {
-      toast.error(`Erro ao salvar pasta: ${err}`, { id })
+      toast.error(`${t("luducard-cw-folder-save-failed", "Could not save the folder:")} ${err}`, { id })
     }
   }
 
   // Action: Unlink Account / Reset Wizard
   const handleUnlink = async () => {
-    const id = toast.loading("Desconectando conta...")
+    const id = toast.loading(t("luducard-cw-unlinking", "Disconnecting the account..."))
     try {
       if (isTauri) {
         const { invoke } = await import("@tauri-apps/api/core")
@@ -248,9 +254,9 @@ export function CloudClient() {
       setShowDashboard(false)
       localStorage.setItem("luducard_has_cloud_remote", "false")
       setCurrentStep(2)
-      toast.success("Conta desconectada com sucesso!", { id })
+      toast.success(t("luducard-cw-unlinked", "Account disconnected!"), { id })
     } catch (err) {
-      toast.error(`Erro ao desconectar: ${err}`, { id })
+      toast.error(`${t("luducard-cw-unlink-failed", "Could not disconnect:")} ${err}`, { id })
     }
   }
 
@@ -299,13 +305,13 @@ export function CloudClient() {
       await new Promise((resolve) => setTimeout(resolve, 300))
       updateStepStatus(4, "success")
       
-      toast.success("Teste de ida e volta concluído com sucesso!")
+      toast.success(t("luducard-cw-test-ok", "Round-trip test passed!"))
     } catch (err) {
       setTestSteps((steps) =>
         steps.map((s) => (s.status === "running" ? { ...s, status: "error" } : s))
       )
       setTestError(String(err))
-      toast.error(`Falha no teste de conexão: ${err}`)
+      toast.error(`${t("luducard-cw-test-failed", "Connection test failed:")} ${err}`)
     } finally {
       setIsTesting(false)
     }
@@ -324,9 +330,9 @@ export function CloudClient() {
             cloudSync: checked
           }
         })
-        toast.success(checked ? "Sincronização global ativada!" : "Sincronização global desativada.")
+        toast.success(checked ? t("luducard-cw-sync-on", "Cloud sync enabled!") : t("luducard-cw-sync-off", "Cloud sync disabled."))
       } catch (err) {
-        toast.error(`Falha ao salvar configuração: ${err}`)
+        toast.error(`${t("luducard-cw-save-failed", "Could not save the setting:")} ${err}`)
       }
     } else {
       toast.success(checked ? "[Mock] Sincronização global ligada!" : "[Mock] Sincronização global desligada.")
@@ -349,9 +355,9 @@ export function CloudClient() {
       setCloudSync(true)
       setShowDashboard(true)
       localStorage.setItem("luducard_has_cloud_remote", "true")
-      toast.success("Configuração de Nuvem ativada com sucesso!")
+      toast.success(t("luducard-cw-finished", "Cloud sync is set up!"))
     } catch (err) {
-      toast.error(`Falha ao finalizar: ${err}`)
+      toast.error(`${t("luducard-cw-finish-failed", "Could not finish:")} ${err}`)
     }
   }
 
@@ -423,12 +429,12 @@ export function CloudClient() {
                 <span className="text-muted-foreground">{t("luducard-cloud-provider", "Provedor Conectado:")}</span>
                 <span className="font-medium text-foreground">{activeProvider}</span>
               </div>
-              {cloudEmail && (
-                <div className="flex justify-between py-1.5 border-b border-border/40">
-                  <span className="text-muted-foreground">{t("luducard-cloud-email", "E-mail da Conta:")}</span>
-                  <span className="font-medium text-foreground">{cloudEmail}</span>
-                </div>
-              )}
+              <div className="flex justify-between gap-4 py-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">{t("luducard-cw-account", "Account")}</span>
+                <span className="font-medium text-foreground truncate" title={cloudEmail}>
+                  {cloudEmail || (emailLookupDone ? "—" : t("luducard-cw-account-loading", "Looking up…"))}
+                </span>
+              </div>
               <div className="flex justify-between py-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">{t("luducard-cloud-destination", "Pasta de Destino:")}</span>
                 <span className="font-mono text-xs">{cloudPath}</span>
@@ -452,28 +458,8 @@ export function CloudClient() {
                 {t("luducard-cloud-rules-title", "Regras de Sincronização")}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-0.5 text-left">
-                  <span className="text-xs font-semibold">{t("luducard-cloud-upload-auto", "Upload Automático")}</span>
-                  <span className="text-[10px] text-muted-foreground">{t("luducard-cloud-upload-auto-desc", "Upar saves assim que o backup local for gerado.")}</span>
-                </div>
-                <Switch checked={autoUpload} onCheckedChange={(c) => {
-                  setAutoUpload(c)
-                  toast.success(c ? t("luducard-cloud-toast-upload-enabled", "Upload automático ativado") : t("luducard-cloud-toast-upload-disabled", "Upload automático desativado"))
-                }} />
-              </div>
-              <Separator className="bg-border/40" />
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-0.5 text-left">
-                  <span className="text-xs font-semibold">{t("luducard-cloud-download-latest", "Baixar mais Recente")}</span>
-                  <span className="text-[10px] text-muted-foreground">{t("luducard-cloud-download-latest-desc", "Dar prioridade aos arquivos mais novos na nuvem.")}</span>
-                </div>
-                <Switch checked={autoDownload} onCheckedChange={(c) => {
-                  setAutoDownload(c)
-                  toast.success(c ? t("luducard-cloud-toast-download-enabled", "Download automático ativado") : t("luducard-cloud-toast-download-disabled", "Download automático desativado"))
-                }} />
-              </div>
+            <CardContent>
+              <CloudRules />
             </CardContent>
           </Card>
         </div>
@@ -489,11 +475,11 @@ export function CloudClient() {
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             {[
-              { num: 1, name: "Motor (Rclone)", desc: "Instalar rclone" },
-              { num: 2, name: "Provedor (Login)", desc: "Fazer Login" },
-              { num: 3, name: "Pasta Destino", desc: "Configurar pasta" },
-              { num: 4, name: "Validação", desc: "Testar conexão" },
-              { num: 5, name: "Ativação", desc: "Finalizar" },
+              { num: 1, name: t("luducard-cw-stepper-1", "Engine (Rclone)"), desc: t("luducard-cw-stepper-1-desc", "Install rclone") },
+              { num: 2, name: t("luducard-cw-stepper-2", "Provider (sign-in)"), desc: t("luducard-cw-stepper-2-desc", "Sign in") },
+              { num: 3, name: t("luducard-cw-stepper-3", "Destination folder"), desc: t("luducard-cw-stepper-3-desc", "Set up the folder") },
+              { num: 4, name: t("luducard-cw-stepper-4", "Check"), desc: t("luducard-cw-stepper-4-desc", "Test the connection") },
+              { num: 5, name: t("luducard-cw-stepper-5", "Activation"), desc: t("luducard-cw-stepper-5-desc", "Finish") },
             ].map((step, idx) => (
               <div key={step.num} className="flex flex-1 items-center last:flex-initial">
                 <button
@@ -546,8 +532,8 @@ export function CloudClient() {
                 <Download className="size-5" />
               </span>
               <div>
-                <CardTitle className="text-base">Passo 1: Instalação do Motor Rclone</CardTitle>
-                <CardDescription>O Rclone é o motor de código aberto seguro usado para fazer o upload e download de arquivos em nuvem.</CardDescription>
+                <CardTitle className="text-base">{t("luducard-cw-step1-title", "Step 1: Install the Rclone engine")}</CardTitle>
+                <CardDescription>{t("luducard-cw-step1-desc", "Rclone is the secure open-source engine used to upload and download files to the cloud.")}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -557,13 +543,13 @@ export function CloudClient() {
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="size-5 text-emerald-400 shrink-0 mt-0.5" />
                   <div className="flex flex-col gap-0.5 text-left">
-                    <span className="text-sm font-semibold text-emerald-400">Rclone Detectado e Pronto!</span>
+                    <span className="text-sm font-semibold text-emerald-400">{t("luducard-cw-rclone-ready", "Rclone found and ready!")}</span>
                     <span className="text-xs text-muted-foreground font-mono break-all">{rclonePath}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={handleSelectRcloneManual}>
-                    Alterar Executável
+                    {t("luducard-cw-change-exe", "Change executable")}
                   </Button>
                   <Button size="sm" onClick={() => setCurrentStep(2)}>
                     Avançar
@@ -577,9 +563,9 @@ export function CloudClient() {
                   <AlertTriangle className="size-7" />
                 </span>
                 <div className="max-w-md flex flex-col gap-1">
-                  <span className="text-sm font-semibold">Nenhum executável Rclone encontrado</span>
+                  <span className="text-sm font-semibold">{t("luducard-cw-no-rclone", "No Rclone executable found")}</span>
                   <p className="text-xs text-muted-foreground">
-                    Para que a sincronização funcione, precisamos baixar o executável do Rclone ou indicar o caminho de um já instalado.
+                    {t("luducard-cw-no-rclone-desc", "For sync to work, we need to download the Rclone executable or point to one that is already installed.")}
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm justify-center">
@@ -591,12 +577,12 @@ export function CloudClient() {
                     {isDownloading ? (
                       <>
                         <Loader2 className="size-4 mr-2 animate-spin" />
-                        Baixando Rclone...
+                        {t("luducard-cw-rclone-downloading-short", "Downloading Rclone...")}
                       </>
                     ) : (
                       <>
                         <Sparkles className="size-4 mr-2 text-yellow-300 animate-bounce" />
-                        Instalar Automaticamente
+                        {t("luducard-cw-install-auto", "Install automatically")}
                       </>
                     )}
                   </Button>
@@ -606,7 +592,7 @@ export function CloudClient() {
                     disabled={isDownloading}
                   >
                     <FolderOpen className="size-4 mr-2" />
-                    Selecionar Pasta
+                    {t("luducard-cw-select-folder", "Select folder")}
                   </Button>
                 </div>
               </div>
@@ -624,15 +610,15 @@ export function CloudClient() {
                 <LinkIcon className="size-5" />
               </span>
               <div>
-                <CardTitle className="text-base">Passo 2: Vincular Conta de Nuvem</CardTitle>
-                <CardDescription>Escolha o seu provedor de nuvem de preferência e faça login.</CardDescription>
+                <CardTitle className="text-base">{t("luducard-cw-step2-title", "Step 2: Link a cloud account")}</CardTitle>
+                <CardDescription>{t("luducard-cw-step2-desc", "Choose your cloud provider and sign in.")}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
             {/* Provider Grid */}
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-semibold text-muted-foreground text-left">Selecione o Provedor:</span>
+              <span className="text-xs font-semibold text-muted-foreground text-left">{t("luducard-cw-select-provider", "Select the provider:")}</span>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                 {providersList.map((p) => (
                   <button
@@ -661,9 +647,9 @@ export function CloudClient() {
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="size-5 text-emerald-400 shrink-0 mt-0.5 animate-bounce" />
                   <div className="flex flex-col gap-0.5 text-left">
-                    <span className="text-sm font-semibold text-emerald-400">Conta Vinculada!</span>
+                    <span className="text-sm font-semibold text-emerald-400">{t("luducard-cw-account-linked", "Account linked!")}</span>
                     <span className="text-xs text-muted-foreground">
-                      Conexão via <strong className="text-foreground">{activeProvider}</strong> estabelecida com sucesso.
+                      {t("luducard-cw-connected-via", "Connected through { $provider }.", { provider: activeProvider })}
                     </span>
                   </div>
                 </div>
@@ -681,9 +667,9 @@ export function CloudClient() {
             ) : (
               <div className="flex flex-col gap-4 max-w-md border border-border p-5 rounded-xl bg-muted/10 text-left">
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold">Autenticação do Provedor</span>
+                  <span className="text-sm font-semibold">{t("luducard-cw-auth-title", "Provider sign-in")}</span>
                   <p className="text-xs text-muted-foreground">
-                    Ao clicar no botão abaixo, abriremos o seu navegador web para que você possa escolher sua conta e fazer o login com segurança.
+                    {t("luducard-cw-auth-desc", "Clicking the button below opens your web browser so you can choose your account and sign in securely.")}
                   </p>
                 </div>
 
@@ -696,12 +682,12 @@ export function CloudClient() {
                     {isLinking ? (
                       <>
                         <Loader2 className="size-4 mr-2 animate-spin" />
-                        Aguardando Login...
+                        {t("luducard-cw-waiting-login", "Waiting for sign-in...")}
                       </>
                     ) : (
                       <>
                         <LinkIcon className="size-4 mr-2" />
-                        Fazer Login / Vincular Conta
+                        {t("luducard-cw-login", "Sign in / Link account")}
                       </>
                     )}
                   </Button>
@@ -721,15 +707,15 @@ export function CloudClient() {
                 <Folder className="size-5" />
               </span>
               <div>
-                <CardTitle className="text-base">Passo 3: Pasta de Destino na Nuvem</CardTitle>
-                <CardDescription>Escolha a pasta do seu provedor onde seus backups de save serão guardados.</CardDescription>
+                <CardTitle className="text-base">{t("luducard-cw-step3-title", "Step 3: Cloud destination folder")}</CardTitle>
+                <CardDescription>{t("luducard-cw-step3-desc", "Choose the folder in your provider where your save backups will be kept.")}</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 max-w-md border border-border p-5 rounded-xl bg-muted/10 text-left">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Nome da Pasta Remota:</label>
+                <label className="text-xs font-semibold text-muted-foreground">{t("luducard-cw-remote-folder", "Remote folder name:")}</label>
                 <Input
                   type="text"
                   placeholder="luducard-backup"
@@ -737,11 +723,11 @@ export function CloudClient() {
                   onChange={(e) => setCloudPath(e.target.value)}
                 />
                 <span className="text-[10px] text-muted-foreground">
-                  Se você já tem uma pasta de backups no {activeProvider}, digite o nome exato dela aqui para reutilizá-la. Caso contrário, digite um novo nome e ela será criada automaticamente.
+                  {t("luducard-cw-remote-folder-hint", "If you already have a backup folder in { $provider }, type its exact name here to reuse it. Otherwise, type a new name and it will be created.", { provider: activeProvider })}
                 </span>
               </div>
               <Button onClick={handleSaveCloudFolder} className="font-semibold">
-                Salvar e Avançar
+                {t("luducard-cw-save-next", "Save and continue")}
                 <ArrowRight className="size-4 ml-2" />
               </Button>
             </div>
@@ -758,8 +744,8 @@ export function CloudClient() {
                 <RefreshCw className="size-5" />
               </span>
               <div>
-                <CardTitle className="text-base">Passo 4: Validação de Conexão (Ida & Volta)</CardTitle>
-                <CardDescription>Fazemos um teste real escrevendo e lendo um arquivo de teste na sua pasta de nuvem para validar as permissões.</CardDescription>
+                <CardTitle className="text-base">{t("luducard-cw-step4-title", "Step 4: Connection check (round trip)")}</CardTitle>
+                <CardDescription>{t("luducard-cw-step4-desc", "We write and read a test file in your cloud folder to check the permissions.")}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -770,25 +756,25 @@ export function CloudClient() {
                   <div key={step.id} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0 last:pb-0">
                     <span className="text-xs font-medium text-foreground/80 flex items-center gap-2">
                       <span className="text-muted-foreground font-semibold">{step.id}.</span>
-                      {step.label}
+                      {t(step.label)}
                     </span>
                     <span>
                       {step.status === "idle" && (
-                        <span className="text-[10px] text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded-full font-medium">Aguardando</span>
+                        <span className="text-[10px] text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded-full font-medium">{t("luducard-cw-status-idle", "Waiting")}</span>
                       )}
                       {step.status === "running" && (
                         <span className="text-[10px] text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                          <Loader2 className="size-3 animate-spin" /> Executando
+                          <Loader2 className="size-3 animate-spin" /> {t("luducard-cw-status-running", "Running")}
                         </span>
                       )}
                       {step.status === "success" && (
                         <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1 animate-scale-up">
-                          <CheckCircle2 className="size-3 text-emerald-400" /> Sucesso
+                          <CheckCircle2 className="size-3 text-emerald-400" /> {t("luducard-cw-status-success", "Done")}
                         </span>
                       )}
                       {step.status === "error" && (
                         <span className="text-[10px] text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                          <XCircle className="size-3 text-destructive" /> Falhou
+                          <XCircle className="size-3 text-destructive" /> {t("luducard-cw-status-error", "Failed")}
                         </span>
                       )}
                     </span>
@@ -799,7 +785,7 @@ export function CloudClient() {
               {testError && (
                 <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive flex items-start gap-2 mt-3 font-mono text-left">
                   <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-                  <span>Erro de Teste: {testError}</span>
+                  <span>{t("luducard-cw-test-error", "Test error:")} {testError}</span>
                 </div>
               )}
 
@@ -807,8 +793,8 @@ export function CloudClient() {
                 <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-400 text-sm flex items-start gap-3 mt-3 shadow-md shadow-emerald-500/5 text-left">
                   <CheckCircle2 className="size-5 shrink-0 mt-0.5 text-emerald-400 animate-bounce" />
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold text-emerald-400">Sincronização configurada com sucesso e pronta para uso!</span>
-                    <span className="text-xs text-emerald-500/80 font-medium">O teste de upload e download do arquivo temporário funcionou perfeitamente.</span>
+                    <span className="font-semibold text-emerald-400">{t("luducard-cw-test-success", "Sync is set up and ready to use!")}</span>
+                    <span className="text-xs text-emerald-500/80 font-medium">{t("luducard-cw-test-success-desc", "Uploading and downloading the temporary file worked.")}</span>
                   </div>
                 </div>
               )}
@@ -822,12 +808,12 @@ export function CloudClient() {
                   {isTesting ? (
                     <>
                       <Loader2 className="size-4 mr-2 animate-spin" />
-                      Testando Conexão...
+                      {t("luducard-cw-testing", "Testing the connection...")}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="size-4 mr-2" />
-                      Testar Conexão Real
+                      {t("luducard-cw-test", "Test the connection")}
                     </>
                   )}
                 </Button>
@@ -855,8 +841,8 @@ export function CloudClient() {
                 <Cloud className="size-5" />
               </span>
               <div>
-                <CardTitle className="text-base">Passo 5: Regras de Sincronização & Ativação</CardTitle>
-                <CardDescription>Ajuste os gatilhos automáticos para que a nuvem trabalhe por você.</CardDescription>
+                <CardTitle className="text-base">{t("luducard-cw-step5-title", "Step 5: Sync rules and activation")}</CardTitle>
+                <CardDescription>{t("luducard-cw-step5-desc", "Adjust the automatic triggers so the cloud works for you.")}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -866,57 +852,20 @@ export function CloudClient() {
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-semibold flex items-center gap-1.5">
                   <Cloud className="size-4 text-primary" />
-                  Ativar Sincronização em Nuvem Global
+                  {t("luducard-cw-enable-sync", "Enable cloud sync")}
                 </span>
-                <span className="text-xs text-muted-foreground">Quando desativado, o envio para a nuvem fica em pausa.</span>
+                <span className="text-xs text-muted-foreground">{t("luducard-cw-enable-sync-desc", "When off, uploading to the cloud is paused.")}</span>
               </div>
               <Switch checked={cloudSync} onCheckedChange={handleEnableGlobalSync} />
             </div>
 
-            {/* Sync Rules switches */}
-            <div className="flex flex-col gap-1 max-w-xl border border-border rounded-xl p-3 bg-muted/10 text-left">
-              <label className="flex items-center justify-between gap-3 rounded-lg px-2 py-3 border-b border-border/40 last:border-0">
-                <span className="flex items-center gap-3 text-left">
-                  <ArrowUpFromLine className="size-4 text-primary shrink-0" />
-                  <span className="flex flex-col">
-                    <span className="text-xs font-semibold">Upload automático após backup local</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      Envia para a nuvem imediatamente após cada backup.
-                    </span>
-                  </span>
-                </span>
-                <Switch 
-                  checked={autoUpload} 
-                  onCheckedChange={(c) => {
-                    setAutoUpload(c)
-                    toast.message(c ? "Upload automático ligado" : "Upload automático desligado")
-                  }} 
-                />
-              </label>
-
-              <label className="flex items-center justify-between gap-3 rounded-lg px-2 py-3">
-                <span className="flex items-center gap-3 text-left">
-                  <ArrowDownToLine className="size-4 text-primary shrink-0" />
-                  <span className="flex flex-col">
-                    <span className="text-xs font-semibold">Baixar se o save remoto for mais recente</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      Resolve conflitos priorizando a versão mais nova da nuvem.
-                    </span>
-                  </span>
-                </span>
-                <Switch 
-                  checked={autoDownload} 
-                  onCheckedChange={(c) => {
-                    setAutoDownload(c)
-                    toast.message(c ? "Download automático ligado" : "Download automático desligado")
-                  }} 
-                />
-              </label>
+            <div className="max-w-xl border border-border rounded-xl p-4 bg-muted/10">
+              <CloudRules />
             </div>
 
             <div className="flex gap-3 max-w-xl justify-end">
               <Button onClick={handleFinishWizard} className="font-semibold">
-                Finalizar e Fechar
+                {t("luducard-cw-finish", "Finish and close")}
               </Button>
             </div>
           </CardContent>

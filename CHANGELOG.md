@@ -8,8 +8,18 @@ This project is a new application based on the core of Ludosavi. The change hist
 ### Added
 - **Choose Where Backups Go**: On a fresh install, Luducard asks where to keep backups before anything else, suggesting `Documents\Luducard Backups` (or `luducard-backups` next to the app in portable mode). New installs no longer default to Ludusavi's `ludusavi-backup` folder in the user's home. Existing installs keep their folder and are not asked.
 - **Moving Backups With the Folder**: Changing the backup folder in Settings now offers to move the existing backups. They are copied, checked, and only then removed from the old folder; a failure or cancel leaves everything as it was. Automatic backups and the quick-save hotkey pause during the move. Only game backups are moved, so anything else kept in the old folder stays put.
+- **Cancelling a Backup Run**: "Back up all" and "Back up selected" can now be cancelled from the progress notification. The run stops after the game being backed up at that moment, since cutting a game's backup in half would leave it incomplete.
+- **Choosing When Backups Go to the Cloud**: Cloud & Sync now offers uploading every backup automatically, or only when asked through "Back up and upload to the cloud". A second choice decides what happens when the cloud holds a version this PC has never seen: ask, or keep the most recent. These replace the "Auto Upload" and "Download Most Recent" switches, which were never saved or used.
+- **Cloud Account in Cloud & Sync**: The connected account's e-mail is shown, so it is clear which Drive is in use. It is looked up again when missing, rather than only once at connect time.
 
 ### Fixed
+- **Automatic Backups Overwrote Newer Cloud Saves Silently**: The file watcher and the quick-save hotkey always uploaded, even when the cloud had progress from another PC, so the other PC's save was pushed down the history without a word. In "ask" mode they now keep the backup local and say so in the notification.
+- **Cloud Conflicts Detected From the Wrong Backup**: The check compared only full backups, while the latest one is usually a differential, and treated a cloud that was merely behind as a conflict. It now looks at every backup and only flags a cloud that has one this PC lacks.
+- **"Local Backup" Uploaded to the Cloud Anyway**: With Cloud Sync on, the local option ran exactly the same backup as the cloud one, upload included. It now skips the upload for that backup without changing the setting.
+- **Backup Progress Lost When Leaving the Library**: Switching screens during "Back up all" reset the button, although the backups kept running, and allowed a second run to start on top of the first. The progress now survives navigation and a second run can't start.
+- **Cloud & Sync Claimed to Be Healthy Without an Account**: The status came from a value cached in the browser, so it could say "Active and Healthy" with no account connected. It now follows the actual configuration.
+- **Portuguese Text in Other Languages**: The cloud setup wizard, the backup progress messages, several Settings notifications and some backend errors were written in Portuguese only. They are now translated into all five languages, or rewritten in English for technical errors.
+- **Blurry Taskbar Icon**: The window icon was the 16-pixel image from the icon file, stretched to fit the taskbar, because Tauri uses whichever image the file lists first. The largest image now comes first, and the icon is rendered from the vector source at each size, including the 24-pixel one the taskbar uses at 100% scaling.
 - **Changing the Backup Folder No Longer Hides Your Backups**: It used to switch the path and leave every existing backup behind, where the app no longer looked.
 
 ### Changed

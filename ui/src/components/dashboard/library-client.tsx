@@ -120,7 +120,7 @@ function GameCard({ game, selected, onSelectedChange, onBackup, onRestore, onNot
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("save_campaign_note", { gameId: game.id, note: localNotes });
       } catch (err) {
-        toast.error(`Falha ao salvar anotação: ${err}`);
+        toast.error(`${t("luducard-note-save-failed", "Could not save the note:")} ${err}`);
         return;
       }
     }
@@ -231,7 +231,7 @@ function GameRow({ game, selected, onSelectedChange, onBackup, onRestore, onNote
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("save_campaign_note", { gameId: game.id, note: localNotes });
       } catch (err) {
-        toast.error(`Falha ao salvar anotação: ${err}`);
+        toast.error(`${t("luducard-note-save-failed", "Could not save the note:")} ${err}`);
         return;
       }
     }
@@ -406,23 +406,23 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
     const title = conflictInfo.gameTitle;
     const id = toast.loading(
       direction === "local"
-        ? `Resolvendo conflito: mantendo a versão local de "${title}"...`
-        : `Resolvendo conflito: baixando a versão da nuvem de "${title}"...`
+        ? t("luducard-conflict-keeping-local", "Resolving conflict: keeping the local version of \"{ $game }\"...", { game: title })
+        : t("luducard-conflict-downloading", "Resolving conflict: downloading the cloud version of \"{ $game }\"...", { game: title })
     );
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       if (direction === "local") {
         await invoke("backup_game", { gameTitle: title });
-        toast.success(`Versão local de "${title}" salva na nuvem!`, { id });
+        toast.success(t("luducard-conflict-local-saved", "Local version of \"{ $game }\" saved to the cloud!", { game: title }), { id });
       } else {
         await invoke("restore_game", { gameTitle: title, backupId: null });
-        toast.success(`Versão da nuvem de "${title}" restaurada!`, { id });
+        toast.success(t("luducard-conflict-cloud-restored", "Cloud version of \"{ $game }\" restored!", { game: title }), { id });
       }
       setConflictModalOpen(false);
       setConflictInfo(null);
       loadGames(true);
     } catch (err) {
-      toast.error(`Falha ao resolver conflito de "${title}": ${err}`, { id });
+      toast.error(`${t("luducard-conflict-failed", "Could not resolve the conflict for \"{ $game }\":", { game: title })} ${err}`, { id });
     }
   };
 
@@ -671,12 +671,12 @@ export function LibraryClient({ selected, setSelected }: LibraryClientProps) {
             </EmptyMedia>
             <EmptyTitle>
               {games.length === 0 
-                ? "Você ainda não tem jogos" 
+                ? t("luducard-no-games-yet", "You don't have any games yet")
                 : t("luducard-no-games-found", "Nenhum jogo encontrado")}
             </EmptyTitle>
             <EmptyDescription>
               {games.length === 0
-                ? "Adicione caminhos ou realize um escaneamento para começar."
+                ? t("luducard-no-games-yet-desc", "Add paths or run a scan to get started.")
                 : t("luducard-adjust-filters-desc", "Ajuste os filtros ou escaneie suas pastas para adicionar novos jogos.")}
             </EmptyDescription>
           </EmptyHeader>

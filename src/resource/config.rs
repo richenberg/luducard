@@ -27,7 +27,10 @@ pub fn default_backup_dir() -> StrictPath {
     if crate::prelude::is_portable() {
         return crate::prelude::app_dir().joined("luducard-backups");
     }
-    let base = CommonPath::Document.get().or_else(|| CommonPath::Home.get()).unwrap_or(".");
+    let base = CommonPath::Document
+        .get()
+        .or_else(|| CommonPath::Home.get())
+        .unwrap_or(".");
     StrictPath::new(format!("{}/Luducard Backups", base)).rendered()
 }
 

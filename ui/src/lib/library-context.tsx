@@ -34,6 +34,8 @@ interface LibraryContextType {
     totalSizeMB: number;
     cloudSynced: number;
     pending: number;
+    /** RFC 3339 timestamp of the newest backup across all games, or null if none. */
+    lastBackupAt: string | null;
   };
 }
 
@@ -206,6 +208,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       totalSizeMB: games.reduce((acc, g) => acc + (g.sizeMB || 0), 0),
       cloudSynced: games.filter((g) => g.cloudSync).length,
       pending: games.filter((g) => g.status === "pending" || g.status === "never").length,
+      lastBackupAt: games.reduce<string | null>((latest, g) => {
+        if (!g.lastBackupAt) return latest;
+        return !latest || new Date(g.lastBackupAt) > new Date(latest) ? g.lastBackupAt : latest;
+      }, null),
     };
   }, [games]);
 

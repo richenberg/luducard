@@ -214,7 +214,7 @@ export function SettingsClient() {
     }
 
     if (isTauri) {
-      const id = override ? undefined : toast.loading("Salvando configurações...");
+      const id = override ? undefined : toast.loading(t("luducard-settings-saving", "Saving settings..."));
       try {
         const { invoke } = await import("@tauri-apps/api/core");
         await invoke("save_settings", {
@@ -240,7 +240,7 @@ export function SettingsClient() {
           }
         });
         if (id) {
-          toast.success("Configurações salvas no backend!", { id });
+          toast.success(t("luducard-settings-saved", "Settings saved!"), { id });
         }
         // Reload settings to ensure React states are perfectly in sync
         const s = await invoke<{
@@ -283,9 +283,9 @@ export function SettingsClient() {
         setHasCloudRemote(s.hasCloudRemote);
       } catch (err) {
         if (id) {
-          toast.error(`Erro ao salvar: ${err}`, { id });
+          toast.error(`${t("luducard-settings-save-failed", "Could not save the settings:")} ${err}`, { id });
         } else {
-          toast.error(`Erro ao salvar configuração: ${err}`);
+          toast.error(`${t("luducard-settings-save-failed", "Could not save the settings:")} ${err}`);
         }
       }
     } else {
@@ -301,14 +301,14 @@ export function SettingsClient() {
       toast.success(`[Mock] Modo Portátil ${checked ? "ativado" : "desativado"}!`);
       return;
     }
-    const id = toast.loading(checked ? "Ativando Modo Portátil e migrando dados..." : "Desativando Modo Portátil e migrando dados...");
+    const id = toast.loading(checked ? t("luducard-portable-enabling", "Enabling portable mode and moving data...") : t("luducard-portable-disabling", "Disabling portable mode and moving data..."));
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("toggle_portable_mode", { enable: checked });
-      toast.success(checked ? "Modo Portátil ativado! Configurações salvas na pasta do executável." : "Modo Portátil desativado!", { id });
+      toast.success(checked ? t("luducard-portable-enabled", "Portable mode enabled! Settings are now kept in the app's folder.") : t("luducard-portable-disabled", "Portable mode disabled!"), { id });
       await loadSettings();
     } catch (err) {
-      toast.error(`Erro ao alterar Modo Portátil: ${err}`, { id });
+      toast.error(`${t("luducard-portable-failed", "Could not change portable mode:")} ${err}`, { id });
     }
   }
 
@@ -328,7 +328,7 @@ export function SettingsClient() {
         window.location.reload();
       }, 1000);
     } catch (err) {
-      toast.error(`Erro ao limpar dados: ${err}`, { id });
+      toast.error(`${t("luducard-clear-data-failed", "Could not clear the data:")} ${err}`, { id });
     }
   }
 
@@ -382,7 +382,7 @@ export function SettingsClient() {
                   checked={startWithWindows}
                   onCheckedChange={(c) => {
                     handleSaveSettings({ startWithWindows: c });
-                    toast.message(c ? "Inicialização automática ligada" : "Inicialização automática desligada");
+                    toast.message(c ? t("luducard-autostart-on", "Start with Windows enabled") : t("luducard-autostart-off", "Start with Windows disabled"));
                   }}
                 />
               }
@@ -397,7 +397,7 @@ export function SettingsClient() {
                   checked={systemTray}
                   onCheckedChange={(c) => {
                     handleSaveSettings({ systemTray: c });
-                    toast.message(c ? "Execução na bandeja ativada" : "Execução na bandeja desativada");
+                    toast.message(c ? t("luducard-tray-on", "Run in the system tray enabled") : t("luducard-tray-off", "Run in the system tray disabled"));
                   }}
                 />
               }
@@ -425,7 +425,7 @@ export function SettingsClient() {
                   onCheckedChange={(c) => {
                     setShowNotesInLibrary(c);
                     localStorage.setItem("luducard_show_notes_in_library", String(c));
-                    toast.success(c ? "Diário de bordo visível na biblioteca" : "Diário de bordo ocultado na biblioteca");
+                    toast.success(c ? t("luducard-logbook-on", "Logbook shown in the library") : t("luducard-logbook-off", "Logbook hidden in the library"));
                   }}
                 />
               }
@@ -487,7 +487,7 @@ export function SettingsClient() {
                     onCheckedChange={(c) => {
                       setQuickSaveEnabled(c);
                       handleSaveSettings({ quickSaveEnabled: c });
-                      toast.message(c ? "Atalho de emergência ativado" : "Atalho de emergência desativado");
+                      toast.message(c ? t("luducard-quicksave-on", "Quick-save hotkey enabled") : t("luducard-quicksave-off", "Quick-save hotkey disabled"));
                     }}
                   />
                 </div>

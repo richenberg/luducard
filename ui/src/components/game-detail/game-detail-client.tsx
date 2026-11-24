@@ -1046,7 +1046,7 @@ export function GameDetailClient({ game, onRefresh }: GameDetailClientProps) {
 
           const { uploadUrl, r2Path } = await edgeRes.json()
 
-          toast.loading("Realizando upload seguro dos arquivos...", { id: toastId })
+          toast.loading(t("luducard-hub-uploading", "Uploading the files securely..."), { id: toastId })
 
           // Step 3: Run Rust direct upload
           await invoke("upload_file_to_url", {

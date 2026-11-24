@@ -375,7 +375,7 @@ export default function Community() {
     let tempZipPath = ""
     try {
       const { invoke } = await import("@tauri-apps/api/core")
-      const toastId = toast.loading("Comprimindo arquivos de save do backup com zstd...")
+      const toastId = toast.loading(t("luducard-hub-compressing", "Compressing the save files with zstd..."))
 
       const tempSaveInfo = await invoke<any>("export_temp_luducard_backup", {
         gameTitle: selectedGame.title,

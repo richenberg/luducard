@@ -342,29 +342,6 @@ fn find_game_for_exe(exe_path: &Path, app: &tauri::AppHandle) -> Option<String> 
     None
 }
 
-/// Backup game silently using Ludusavi API
-fn backup_game_silent(game_title: &str, app_data_dir: Option<&Path>) -> Result<(), String> {
-    use ludusavi::prelude::{Finality, SyncDirection};
-
-    let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
-
-    api.back_up(ludusavi::api::parameters::BackUp {
-        games: vec![game_title.to_string()],
-        finality: Finality::Final,
-        resolve_cloud_conflict: Some(SyncDirection::Upload),
-        wine_prefix: None,
-        include_disabled: true,
-        skip_downgrade: false,
-    })
-    .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
-
-    if let Some(dir) = app_data_dir {
-        crate::commands::record_latest_backup_kind(&api, dir, game_title, crate::commands::BACKUP_KIND_QUICK);
-    }
-
-    Ok(())
-}
-
 pub fn trigger_quick_save(app: &tauri::AppHandle) {
     if crate::backup_folder::backups_paused() {
         log::info!("[Hotkey] Quick-save skipped: backups are being moved to a new folder.");
@@ -392,13 +369,19 @@ pub fn trigger_quick_save(app: &tauri::AppHandle) {
         if let Some(game_title) = find_game_for_exe(&exe_path, app) {
             log::info!("[Hotkey] Matched foreground process to game: {}", game_title);
 
-            match backup_game_silent(&game_title, app.path().app_data_dir().ok().as_deref()) {
-                Ok(()) => {
+            match crate::cloud_policy::back_up_unattended(
+                &game_title,
+                app.path().app_data_dir().ok().as_deref(),
+                crate::commands::BACKUP_KIND_QUICK,
+            ) {
+                Ok(outcome) => {
                     log::info!("[Hotkey] Quick-save successful for game: {}", game_title);
-                    crate::watcher::show_notification(
-                        &TRANSLATOR.notify_quick_save_done_title(),
-                        &TRANSLATOR.notify_quick_save_done(&game_title),
-                    );
+                    let body = if outcome == crate::cloud_policy::CloudOutcome::ConflictSkipped {
+                        TRANSLATOR.notify_cloud_conflict_skipped(&game_title)
+                    } else {
+                        TRANSLATOR.notify_quick_save_done(&game_title)
+                    };
+                    crate::watcher::show_notification(&TRANSLATOR.notify_quick_save_done_title(), &body);
                     play_notification_sound();
                 }
                 Err(e) => {

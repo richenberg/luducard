@@ -25,6 +25,13 @@ import { formatSize } from "@/lib/mock-data"
 import { useLibrary } from "@/lib/library-context"
 import { useI18n } from "@/lib/i18n"
 
+// dd/mm/yyyy in the local timezone, matching how the user reads dates in the app.
+function formatBackupDate(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+}
+
 export function AppSidebar() {
   const { pathname } = useLocation()
   const { stats, coverProgress } = useLibrary()
@@ -111,7 +118,12 @@ export function AppSidebar() {
                 {stats.pending}
               </span>
             </div>
-            
+            <div className="mt-1 border-t border-border/50 pt-2 text-[11px] text-muted-foreground">
+              {stats.lastBackupAt
+                ? t("luducard-last-backup-date", "Último backup feito dia { $date }", { date: formatBackupDate(stats.lastBackupAt) })
+                : t("luducard-no-backup-yet", "Nenhum backup feito ainda")}
+            </div>
+
             {coverProgress.downloading && (
               <div className="mt-1 flex flex-col gap-1.5 border-t border-border/50 pt-2">
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground">

@@ -1483,6 +1483,12 @@ impl Translator {
         translate_args("luducard-notify-auto-backup-done", &args)
     }
 
+    pub fn notify_cloud_conflict_skipped(&self, game: &str) -> String {
+        let mut args = FluentArgs::new();
+        args.set(GAME, game);
+        translate_args("luducard-notify-cloud-conflict-skipped", &args)
+    }
+
     pub fn notify_auto_backup_failed_title(&self) -> String {
         translate("luducard-notify-auto-backup-failed-title")
     }

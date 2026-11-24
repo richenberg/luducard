@@ -230,32 +230,6 @@ fn is_game_likely_running(game_title: &str) -> bool {
     false
 }
 
-/// Performs a silent backup for a single game using the Ludusavi API.
-fn backup_game_silent(game_title: &str, app_data_dir: Option<&Path>) -> Result<(), String> {
-    use ludusavi::{
-        api::Ludusavi,
-        prelude::{Finality, SyncDirection},
-    };
-
-    let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
-
-    api.back_up(ludusavi::api::parameters::BackUp {
-        games: vec![game_title.to_string()],
-        finality: Finality::Final,
-        resolve_cloud_conflict: Some(SyncDirection::Upload),
-        wine_prefix: None,
-        include_disabled: true,
-        skip_downgrade: false,
-    })
-    .map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
-
-    if let Some(dir) = app_data_dir {
-        crate::commands::record_latest_backup_kind(&api, dir, game_title, crate::commands::BACKUP_KIND_AUTO);
-    }
-
-    Ok(())
-}
-
 /// Finds the game title whose save path contains the given modified path.
 fn find_game_for_path(path: &Path, path_to_game: &HashMap<PathBuf, String>) -> Option<String> {
     let path_str = path.to_string_lossy().to_lowercase();
@@ -433,13 +407,19 @@ pub fn start_file_watcher(app: &tauri::AppHandle) {
                     game_title
                 );
 
-                match backup_game_silent(game_title, watcher_app_data_dir.as_deref()) {
-                    Ok(()) => {
+                match crate::cloud_policy::back_up_unattended(
+                    game_title,
+                    watcher_app_data_dir.as_deref(),
+                    crate::commands::BACKUP_KIND_AUTO,
+                ) {
+                    Ok(outcome) => {
                         log::info!("[FileWatcher] '{}' - backup completed successfully.", game_title);
-                        show_notification(
-                            &TRANSLATOR.notify_auto_backup_title(),
-                            &TRANSLATOR.notify_auto_backup_done(game_title),
-                        );
+                        let body = if outcome == crate::cloud_policy::CloudOutcome::ConflictSkipped {
+                            TRANSLATOR.notify_cloud_conflict_skipped(game_title)
+                        } else {
+                            TRANSLATOR.notify_auto_backup_done(game_title)
+                        };
+                        show_notification(&TRANSLATOR.notify_auto_backup_title(), &body);
 
                         // Notify frontend
                         let _ = app_handle.emit(

@@ -40,6 +40,8 @@ pub struct FrontendGame {
     #[serde(rename = "sizeMB")]
     pub size_mb: f64,
     pub last_backup: String,
+    /// RFC 3339 timestamp of the newest backup, for the sidebar date.
+    pub last_backup_at: Option<String>,
     pub status: String, // "ok" | "pending" | "never"
     pub auto_backup: bool,
     pub cloud_sync: bool,
@@ -936,8 +938,10 @@ fn build_frontend_game(
     }
 
     let mut backups_list = Vec::new();
+    let mut last_backup_at: Option<String> = None;
 
     if let Some(ApiGame::Stored { backups, .. }) = backup_game {
+        last_backup_at = backups.iter().map(|b| b.when).max().map(|t| t.to_rfc3339());
         for b in backups {
             let local_time = b.when.with_timezone(&chrono::Local);
             let date_str = local_time.format("%d %b %Y").to_string();
@@ -1076,6 +1080,7 @@ fn build_frontend_game(
         backup_path,
         size_mb: (size_bytes as f64) / (1024.0 * 1024.0),
         last_backup: last_backup_str,
+        last_backup_at,
         status,
         auto_backup,
         cloud_sync,
@@ -1427,9 +1432,25 @@ pub async fn get_game_details(app: tauri::AppHandle, game_title: String) -> Resu
 }
 
 #[tauri::command]
-pub async fn backup_game(app: tauri::AppHandle, game_title: String) -> Result<BackupOutcome, String> {
+pub async fn backup_game(
+    app: tauri::AppHandle,
+    game_title: String,
+    cloud: Option<bool>,
+) -> Result<BackupOutcome, String> {
     tokio::task::spawn_blocking(move || {
         let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
+
+        // `Some(true)` / `Some(false)` is an explicit cloud or local choice for this backup
+        // only. `None` follows the settings: Cloud Sync on and uploads set to automatic.
+        let upload = match cloud {
+            Some(choice) => choice,
+            None => {
+                crate::cloud_policy::CloudPrefs::load(app.path().app_data_dir().ok().as_deref()).upload_automatically
+            }
+        };
+        if !upload {
+            api.config.cloud.synchronize = false;
+        }
 
         let result = api
             .back_up(parameters::BackUp {
@@ -1896,14 +1917,11 @@ pub async fn open_game_folder(game_title: String, folder_type: String, save_path
                     }
                 }
             }
-            _ => return Err("Tipo de pasta inválido.".to_string()),
+            _ => return Err("Invalid folder type.".to_string()),
         };
 
         if !path_to_open.exists() {
-            return Err(format!(
-                "O diretório especificado não existe ou ainda não foi criado: {:?}",
-                path_to_open
-            ));
+            return Err(format!("The folder does not exist yet: {:?}", path_to_open));
         }
 
         opener::open(&path_to_open).map_err(|e| e.to_string())?;
@@ -2093,7 +2111,7 @@ fn export_luducard_save_internal(
 ) -> Result<LuducardMetadata, String> {
     let source = Path::new(source_path);
     if !source.exists() {
-        return Err(format!("O arquivo de save não foi encontrado: {}", source_path));
+        return Err(format!("Save file not found: {}", source_path));
     }
 
     // Collect files to archive: if source is a file, just that file.
@@ -2112,7 +2130,7 @@ fn export_luducard_save_internal(
         }
         base_dir = source;
     } else {
-        return Err("O caminho selecionado não é um arquivo ou pasta válida.".to_string());
+        return Err("The selected path is not a valid file or folder.".to_string());
     }
 
     if files_to_archive.is_empty() {
@@ -2278,7 +2296,7 @@ pub async fn read_luducard_metadata(archive_path: String) -> Result<LuducardMeta
             }
         }
 
-        Err("O arquivo .luducard não contém metadata.json — pode estar corrompido.".to_string())
+        Err("The .luducard file has no metadata.json; it may be corrupted.".to_string())
     })
     .await
     .map_err(|e| e.to_string())?
@@ -2316,7 +2334,7 @@ fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
         }
     }
 
-    let metadata = metadata.ok_or("O arquivo .luducard não contém metadata.json.".to_string())?;
+    let metadata = metadata.ok_or("The .luducard file has no metadata.json.".to_string())?;
 
     // Step 2: Create a safety backup of the current save directory (Seguro-Crash)
     if target_dir.exists() && target_dir.is_dir() {
@@ -2392,7 +2410,7 @@ fn import_luducard_save_internal(archive_path: &Path, target_dir: &Path) -> Resu
             .any(|c| matches!(c, std::path::Component::ParentDir))
         {
             return Err(format!(
-                "🚨 Arquivo bloqueado por segurança (path traversal detectado): {}",
+                "Blocked a file that points outside the save folder (path traversal): {}",
                 path_str
             ));
         }
@@ -2618,19 +2636,13 @@ pub async fn export_temp_luducard_backup(
     tokio::task::spawn_blocking(move || {
         let backup_folder = Path::new(&backup_path).join(&backup_id);
         if !backup_folder.exists() {
-            return Err(format!(
-                "O diretório do backup não foi encontrado: {}",
-                backup_folder.display()
-            ));
+            return Err(format!("Backup folder not found: {}", backup_folder.display()));
         }
 
         // Load mapping.yaml to get the drives mapping and files list
         let mapping_path = Path::new(&backup_path).join("mapping.yaml");
         if !mapping_path.exists() {
-            return Err(format!(
-                "O arquivo mapping.yaml não foi encontrado em: {}",
-                mapping_path.display()
-            ));
+            return Err(format!("mapping.yaml not found in: {}", mapping_path.display()));
         }
 
         let mapping_file = StrictPath::from(mapping_path.as_path());
@@ -2771,19 +2783,13 @@ pub async fn export_luducard_backup(
     tokio::task::spawn_blocking(move || {
         let backup_folder = Path::new(&backup_path).join(&backup_id);
         if !backup_folder.exists() {
-            return Err(format!(
-                "O diretório do backup não foi encontrado: {}",
-                backup_folder.display()
-            ));
+            return Err(format!("Backup folder not found: {}", backup_folder.display()));
         }
 
         // Load mapping.yaml to get the drives mapping and files list
         let mapping_path = Path::new(&backup_path).join("mapping.yaml");
         if !mapping_path.exists() {
-            return Err(format!(
-                "O arquivo mapping.yaml não foi encontrado em: {}",
-                mapping_path.display()
-            ));
+            return Err(format!("mapping.yaml not found in: {}", mapping_path.display()));
         }
 
         let mapping_file = StrictPath::from(mapping_path.as_path());
@@ -3478,7 +3484,7 @@ pub async fn apply_local_preset(
             let mapping_path = preset_dir.join("mapping.json");
 
             if !mapping_path.exists() {
-                return Err("Mapeamento do preset local não encontrado.".to_string());
+                return Err("Local preset mapping not found.".to_string());
             }
 
             let mapping_content = std::fs::read_to_string(&mapping_path)
@@ -3666,7 +3672,7 @@ pub async fn add_emulator(app: tauri::AppHandle, path: String) -> Result<usize, 
 
         let mut emulators = load_emulators_setting(&app_data_dir);
         if emulators.contains(&path) {
-            return Err("Este emulador já está adicionado.".to_string());
+            return Err("This emulator is already added.".to_string());
         }
         emulators.push(path.clone());
         save_emulators_setting(&app_data_dir, &emulators);
@@ -3836,7 +3842,7 @@ pub async fn configure_cloud_remote(app: tauri::AppHandle, provider: String, ema
         let mut api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
         if !api.config.apps.rclone.is_valid() {
-            return Err("Executável do Rclone não configurado ou inválido nas Configurações.".to_string());
+            return Err("The Rclone executable is missing or invalid in Settings.".to_string());
         }
 
         let remote_choice = match provider.as_str() {
@@ -3909,6 +3915,46 @@ pub async fn configure_cloud_remote(app: tauri::AppHandle, provider: String, ema
 /// Fetches the authenticated user's email by extracting the access_token from rclone config
 /// and querying the provider's API.
 #[allow(clippy::collapsible_if)]
+/// The connected account's e-mail, asked from the provider when we don't have it yet (it
+/// is only fetched at connect time, and is lost if `luducard.json` is reset).
+#[tauri::command]
+pub async fn refresh_cloud_email(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    tokio::task::spawn_blocking(move || {
+        let api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
+        let Some(remote) = api.config.cloud.remote.clone() else {
+            return Ok(None);
+        };
+        if !api.config.apps.rclone.is_valid() {
+            return Ok(None);
+        }
+
+        // The stored access token expires after an hour; any rclone call refreshes it and
+        // writes the new one back to rclone's config, where `fetch_cloud_email` reads it.
+        let mut command = std::process::Command::new(api.config.apps.rclone.path.raw());
+        command.args(["about", &format!("{}:", remote.id()), "--json"]);
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let _ = command.output();
+
+        let email = fetch_cloud_email(&api.config.apps.rclone.path, &remote, &api.config.apps.rclone.arguments);
+        if let (Some(e), Ok(dir)) = (&email, app.path().app_data_dir()) {
+            let path = dir.join("luducard.json");
+            let mut json: serde_json::Value = std::fs::read_to_string(&path)
+                .ok()
+                .and_then(|c| serde_json::from_str(&c).ok())
+                .unwrap_or_else(|| serde_json::json!({}));
+            json["cloud_email"] = serde_json::json!(e);
+            let _ = std::fs::write(&path, serde_json::to_string_pretty(&json).unwrap_or_default());
+        }
+        Ok(email)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn fetch_cloud_email(
     rclone_path: &StrictPath,
     remote: &ludusavi::cloud::Remote,
@@ -3918,10 +3964,10 @@ fn fetch_cloud_email(
     let mut command = std::process::Command::new(rclone_path.raw());
     command.args(["config", "dump"]);
 
-    if !rclone_arguments.is_empty() {
-        if let Some(parts) = shlex::split(rclone_arguments) {
-            command.args(parts);
-        }
+    if !rclone_arguments.is_empty()
+        && let Some(parts) = shlex::split(rclone_arguments)
+    {
+        command.args(parts);
     }
 
     #[cfg(target_os = "windows")]
@@ -4002,7 +4048,7 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
         let api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
 
         if !api.config.apps.rclone.is_valid() {
-            return Err("Executável do Rclone não configurado ou inválido nas Configurações.".to_string());
+            return Err("The Rclone executable is missing or invalid in Settings.".to_string());
         }
 
         let Some(remote) = api.config.cloud.remote.clone() else {
@@ -4079,7 +4125,7 @@ pub async fn test_cloud_connection(app: tauri::AppHandle) -> Result<(), String> 
         }
 
         if content != "luducard-cloud-sync-test-content" {
-            return Err("Conteúdo corrompido durante o teste.".to_string());
+            return Err("The test file came back different from what was uploaded.".to_string());
         }
 
         Ok(())
@@ -4110,125 +4156,115 @@ pub struct CloudConflict {
 pub async fn check_cloud_conflict(app: tauri::AppHandle, game_title: String) -> Result<Option<CloudConflict>, String> {
     tokio::task::spawn_blocking(move || {
         let api = Ludusavi::load().map_err(|e| ludusavi::lang::TRANSLATOR.handle_error(&e))?;
-
-        // 1. Check if cloud sync is enabled
-        if !api.config.cloud.synchronize {
-            return Ok(None);
-        }
-
-        // 2. Validate cloud config and get remote
-        let remote = match ludusavi::cloud::validate_cloud_config(&api.config, &api.config.cloud.path) {
-            Ok(r) => r,
-            Err(_) => return Ok(None),
-        };
-
-        let game_dir = api
-            .layout
-            .game_folder(&game_title)
-            .leaf()
-            .unwrap_or_else(|| game_title.clone());
         let app_data_dir = app
             .path()
             .app_data_dir()
             .map_err(|_| "Failed to get AppData dir".to_string())?;
-
-        // 3. Try to load local mapping.yaml
-        let local_mapping_path = api.layout.game_folder(&game_title).joined("mapping.yaml");
-        let local_mapping = if local_mapping_path.exists() {
-            ludusavi::scan::layout::IndividualMapping::load(&local_mapping_path).ok()
-        } else {
-            None
-        };
-
-        // 4. Download remote mapping.yaml
-        let temp_dir = app_data_dir.join("temp");
-        let _ = std::fs::create_dir_all(&temp_dir);
-        let temp_file = temp_dir.join(format!("remote_mapping_{}.yaml", uuid::Uuid::new_v4()));
-
-        let remote_mapping_path_str = format!("{}/{}/mapping.yaml", api.config.cloud.path, game_dir);
-        let remote_path_full = format!("{}:{}", remote.id(), remote_mapping_path_str.replace('\\', "/"));
-
-        let run_rclone = |args: &[&str]| -> Result<(), String> {
-            let mut command = std::process::Command::new(api.config.apps.rclone.path.raw());
-            command.args(args);
-
-            if !api.config.apps.rclone.arguments.is_empty()
-                && let Some(parts) = shlex::split(&api.config.apps.rclone.arguments)
-            {
-                command.args(parts);
-            }
-
-            #[cfg(target_os = "windows")]
-            {
-                use std::os::windows::process::CommandExt;
-                command.creation_flags(0x08000000);
-            }
-
-            let output = command.output().map_err(|e| format!("Could not start Rclone: {}", e))?;
-            if !output.status.success() {
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(format!("Rclone reported an error: {}", stderr));
-            }
-            Ok(())
-        };
-
-        // Copy remote mapping to temp file
-        let remote_mapping = if run_rclone(&["copyto", &remote_path_full, &temp_file.to_string_lossy()]).is_ok() {
-            let mapping_content = std::fs::read_to_string(&temp_file).ok();
-            let _ = std::fs::remove_file(&temp_file);
-            mapping_content.and_then(|c| ludusavi::scan::layout::IndividualMapping::load_from_string(&c).ok())
-        } else {
-            None
-        };
-
-        // 5. Compare latest backups
-        let latest_local = local_mapping.as_ref().and_then(|m| m.backups.back());
-        let latest_remote = remote_mapping.as_ref().and_then(|m| m.backups.back());
-
-        if let (Some(local), Some(remote)) = (latest_local, latest_remote) {
-            // Check if timestamps are different (by more than 2 seconds)
-            let diff_seconds = (local.when.timestamp() - remote.when.timestamp()).abs();
-            if diff_seconds > 2 {
-                let local_bytes: u64 = local.files.values().map(|f| f.size).sum();
-                let remote_bytes: u64 = remote.files.values().map(|f| f.size).sum();
-
-                let is_local_newer = local.when > remote.when;
-
-                let format_size = |bytes: u64| {
-                    if bytes < 1024 * 1024 {
-                        format!("{:.2} KB", bytes as f64 / 1024.0)
-                    } else {
-                        format!("{:.2} MB", bytes as f64 / (1024.0 * 1024.0))
-                    }
-                };
-
-                let local_local_time = local.when.with_timezone(&chrono::Local);
-                let remote_local_time = remote.when.with_timezone(&chrono::Local);
-
-                return Ok(Some(CloudConflict {
-                    game_title,
-                    local: ConflictVersionInfo {
-                        date: local_local_time.format("%d %b %Y, %H:%M:%S").to_string(),
-                        size_formatted: format_size(local_bytes),
-                        is_newer: is_local_newer,
-                        is_older: !is_local_newer,
-                        label: "Este PC".to_string(),
-                    },
-                    remote: ConflictVersionInfo {
-                        date: remote_local_time.format("%d %b %Y, %H:%M:%S").to_string(),
-                        size_formatted: format_size(remote_bytes),
-                        is_newer: !is_local_newer,
-                        is_older: is_local_newer,
-                        label: "Nuvem".to_string(),
-                    },
-                }));
-            }
-        }
-
-        Ok(None)
+        Ok(find_cloud_conflict(&api, &app_data_dir, &game_title))
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+/// Every backup in a game's history, full and differential, newest last.
+fn backup_times(mapping: &ludusavi::scan::layout::IndividualMapping) -> Vec<(chrono::DateTime<chrono::Utc>, u64)> {
+    let mut times: Vec<_> = mapping
+        .backups
+        .iter()
+        .flat_map(|full| {
+            let size: u64 = full.files.values().map(|f| f.size).sum();
+            std::iter::once((full.when, size)).chain(full.children.iter().map(move |diff| (diff.when, size)))
+        })
+        .collect();
+    times.sort_by_key(|(when, _)| *when);
+    times
+}
+
+/// The cloud holds a backup this PC has never seen, so uploading would bury it and
+/// downloading would bury this PC's. Only then is there anything to ask about: a cloud
+/// that is merely behind (every backup it has, this PC has too) just needs an upload.
+pub fn find_cloud_conflict(api: &Ludusavi, app_data_dir: &Path, game_title: &str) -> Option<CloudConflict> {
+    if !api.config.cloud.synchronize {
+        return None;
+    }
+    let remote = ludusavi::cloud::validate_cloud_config(&api.config, &api.config.cloud.path).ok()?;
+
+    let game_dir = api
+        .layout
+        .game_folder(game_title)
+        .leaf()
+        .unwrap_or_else(|| game_title.to_string());
+
+    let local_mapping_path = api.layout.game_folder(game_title).joined("mapping.yaml");
+    let local_mapping = ludusavi::scan::layout::IndividualMapping::load(&local_mapping_path).ok()?;
+
+    let temp_dir = app_data_dir.join("temp");
+    let _ = std::fs::create_dir_all(&temp_dir);
+    let temp_file = temp_dir.join(format!("remote_mapping_{}.yaml", uuid::Uuid::new_v4()));
+    let remote_mapping_path = format!("{}/{}/mapping.yaml", api.config.cloud.path, game_dir).replace('\\', "/");
+    let remote_path_full = format!("{}:{}", remote.id(), remote_mapping_path);
+
+    let mut command = std::process::Command::new(api.config.apps.rclone.path.raw());
+    command.args(["copyto", &remote_path_full, &temp_file.to_string_lossy()]);
+    if !api.config.apps.rclone.arguments.is_empty()
+        && let Some(parts) = shlex::split(&api.config.apps.rclone.arguments)
+    {
+        command.args(parts);
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    let downloaded = command.output().is_ok_and(|o| o.status.success());
+    let content = downloaded.then(|| std::fs::read_to_string(&temp_file).ok()).flatten();
+    let _ = std::fs::remove_file(&temp_file);
+    // Nothing in the cloud yet for this game: nothing to conflict with.
+    let remote_mapping = ludusavi::scan::layout::IndividualMapping::load_from_string(&content?).ok()?;
+
+    let local_times = backup_times(&local_mapping);
+    let remote_times = backup_times(&remote_mapping);
+    let (local_when, local_bytes) = *local_times.last()?;
+    let (remote_when, remote_bytes) = *remote_times.last()?;
+
+    let same = |a: &chrono::DateTime<chrono::Utc>, b: &chrono::DateTime<chrono::Utc>| {
+        (a.timestamp() - b.timestamp()).abs() <= 2
+    };
+    if local_times.iter().any(|(when, _)| same(when, &remote_when)) {
+        return None;
+    }
+
+    let is_local_newer = local_when > remote_when;
+    let format_size = |bytes: u64| {
+        if bytes < 1024 * 1024 {
+            format!("{:.2} KB", bytes as f64 / 1024.0)
+        } else {
+            format!("{:.2} MB", bytes as f64 / (1024.0 * 1024.0))
+        }
+    };
+    let format_date = |when: chrono::DateTime<chrono::Utc>| {
+        when.with_timezone(&chrono::Local)
+            .format("%d %b %Y, %H:%M:%S")
+            .to_string()
+    };
+
+    Some(CloudConflict {
+        game_title: game_title.to_string(),
+        local: ConflictVersionInfo {
+            date: format_date(local_when),
+            size_formatted: format_size(local_bytes),
+            is_newer: is_local_newer,
+            is_older: !is_local_newer,
+            label: "This PC".to_string(),
+        },
+        remote: ConflictVersionInfo {
+            date: format_date(remote_when),
+            size_formatted: format_size(remote_bytes),
+            is_newer: !is_local_newer,
+            is_older: is_local_newer,
+            label: "Cloud".to_string(),
+        },
+    })
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -4389,7 +4425,7 @@ pub async fn create_save_profile(
             id: default_profile_id.clone(),
             game_id: game_id.clone(),
             title: "Principal (Original)".to_string(),
-            description: "Perfil padrão criado automaticamente com o progresso inicial do jogo.".to_string(),
+            description: "Default profile, created automatically with the game's starting progress.".to_string(),
             created_at: default_created_at,
             active: false,
         };

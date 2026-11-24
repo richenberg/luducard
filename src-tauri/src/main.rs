@@ -4,6 +4,7 @@
 use tauri::Manager;
 
 mod backup_folder;
+mod cloud_policy;
 mod commands;
 pub mod emulator;
 pub mod hotkey;
@@ -215,6 +216,9 @@ fn main() {
             commands::download_rclone,
             commands::configure_cloud_remote,
             commands::test_cloud_connection,
+            commands::refresh_cloud_email,
+            cloud_policy::get_cloud_prefs,
+            cloud_policy::set_cloud_prefs,
             commands::check_cloud_conflict,
             commands::get_roots,
             commands::detect_installed_launchers,

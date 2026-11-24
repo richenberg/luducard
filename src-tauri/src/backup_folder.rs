@@ -95,7 +95,9 @@ fn absolute(path: &Path) -> PathBuf {
     }
     match (path.parent(), path.file_name()) {
         (Some(parent), Some(name)) if !parent.as_os_str().is_empty() => absolute(parent).join(name),
-        _ => std::env::current_dir().map(|d| d.join(path)).unwrap_or_else(|_| path.to_path_buf()),
+        _ => std::env::current_dir()
+            .map(|d| d.join(path))
+            .unwrap_or_else(|_| path.to_path_buf()),
     }
 }
 
@@ -413,7 +415,10 @@ fn move_backups(app: &tauri::AppHandle, target: &Path) -> Result<MoveResult, Str
         let size = std::fs::metadata(target.join(&file.relative)).map(|m| m.len()).ok();
         if size != Some(file.size) {
             undo_copy(&target, created_target, &copied);
-            return Err(format!("The copy of {} did not match the original.", file.relative.display()));
+            return Err(format!(
+                "The copy of {} did not match the original.",
+                file.relative.display()
+            ));
         }
     }
 
